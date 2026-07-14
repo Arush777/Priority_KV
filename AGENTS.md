@@ -2,9 +2,9 @@
 
 ## What this repo is
 
-Collaborative **Information Retrieval** research prototype. Two Cursor agents
-(`arush`, `friend`) coordinate over Telegram via `collab_bridge` and share code
-on GitHub.
+Collaborative **PriorityKV** research (mixed-precision agent KV cache +
+PriorityBench). Two Cursor agents (`arush`, `friend`) coordinate over Telegram
+via `collab_bridge` and share code on GitHub.
 
 ## Layout
 

@@ -6,7 +6,8 @@ from typing import Any
 
 from .agent_runner import compose_prompt, run_cursor_agent
 from .config import Settings
-from .protocol import ControlAction, detect_stop, format_transcript, parse_message
+from .memory import CollabMemory, format_new_and_ring
+from .protocol import ControlAction, detect_stop, parse_message
 from .state_store import StateStore
 from .telegram_client import TelegramClient
 
@@ -26,6 +27,12 @@ def run_tick(settings: Settings) -> TickResult:
         raise RuntimeError("Config invalid:\n- " + "\n- ".join(errs))
 
     store = StateStore(settings.state_dir, settings.agent_id)
+    memory = CollabMemory(
+        settings.state_dir,
+        settings.repo_root,
+        settings.agent_id,
+        window=settings.memory_window,
+    )
     if not store.acquire_lock():
         return TickResult(
             skipped=True,
@@ -46,6 +53,9 @@ def run_tick(settings: Settings) -> TickResult:
             offset, limit=settings.max_messages_per_tick
         )
         parsed = [parse_message(m) for m in messages]
+
+        # Sticky ring: keep last N including own posts (for continuity)
+        memory.append_telegram_messages(messages)
 
         for p in parsed:
             stop_kw = detect_stop(p.msg.text, settings.stop_keywords)
@@ -91,18 +101,31 @@ def run_tick(settings: Settings) -> TickResult:
 
         relevant = [p for p in parsed if p.author_agent != settings.agent_id]
         heartbeat = not relevant
+        ring_tx = memory.ring_as_transcript(settings.agent_id)
         if heartbeat:
+            new_part = (
+                "(no brand-new peer/human messages)\n"
+                "Heartbeat: use sticky memory + unanswered ASKs; either answer a peer "
+                "ASK, advance a CLAIMed workstream, or ask one concrete question.\n"
+            )
             transcript = (
-                "(no new peer/human messages)\n"
-                "Hourly heartbeat: review repo status, pick one small unowned "
-                "improvement aligned with scopes/PROJECT_SCOPE.md, or ask the peer "
-                "a concrete clarifying question about the Information Retrieval idea.\n"
+                "## Brand-new since last poll\n"
+                f"{new_part}\n"
+                f"## Last N Telegram messages (sticky ring)\n{ring_tx}\n"
             )
         else:
-            transcript = format_transcript(relevant, settings.agent_id)
+            transcript = format_new_and_ring(relevant, ring_tx, settings.agent_id)
 
-        prompt = compose_prompt(settings, transcript)
-        result = run_cursor_agent(settings, prompt)
+        prior = memory.get_cursor_agent_id()
+        will_try_resume = bool(settings.use_agent_resume and prior)
+        memory_blob = memory.read_summary()
+        prompt = compose_prompt(
+            settings,
+            transcript,
+            memory_blob=memory_blob,
+            resumed=will_try_resume,
+        )
+        result = run_cursor_agent(settings, prompt, memory=memory)
 
         status_body = ""
         if result.status_file and result.status_file.exists():
@@ -111,10 +134,17 @@ def run_tick(settings: Settings) -> TickResult:
             status_body = (
                 f"{settings.tag} TICK\n"
                 f"SUMMARY: {result.summary}\n"
-                f"ACTIONS: runner mode={result.mode} ok={result.ok}\n"
+                f"ACTIONS: runner mode={result.mode} ok={result.ok} "
+                f"resumed={result.resumed}\n"
             )
         if not status_body.lstrip().startswith("["):
             status_body = f"{settings.tag}\n{status_body}"
+
+        memory.update_after_tick(
+            status_body,
+            new_msgs=len(messages),
+            resumed=result.resumed,
+        )
 
         tg.send_message(status_body)
         posted = True
@@ -129,8 +159,11 @@ def run_tick(settings: Settings) -> TickResult:
             "heartbeat": heartbeat,
             "ok": result.ok,
             "mode": result.mode,
+            "resumed": result.resumed,
+            "cursor_agent_id": result.cursor_agent_id,
             "agent_run_id": result.agent_run_id,
             "error": result.error,
+            "memory_window": settings.memory_window,
         }
         store.record_tick(details)
         return TickResult(
