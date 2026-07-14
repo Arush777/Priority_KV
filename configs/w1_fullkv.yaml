@@ -1,0 +1,24 @@
+# W1 FullKV gate (G0) — freeze lightly; bump rev if prompts/pins change.
+manifest_id: w1_fullkv_g0
+rev: 1
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+prompts: data/prompts/w1_fullkv_20.jsonl
+decode:
+  max_new_tokens: 32
+  temperature: 0.0
+  # greedy for both backends
+backends:
+  - transformers
+  - vllm
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.45
+  max_model_len: 4096
+gate:
+  # fraction of prompts whose decoded strings match exactly
+  min_exact_match: 0.85
+  # mean token-id agreement on overlapping continuation
+  min_mean_token_agree: 0.90

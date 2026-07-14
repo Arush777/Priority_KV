@@ -1,0 +1,20 @@
+{"id": "p01", "messages": [{"role": "user", "content": "Reply with exactly: OK"}]}
+{"id": "p02", "messages": [{"role": "user", "content": "What is 2+2? Reply with only the number."}]}
+{"id": "p03", "messages": [{"role": "user", "content": "Name the capital of France. One word."}]}
+{"id": "p04", "messages": [{"role": "user", "content": "Say hello in one short sentence."}]}
+{"id": "p05", "messages": [{"role": "user", "content": "List three primary colors, comma-separated."}]}
+{"id": "p06", "messages": [{"role": "system", "content": "You are a concise assistant."}, {"role": "user", "content": "Define entropy in one sentence."}]}
+{"id": "p07", "messages": [{"role": "user", "content": "Write a Python one-liner that prints 1 to 5."}]}
+{"id": "p08", "messages": [{"role": "user", "content": "Is 17 prime? Answer yes or no."}]}
+{"id": "p09", "messages": [{"role": "user", "content": "Translate 'good morning' to Spanish. Two words."}]}
+{"id": "p10", "messages": [{"role": "user", "content": "Give the chemical formula for water."}]}
+{"id": "p11", "messages": [{"role": "system", "content": "Always answer in lowercase."}, {"role": "user", "content": "What day follows Monday?"}]}
+{"id": "p12", "messages": [{"role": "user", "content": "Sort these numbers ascending: 3,1,2. Output only the list."}]}
+{"id": "p13", "messages": [{"role": "user", "content": "Complete: The mitochondria is the powerhouse of the"}]}
+{"id": "p14", "messages": [{"role": "user", "content": "Return a valid empty JSON object."}]}
+{"id": "p15", "messages": [{"role": "user", "content": "How many bits in a byte? Number only."}]}
+{"id": "p16", "messages": [{"role": "user", "content": "Name one programming language that starts with P."}]}
+{"id": "p17", "messages": [{"role": "system", "content": "Be brief."}, {"role": "user", "content": "Who wrote Hamlet?"}]}
+{"id": "p18", "messages": [{"role": "user", "content": "Convert 100 degrees Celsius to Kelvin. Number only."}]}
+{"id": "p19", "messages": [{"role": "user", "content": "True or false: TCP is connection-oriented."}]}
+{"id": "p20", "messages": [{"role": "user", "content": "Emit the token sequence: A B C"}]}
