@@ -9,37 +9,78 @@ from prioritykv.fullkv_compare import PromptRow, _apply_chat
 from prioritykv.int4_kv import Int4KvConfig, fake_quant_roundtrip, make_quantized_cache
 
 
-def _to_legacy(past) -> tuple:
-    if past is None:
-        return ()
-    if hasattr(past, "to_legacy_cache"):
-        return past.to_legacy_cache()
-    return tuple(past)
-
-
-def _from_legacy(legacy: tuple):
-    try:
-        from transformers import DynamicCache
-
-        return DynamicCache.from_legacy_cache(legacy)
-    except Exception:
-        return legacy
-
-
-def _fake_quant_legacy(legacy: tuple, cfg: Int4KvConfig) -> tuple:
+def _fq_tensor(t, cfg: Int4KvConfig):
     import torch
 
-    out = []
-    for k, v in legacy:
-        k_np = fake_quant_roundtrip(k.detach().float().cpu().numpy(), cfg)
-        v_np = fake_quant_roundtrip(v.detach().float().cpu().numpy(), cfg)
-        out.append(
-            (
-                torch.from_numpy(k_np).to(device=k.device, dtype=k.dtype),
-                torch.from_numpy(v_np).to(device=v.device, dtype=v.dtype),
-            )
-        )
-    return tuple(out)
+    y = fake_quant_roundtrip(t.detach().float().cpu().numpy(), cfg)
+    return torch.from_numpy(y).to(device=t.device, dtype=t.dtype)
+
+
+def _fake_quant_past(past, cfg: Int4KvConfig):
+    """INT4 round-trip K/V in whatever cache object HF returned."""
+    import torch
+
+    if past is None:
+        return past
+
+    # Newer transformers: Cache with .layers[*].keys / .values (or key_cache)
+    layers = getattr(past, "layers", None)
+    if layers is not None:
+        for layer in layers:
+            for attr_k, attr_v in (
+                ("keys", "values"),
+                ("key_cache", "value_cache"),
+                ("key", "value"),
+            ):
+                k = getattr(layer, attr_k, None)
+                v = getattr(layer, attr_v, None)
+                if k is None or v is None:
+                    continue
+                if torch.is_tensor(k) and torch.is_tensor(v):
+                    setattr(layer, attr_k, _fq_tensor(k, cfg))
+                    setattr(layer, attr_v, _fq_tensor(v, cfg))
+                    break
+                if isinstance(k, list) and isinstance(v, list):
+                    for i in range(len(k)):
+                        if k[i] is not None and torch.is_tensor(k[i]):
+                            k[i] = _fq_tensor(k[i], cfg)
+                        if v[i] is not None and torch.is_tensor(v[i]):
+                            v[i] = _fq_tensor(v[i], cfg)
+                    break
+        return past
+
+    # Older DynamicCache: parallel key_cache / value_cache lists
+    kc = getattr(past, "key_cache", None)
+    vc = getattr(past, "value_cache", None)
+    if isinstance(kc, list) and isinstance(vc, list):
+        for i in range(len(kc)):
+            if kc[i] is not None and torch.is_tensor(kc[i]):
+                kc[i] = _fq_tensor(kc[i], cfg)
+            if vc[i] is not None and torch.is_tensor(vc[i]):
+                vc[i] = _fq_tensor(vc[i], cfg)
+        return past
+
+    # Legacy tuple/list of layer entries
+    if isinstance(past, (tuple, list)):
+        out = []
+        for layer in past:
+            if isinstance(layer, (tuple, list)) and len(layer) >= 2:
+                k, v = layer[0], layer[1]
+                if torch.is_tensor(k) and torch.is_tensor(v):
+                    k2, v2 = _fq_tensor(k, cfg), _fq_tensor(v, cfg)
+                    out.append((k2, v2) + tuple(layer[2:]))
+                else:
+                    out.append(layer)
+            else:
+                out.append(layer)
+        try:
+            from transformers import DynamicCache
+
+            return DynamicCache.from_legacy_cache(tuple(out))
+        except Exception:
+            return tuple(out)
+
+    raise TypeError(f"unsupported past_key_values type: {type(past)}")
 
 
 def run_transformers_int4(
@@ -54,9 +95,8 @@ def run_transformers_int4(
 ) -> list[tuple[str, list[int], dict[str, Any]]]:
     """Greedy decode with uniform INT4 KV.
 
-    Prefer Transformers QuantizedCache (quanto). If unavailable, fall back to
-    post-prefill fake-quant of the prompt KV (decode tokens stay BF16) — a
-    lower-bound stress signal for agent reliability under INT4 storage.
+    Prefer ``cache_implementation="quantized"`` (quanto). Fall back to
+    post-prefill fake-quant of the prompt KV (decode tokens stay BF16).
     """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -67,17 +107,31 @@ def run_transformers_int4(
         revision=revision if not Path(model_path).exists() else None,
         trust_remote_code=True,
     )
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        revision=revision if not Path(model_path).exists() else None,
-        torch_dtype=torch.bfloat16,
-        device_map="cuda:0",
-        trust_remote_code=True,
-        attn_implementation="sdpa",
-    )
+    # Prefer dtype= over deprecated torch_dtype= when supported.
+    load_kwargs: dict[str, Any] = {
+        "device_map": "cuda:0",
+        "trust_remote_code": True,
+        "attn_implementation": "sdpa",
+    }
+    rev = revision if not Path(model_path).exists() else None
+    if rev:
+        load_kwargs["revision"] = rev
+    try:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path, dtype=torch.bfloat16, **load_kwargs
+        )
+    except TypeError:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path, torch_dtype=torch.bfloat16, **load_kwargs
+        )
     model.eval()
 
     out: list[tuple[str, list[int], dict[str, Any]]] = []
+    cache_cfg = {
+        "backend": "quanto",
+        "nbits": int(cfg.nbits),
+        "group_size": int(cfg.group_size),
+    }
 
     for row in prompts:
         text = _apply_chat(tok, row.messages)
@@ -95,35 +149,58 @@ def run_transformers_int4(
         else:
             inputs = {k: v for k, v in raw.items()}
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
-        meta: dict[str, Any] = {"mode": "unknown", "prompt_tokens": int(inputs["input_ids"].shape[-1])}
+        meta: dict[str, Any] = {
+            "mode": "unknown",
+            "prompt_tokens": int(inputs["input_ids"].shape[-1]),
+        }
 
         with torch.no_grad():
             done = False
             if prefer_quanto and cfg.backend != "fake":
-                cache = make_quantized_cache(max_cache_len=max_model_len, cfg=cfg)
-                if cache is not None:
-                    try:
-                        gen = model.generate(
-                            **inputs,
-                            max_new_tokens=max_new_tokens,
-                            do_sample=False,
-                            temperature=None,
-                            top_p=None,
-                            past_key_values=cache,
-                        )
-                        new_ids = gen[0, inputs["input_ids"].shape[-1] :].tolist()
-                        new_text = tok.decode(new_ids, skip_special_tokens=True)
-                        meta["mode"] = "quanto_quantized_cache"
-                        out.append((new_text, new_ids, meta))
-                        done = True
-                    except Exception as exc:  # noqa: BLE001
-                        meta["quanto_error"] = str(exc)[:240]
+                # Path A: generate API with quantized cache impl (transformers ≥4.45)
+                try:
+                    gen = model.generate(
+                        **inputs,
+                        max_new_tokens=max_new_tokens,
+                        do_sample=False,
+                        temperature=None,
+                        top_p=None,
+                        cache_implementation="quantized",
+                        cache_config=cache_cfg,
+                    )
+                    new_ids = gen[0, inputs["input_ids"].shape[-1] :].tolist()
+                    new_text = tok.decode(new_ids, skip_special_tokens=True)
+                    meta["mode"] = "hf_cache_implementation_quantized"
+                    out.append((new_text, new_ids, meta))
+                    done = True
+                except Exception as exc:  # noqa: BLE001
+                    meta["quanto_impl_error"] = str(exc)[:240]
+
+                # Path B: explicit QuantizedCache object
+                if not done:
+                    cache = make_quantized_cache(max_cache_len=max_model_len, cfg=cfg)
+                    if cache is not None:
+                        try:
+                            gen = model.generate(
+                                **inputs,
+                                max_new_tokens=max_new_tokens,
+                                do_sample=False,
+                                temperature=None,
+                                top_p=None,
+                                past_key_values=cache,
+                            )
+                            new_ids = gen[0, inputs["input_ids"].shape[-1] :].tolist()
+                            new_text = tok.decode(new_ids, skip_special_tokens=True)
+                            meta["mode"] = "quanto_quantized_cache"
+                            out.append((new_text, new_ids, meta))
+                            done = True
+                        except Exception as exc:  # noqa: BLE001
+                            meta["quanto_obj_error"] = str(exc)[:240]
 
             if not done:
                 meta["mode"] = "fake_groupwise_prefill"
                 pre = model(**inputs, use_cache=True, return_dict=True)
-                legacy = _fake_quant_legacy(_to_legacy(pre.past_key_values), cfg)
-                past = _from_legacy(legacy)
+                past = _fake_quant_past(pre.past_key_values, cfg)
                 next_id = int(torch.argmax(pre.logits[:, -1, :], dim=-1).item())
                 gen_ids = [next_id]
                 attn = inputs["attention_mask"]

@@ -198,6 +198,9 @@ set -a && source .env && set +a
 python scripts/int4_status.py   # quanto_available / transformers_cache
 
 # Full triple pilot (FullKV + FP8 vLLM, then INT4 HF)
+# If INT4 crashes after vLLM, partial is saved as *_vllm_partial.json — resume with:
+#   python scripts/run_pilot3.py --config configs/w2c_pb_quality_16k.yaml \
+#     --modes int4_only --reuse $PRIORITYKV_SCRATCH/runs/w2c_pb_quality/w2c_pb_quality_16k_r1_vllm_partial.json
 python scripts/run_pilot3.py --config configs/w2c_pb_quality_16k.yaml
 ```
 

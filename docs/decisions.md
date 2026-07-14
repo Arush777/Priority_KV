@@ -70,10 +70,7 @@ Append-only. Newest at bottom.
 - **Result:** full=1.000 fp8=1.000 delta=0; tool_schema / instruction_supersession / multi_turn_state all 1.0/1.0 at 16k (n=15).
 - **Read:** FP8 KV is too gentle to surface PriorityBench failures on these templates at ≤16k. Next stress must be **stronger compression (uniform INT4)** or **32k + harder adversarial templates**, not another FP8 smoke.
 
-## 2026-07-14 — W2c INT4 + W3/W4 scaffolding
+## 2026-07-14 — W2c INT4 crash fix
 
-- **Decided:** Q2 uniform INT4 pilot via HF `QuantizedCache`/quanto (`scripts/run_pilot3.py`, `configs/w2c_pb_quality_16k.yaml`), with groupwise fake-quant-after-prefill fallback.
-- **Dep:** `optimum-quanto` added to `gpu` extra; optional `kvpress` extra for SnapKV.
-- **W3 start:** `int4_path.append_quantize` / `decode_gather_reference` + `tests/test_locked_structure.py`.
-- **W4 start:** `docs/failure_atlas.md` + `scripts/atlas_collect.py`.
-- **Next large H200 job:** `run_pilot3.py` on w2c 16k (n=15). Gate signal: look for `delta_int4_minus_full` ≤ −0.05 on any category (G2 path a).
+- **Symptom on H200:** FullKV+FP8 OK; INT4 fell through to fake path and crashed with `ValueError: too many values to unpack (expected 2)` — Qwen3/HF cache layers are not plain `(k, v)` pairs.
+- **Fix:** mutate DynamicCache / `.layers` / legacy ≥2-tuples safely; prefer `cache_implementation="quantized"`; checkpoint vLLM partial JSON before INT4.

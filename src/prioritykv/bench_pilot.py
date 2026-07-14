@@ -258,6 +258,40 @@ def run_triple_pilot(
         for ex, (qt, _) in zip(examples, fp8_out, strict=True):
             fp8_by_id[ex.example_id] = qt
 
+    # Checkpoint FullKV/FP8 before the slow INT4 leg so crashes can reuse.
+    if full_by_id and modes in ("all", "skip_fp8", "vllm_only"):
+        scratch = os.environ.get("PRIORITYKV_SCRATCH")
+        ck_dir = (
+            Path(scratch) / "runs" / "w2c_pb_quality"
+            if scratch
+            else root / "runs" / "w2c_pb_quality"
+        )
+        ck_dir.mkdir(parents=True, exist_ok=True)
+        ck_path = ck_dir / f"{cfg['manifest_id']}_r{cfg['rev']}_vllm_partial.json"
+        partial = {
+            "manifest_id": cfg["manifest_id"],
+            "rev": cfg["rev"],
+            "partial": "vllm_full_fp8",
+            "rows": [
+                {
+                    "example_id": ex.example_id,
+                    "category": ex.category.value,
+                    "fullkv_text": full_by_id.get(ex.example_id, ""),
+                    "fp8_text": fp8_by_id.get(ex.example_id, ""),
+                    "fullkv_score": float(
+                        score_example(ex, full_by_id[ex.example_id])
+                    )
+                    if ex.example_id in full_by_id and full_by_id[ex.example_id]
+                    else None,
+                    "fp8_score": float(score_example(ex, fp8_by_id[ex.example_id]))
+                    if ex.example_id in fp8_by_id and fp8_by_id[ex.example_id]
+                    else None,
+                }
+                for ex in examples
+            ],
+        }
+        ck_path.write_text(json.dumps(partial, indent=2), encoding="utf-8")
+
     int4_by_id: dict[str, str] = {}
     int4_meta: dict[str, Any] = {}
     t_int4 = 0.0
