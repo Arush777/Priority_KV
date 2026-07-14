@@ -146,3 +146,7 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 
 - Collaborator continues from **`docs/HANDOFF_W3_INT4.md`** (Opus-reviewed language).
 - Page stress already green (`w3_structured_paged_r1`); active bug = `quanto_cuda` JIT under assert-no-fake.
+
+## 2026-07-15 — Implementation plan → v2.1 execution overlay
+
+- Rewrote `docs/IMPLEMENTATION_PLAN.md` with status snapshot, G1 deferrals, D1/W3 done-vs-cut, baseline table as lived, and week overlay (✅/🚧/⏸).
