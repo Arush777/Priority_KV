@@ -14,7 +14,8 @@ fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
-pytest -q tests/test_byte_model.py
+pytest -q tests/
 PYTHONPATH=src python scripts/test_prioritybench_scoring.py
 PYTHONPATH=src python scripts/test_prioritybench_generate.py
+PYTHONPATH=src python scripts/check_pages.py >/dev/null
 echo ok

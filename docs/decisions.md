@@ -27,7 +27,7 @@ Append-only. Newest at bottom.
 - **Geom pin:** `QWEN3_8B_KV = (36, 8, 128)` in `src/prioritykv/byte_model.py`; table in `configs/w1_byte_budget.json`.
 - **W1 PriorityBench pilot:** 40 `tool_schema` examples, 8 templates, seeds in `data/prioritybench/manifests/w1_pilot.json`.
 
-## 2026-07-14 — W1 FP8 baseline smoke
+## 2026-07-14 — W1 closed / W2 start
 
-- **Decided:** W1 S1 smoke uses vLLM `kv_cache_dtype=fp8` + `calculate_kv_scales=True` (on-the-fly). Dataset oneshot via `scripts/prep_fp8.py` (llmcompressor) is optional follow-up, not blocking G0.
-- **CLI:** `scripts/cmp_fp8.py`; results under `$PRIORITYKV_SCRATCH/runs/w1_fp8/`.
+- **W1 FP8 smoke:** `cmp_fp8.py` → exact=0.850 tok=0.926 pass=1 (S1 runnable on H200). Defer `prep_fp8.py`/llmcompressor to S1 freeze.
+- **W2 start:** page manager + structural tagging + protected invariants (CPU reference). Grow PriorityBench with instruction_supersession templates.

@@ -19,7 +19,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from prioritybench.generate import (  # noqa: E402
     W1_MASTER_SEED,
+    W2_MASTER_SEED,
     generate_tool_schema_pilot,
+    generate_w2_mixed_pilot,
     gold_tool_call,
     write_split_dirs,
 )
@@ -29,7 +31,13 @@ from prioritybench.scoring import score_example  # noqa: E402
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=40)
-    ap.add_argument("--seed", type=int, default=W1_MASTER_SEED)
+    ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument(
+        "--mode",
+        choices=["w1", "w2"],
+        default="w1",
+        help="w1=tool_schema only; w2=tool+supersession mixed",
+    )
     ap.add_argument(
         "--out-dir",
         type=Path,
@@ -38,17 +46,42 @@ def main() -> int:
     ap.add_argument(
         "--manifest",
         type=Path,
-        default=ROOT / "data" / "prioritybench" / "manifests" / "w1_pilot.json",
+        default=None,
     )
     args = ap.parse_args()
+    if args.manifest is None:
+        name = "w1_pilot.json" if args.mode == "w1" else "w2_pilot.json"
+        args.manifest = ROOT / "data" / "prioritybench" / "manifests" / name
+    if args.seed is None:
+        args.seed = W1_MASTER_SEED if args.mode == "w1" else W2_MASTER_SEED
 
-    examples = generate_tool_schema_pilot(args.n, master_seed=args.seed)
-    # Validate gold calls score 1.0 before writing.
+    if args.mode == "w1":
+        examples = generate_tool_schema_pilot(args.n, master_seed=args.seed)
+    else:
+        # Default w2 mix: 80 tool + 40 supersession (=120); --n ignored unless set via knobs later
+        examples = generate_w2_mixed_pilot(master_seed=args.seed)
+
+    # Validate gold for tool_schema; soft-check supersession patterns exist.
     for ex in examples:
-        g = gold_tool_call(ex)
-        if score_example(ex, g) != 1.0:
-            print(f"gold fail {ex.example_id}", file=sys.stderr)
-            return 1
+        if ex.category.value == "tool_schema":
+            g = gold_tool_call(ex)
+            if score_example(ex, g) != 1.0:
+                print(f"gold fail {ex.example_id}", file=sys.stderr)
+                return 1
+        else:
+            # Supersession: synthesize a passing string from latest constraint.
+            latest = ex.scoring.get("latest_constraint") or ex.scoring.get(
+                "constraint_pattern"
+            )
+            if latest and score_example(ex, f"answer with {latest}") != 1.0:
+                # language_flip forbids nothing; format_flip has forbidden — avoid old.
+                payload = str(latest)
+                forbidden = ex.scoring.get("forbidden_pattern")
+                if forbidden:
+                    payload = f"using {latest} only"
+                if score_example(ex, payload) != 1.0:
+                    print(f"synth fail {ex.example_id}", file=sys.stderr)
+                    return 1
 
     counts = write_split_dirs(args.out_dir, examples)
     manifest = {
