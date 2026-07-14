@@ -1,0 +1,44 @@
+# Secrets & local runtime
+.env
+.env.*
+!.env.example
+
+# Python / uv
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+.DS_Store
+
+# Models & heavy artifacts (live on H200 scratch, never git)
+models/
+artifacts/
+outputs/
+runs/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+
+# PriorityBench generated splits (fixtures stay tracked)
+data/prioritybench/calibration/
+data/prioritybench/validation/
+data/prioritybench/test/
+
+# Nsight / profiling
+*.nsys-rep
+*.qdrep
+*.sqlite
+
+# Editor
+.cursor/agent-transcripts/
+.cursor/projects/
