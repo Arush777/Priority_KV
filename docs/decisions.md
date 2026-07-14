@@ -132,3 +132,12 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Cats (structure):** supersession 0.00 · multi_turn 0.00 · **tool_schema 1.00** · len 16k:0.67 / 8k:0.00
 - **Read:** structure **drops** when gold is buried in long filler (no leak). Remaining structure win is mostly TOOL/SYSTEM-tagged schemas (role priors, not length). Scopes W2 claim: structure wins when state is role/length-separable; buried free-form state needs better tagging / page risk in W3.
 - **W2 status:** closed on evidence. G1 freeze stands. Next = W3 (INT4 path, SnapKV attempt, denser atlas, page-level protect).
+
+## 2026-07-15 — W3 lock + CPU package (Fable GO)
+
+- **Manifest:** `data/prioritybench/manifests/w3_lock.json`
+- **SHA256:** `fc44b966725738c94008ba61ce57ad7366169b9c0be73074f8161d909ccfae89`
+- **Audit:** `docs/audit_w3.md` · n=240 · 80/cat · w2d_preserved=145 · buried 20/80 for super+multi; tool 0 (W2d filled quota)
+- **CPU landed:** mixed BF16/INT4 dequant-then-attend ref (`mixed_cache_reference.py`); INT4 path tests; page-granularity keep (floor to token budget); `allow_fake_fallback=False` assert mode; SnapKV/quanto loud-skip via `scripts/run_w3_baselines_check.py`
+- **Cut (Fable D):** `label_page_perturb` deferred W4; FlashInfer multi-call deferred; attention-KL deferred
+- **H200 next:** `configs/w3_structured_paged.yaml` + install quanto/kvpress then `configs/w3_int4_assert.yaml`

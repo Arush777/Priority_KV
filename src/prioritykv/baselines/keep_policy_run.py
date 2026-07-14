@@ -11,9 +11,7 @@ from prioritykv.baselines.keep_policy import (
     KeepPolicyConfig,
     apply_keep_indices,
     assign_token_roles,
-    select_random,
-    select_structure,
-    select_uniform,
+    select_keep_indices,
 )
 from prioritykv.fullkv_compare import PromptRow, _apply_chat
 
@@ -56,7 +54,8 @@ def run_transformers_keep_policy(
     model.eval()
     chat_kwargs = dict(qwen3_chat_template_kwargs())
     print(
-        f"[keep] policy={policy} keep_frac={keep_cfg.keep_frac} "
+        f"[keep] policy={policy} gran={keep_cfg.granularity} "
+        f"keep_frac={keep_cfg.keep_frac} page_tokens={keep_cfg.page_tokens} "
         f"sink={keep_cfg.sink_tokens} force_recent={keep_cfg.force_recent} n={len(prompts)}",
         flush=True,
     )
@@ -81,29 +80,35 @@ def run_transformers_keep_policy(
 
         if policy == "keep_all":
             kept_ids = ids
-            meta_k = {"kept_tokens": n, "prompt_tokens": n, "keep_frac_realized": 1.0}
+            meta_k = {
+                "kept_tokens": n,
+                "prompt_tokens": n,
+                "keep_frac_realized": 1.0,
+                "granularity": keep_cfg.granularity,
+            }
         else:
-            if policy == "uniform":
-                idx = select_uniform(n, keep_cfg)
-            elif policy == "random":
-                idx = select_random(n, KeepPolicyConfig(**{**keep_cfg.__dict__, "seed": keep_cfg.seed + i}))
-            elif policy == "structure":
+            roles = None
+            if policy == "structure":
                 roles = assign_token_roles(tok, row.messages, chat_kwargs=chat_kwargs)
                 if len(roles) != n:
-                    # Head+tail trim changes alignment — refuse silent wrong roles.
                     raise RuntimeError(
                         f"structure role/token mismatch: roles={len(roles)} n={n} "
                         f"id={row.id} (prompt exceeded max_model_len trim path)"
                     )
-                idx = select_structure(n, roles, keep_cfg)
-            else:
-                raise ValueError(f"unknown policy {policy}")
+            cfg_i = keep_cfg
+            if policy == "random":
+                cfg_i = KeepPolicyConfig(
+                    **{**keep_cfg.__dict__, "seed": keep_cfg.seed + i}
+                )
+            idx = select_keep_indices(n, cfg_i, policy=policy, roles=roles)
             kept_ids = apply_keep_indices(ids, idx)
             meta_k = {
                 "kept_tokens": int(kept_ids.numel()),
                 "prompt_tokens": n,
                 "keep_frac_realized": float(kept_ids.numel()) / max(n, 1),
                 "approx_compression_x": n / max(int(kept_ids.numel()), 1),
+                "granularity": keep_cfg.granularity,
+                "page_tokens": keep_cfg.page_tokens,
             }
 
         inputs = {

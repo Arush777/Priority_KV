@@ -53,7 +53,7 @@ def run_stress_pilot(config_path: Path, out_path: Path | None = None) -> dict[st
     cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     bench = json.loads((root / cfg["bench_manifest"]).read_text(encoding="utf-8"))
     rows = select_stress_rows(bench, cfg["selection"])
-    examples = materialize_examples(rows)
+    examples = materialize_examples(rows, data_root=root / "data" / "prioritybench")
     prompts = [PromptRow(id=ex.example_id, messages=list(ex.messages)) for ex in examples]
 
     model_path = resolve_model_path(cfg)
@@ -232,7 +232,7 @@ def run_stress_sweep(
     cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     bench = json.loads((root / cfg["bench_manifest"]).read_text(encoding="utf-8"))
     rows = select_stress_rows(bench, cfg["selection"])
-    examples = materialize_examples(rows)
+    examples = materialize_examples(rows, data_root=root / "data" / "prioritybench")
     prompts = [PromptRow(id=ex.example_id, messages=list(ex.messages)) for ex in examples]
 
     model_path = resolve_model_path(cfg)

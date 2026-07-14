@@ -31,7 +31,7 @@ def run_structured_stress(
     cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     bench = json.loads((root / cfg["bench_manifest"]).read_text(encoding="utf-8"))
     rows = select_stress_rows(bench, cfg["selection"])
-    examples = materialize_examples(rows)
+    examples = materialize_examples(rows, data_root=root / "data" / "prioritybench")
     use_buried = bool(cfg.get("buried_state", False)) if buried is None else buried
     prompts = []
     for ex in examples:
@@ -50,6 +50,8 @@ def run_structured_stress(
         sink_tokens=int(kcfg_raw.get("sink_tokens", 16)),
         force_recent=int(kcfg_raw.get("force_recent", 128)),
         seed=int(kcfg_raw.get("seed", 0)),
+        page_tokens=int(kcfg_raw.get("page_tokens", 16)),
+        granularity=str(kcfg_raw.get("granularity", "token")),
     )
     policies = list(kcfg_raw.get("policies", ["uniform", "structure", "random", "keep_all"]))
 

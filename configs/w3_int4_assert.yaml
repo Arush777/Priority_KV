@@ -1,0 +1,30 @@
+# W3 INT4 quality: assert real quanto path (no silent fake fallback).
+manifest_id: w3_int4_assert
+rev: 1
+bench_manifest: data/prioritybench/manifests/w3_lock.json
+selection:
+  split: calibration
+  context_length: 8000
+  n_tool_schema: 2
+  n_instruction_supersession: 2
+  n_multi_turn_state: 2
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 32768
+fp8:
+  kv_cache_dtype: fp8
+  calculate_kv_scales: true
+int4:
+  modes: int4_only
+  prefer_quanto: true
+  allow_fake_fallback: false
+  nbits: 4
+  group_size: 32

@@ -43,10 +43,41 @@ def select_rows(bench: dict[str, Any], sel: dict[str, Any]) -> list[dict[str, An
     return chosen
 
 
-def materialize_examples(rows: list[dict[str, Any]]):
+def materialize_examples(
+    rows: list[dict[str, Any]],
+    *,
+    data_root: Path | None = None,
+):
+    """Build PriorityExample list for selected manifest rows.
+
+    Prefers on-disk JSONL (required for buried W3 rows whose template_id ends
+    in ``.buried``). Falls back to regenerate-from-seed for W1/W2 pilots.
+    """
+    from prioritybench.generate import assign_split, load_jsonl
+    from prioritybench.schema import PriorityExample as PE
+    from prioritykv.baselines.buried_state import bury_short_state_turns
+
+    disk: dict[str, Any] = {}
+    if data_root is not None:
+        for split in ("calibration", "validation", "test"):
+            p = Path(data_root) / split / "examples.jsonl"
+            if p.exists():
+                for ex in load_jsonl(p):
+                    disk[ex.example_id] = ex
+
     examples = []
     for row in rows:
-        tmpl = template_by_id(row["template_id"])
+        eid = row["example_id"]
+        if eid in disk:
+            examples.append(disk[eid])
+            continue
+        tid = str(row["template_id"])
+        bury = bool(row.get("buried_state")) or tid.endswith(".buried") or eid.endswith(
+            "__buried"
+        )
+        if tid.endswith(".buried"):
+            tid = tid[: -len(".buried")]
+        tmpl = template_by_id(tid)
         if tmpl is None:
             raise KeyError(row["template_id"])
         ex = generate_one(
@@ -54,11 +85,22 @@ def materialize_examples(rows: list[dict[str, Any]]):
             seed=int(row["seed"]),
             context_length=int(row["context_length"]),
         )
-        if ex.example_id != row["example_id"]:
-            # seed/template/ctx must reconstruct the locked id
-            raise ValueError(
-                f"id mismatch: got {ex.example_id} expected {row['example_id']}"
+        if bury:
+            buried_msgs = bury_short_state_turns(ex.messages, seed=int(row["seed"]))
+            want = eid if eid.endswith("__buried") else f"{ex.example_id}__buried"
+            ex = PE(
+                example_id=want,
+                category=ex.category,
+                split=assign_split(want),
+                context_length=ex.context_length,
+                template_id=ex.template_id + ".buried",
+                seed=ex.seed,
+                messages=buried_msgs,
+                scoring=ex.scoring,
+                meta={**dict(ex.meta), "buried_state": True, "parent_id": ex.example_id},
             )
+        if ex.example_id != eid:
+            raise ValueError(f"id mismatch: got {ex.example_id} expected {eid}")
         examples.append(ex)
     return examples
 
@@ -72,7 +114,7 @@ def run_quality_pilot(
     bench_path = root / cfg["bench_manifest"]
     bench = json.loads(bench_path.read_text(encoding="utf-8"))
     rows = select_rows(bench, cfg["selection"])
-    examples = materialize_examples(rows)
+    examples = materialize_examples(rows, data_root=root / "data" / "prioritybench")
 
     model_path = resolve_model_path(cfg)
     max_new = int(cfg["decode"]["max_new_tokens"])
@@ -192,7 +234,7 @@ def run_triple_pilot(
     bench_path = root / cfg["bench_manifest"]
     bench = json.loads(bench_path.read_text(encoding="utf-8"))
     rows = select_rows(bench, cfg["selection"])
-    examples = materialize_examples(rows)
+    examples = materialize_examples(rows, data_root=root / "data" / "prioritybench")
 
     model_path = resolve_model_path(cfg)
     max_new = int(cfg["decode"]["max_new_tokens"])
@@ -200,6 +242,7 @@ def run_triple_pilot(
     fp8 = cfg.get("fp8", {})
     icfg = cfg.get("int4", {})
     modes = str(icfg.get("modes", "all")).lower()
+    allow_fake = bool(icfg.get("allow_fake_fallback", True))
     prompts = [PromptRow(id=ex.example_id, messages=list(ex.messages)) for ex in examples]
 
     full_by_id: dict[str, str] = {}
@@ -309,6 +352,7 @@ def run_triple_pilot(
             max_model_len=int(vcfg["max_model_len"]),
             cfg=int4_cfg,
             prefer_quanto=bool(icfg.get("prefer_quanto", True)),
+            allow_fake_fallback=allow_fake,
         )
         t_int4 = time.time() - t2
         for ex, (it, _, meta) in zip(examples, int4_out, strict=True):
