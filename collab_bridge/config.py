@@ -52,7 +52,7 @@ class Settings:
         token = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
         chat_id = (os.getenv("TELEGRAM_CHAT_ID") or "").strip()
         api_key = (os.getenv("CURSOR_API_KEY") or "").strip()
-        model = (os.getenv("CURSOR_MODEL") or "composer-2.5").strip()
+        model = (os.getenv("CURSOR_MODEL") or "auto").strip()
 
         repo_root_env = (os.getenv("REPO_ROOT") or "").strip()
         repo_root = Path(repo_root_env) if repo_root_env else root
