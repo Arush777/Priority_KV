@@ -1,0 +1,22 @@
+name: smoke
+
+on:
+  push:
+    branches: [main, "agent/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install bridge deps
+        run: pip install -r requirements.txt
+      - name: Protocol tests
+        run: PYTHONPATH=. python scripts/test_protocol.py
+      - name: Metrics stub tests
+        run: PYTHONPATH=src python scripts/test_metrics.py
