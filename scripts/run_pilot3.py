@@ -66,6 +66,16 @@ def main() -> int:
         f"d_int4={d4s} modes={result.get('int4_modes_seen')} "
         f"cats[{cats}] out={result['out_path']}"
     )
+    # Surface first quanto failure reason if we fell back.
+    for r in result.get("rows", []):
+        meta = r.get("int4_meta") or {}
+        for k in ("quanto_impl_error", "quanto_obj_error"):
+            if meta.get(k):
+                print(f"int4_fallback_reason[{k}]={meta[k]}")
+                break
+        else:
+            continue
+        break
     return 0
 
 

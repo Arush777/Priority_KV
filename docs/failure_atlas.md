@@ -9,10 +9,13 @@ equal bytes. See `docs/IMPLEMENTATION_PLAN.md` §3.3.
 
 | Baseline | Pilot | Status |
 |---|---|---|
-| FullKV (S0) | w2 / w2b 8k+16k | green — perfect on current templates |
-| FP8 (S1) | w2b 16k | **delta=0** vs FullKV at ≤16k |
-| Uniform INT4 (Q2) | w2c 16k | **pending H200 run** (`scripts/run_pilot3.py`) |
+| FullKV (S0) | w2 / w2b 8k+16k | green on **leaky v1** templates |
+| FP8 (S1) | w2b + w2c 16k | delta=0 (v1 too easy) |
+| Uniform INT4 (Q2) | w2c 16k | **int4=1.0** but mode=`fake_groupwise_prefill`; **v1 FINALs leaked gold** |
 | SnapKV (Q3) | — | scaffold / optional KVPress |
+
+**2026-07-14 finding:** w2c perfect scores are not a G2 miss yet — multi_turn/supersession
+v1 restated the answer in the FINAL user turn. Fixed in v2 templates; next pilot is **w2d**.
 
 ## How to append rows
 

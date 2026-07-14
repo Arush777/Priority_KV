@@ -16,8 +16,10 @@ from prioritybench.schema import (
     validate_example_shape,
 )
 from prioritybench.templates import (
-    INSTRUCTION_SUPERSESSION_TEMPLATES,
-    MULTI_TURN_STATE_TEMPLATES,
+    INSTRUCTION_SUPERSESSION_TEMPLATES_V1,
+    INSTRUCTION_SUPERSESSION_TEMPLATES_V2,
+    MULTI_TURN_STATE_TEMPLATES_V1,
+    MULTI_TURN_STATE_TEMPLATES_V2,
     TEMPLATES_BY_ID,
     TOOL_SCHEMA_TEMPLATES,
 )
@@ -27,6 +29,7 @@ from prioritybench.templates.base import TemplateSpec, messages_approx_tokens
 W1_MASTER_SEED = 20260714
 W2_MASTER_SEED = 20260721
 W2B_MASTER_SEED = 20260728
+W2D_MASTER_SEED = 20260804
 
 # Split fractions from plan §3.2 (calibration 40% / validation 20% / test 40%).
 _SPLIT_THRESHOLDS = (
@@ -116,7 +119,7 @@ def generate_w2_mixed_pilot(
         n_supersession,
         master_seed=master_seed + 10_000,
         context_lengths=context_lengths,
-        templates=INSTRUCTION_SUPERSESSION_TEMPLATES,
+        templates=INSTRUCTION_SUPERSESSION_TEMPLATES_V1,
     )
     return tools + supers
 
@@ -129,7 +132,7 @@ def generate_w2b_pilot(
     master_seed: int = W2B_MASTER_SEED,
     context_lengths: Sequence[int] = CONTEXT_LENGTHS,
 ) -> List[PriorityExample]:
-    """W2b: ~145 examples across all three categories (80+40+25)."""
+    """W2b: ~145 examples across all three categories (80+40+25). Uses v1 templates."""
     base = generate_w2_mixed_pilot(
         n_tool=n_tool,
         n_supersession=n_supersession,
@@ -140,9 +143,39 @@ def generate_w2b_pilot(
         n_multi_turn,
         master_seed=master_seed + 20_000,
         context_lengths=context_lengths,
-        templates=MULTI_TURN_STATE_TEMPLATES,
+        templates=MULTI_TURN_STATE_TEMPLATES_V1,
     )
     return base + multi
+
+
+def generate_w2d_pilot(
+    n_tool: int = 80,
+    n_supersession: int = 40,
+    n_multi_turn: int = 25,
+    *,
+    master_seed: int = W2D_MASTER_SEED,
+    context_lengths: Sequence[int] = CONTEXT_LENGTHS,
+) -> List[PriorityExample]:
+    """W2d: same shape as w2b but non-leaking v2 supersession + multi_turn."""
+    tools = _generate_round_robin(
+        n_tool,
+        master_seed=master_seed,
+        context_lengths=context_lengths,
+        templates=TOOL_SCHEMA_TEMPLATES,
+    )
+    supers = _generate_round_robin(
+        n_supersession,
+        master_seed=master_seed + 10_000,
+        context_lengths=context_lengths,
+        templates=INSTRUCTION_SUPERSESSION_TEMPLATES_V2,
+    )
+    multi = _generate_round_robin(
+        n_multi_turn,
+        master_seed=master_seed + 20_000,
+        context_lengths=context_lengths,
+        templates=MULTI_TURN_STATE_TEMPLATES_V2,
+    )
+    return tools + supers + multi
 
 
 def _generate_round_robin(

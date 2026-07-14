@@ -16,9 +16,11 @@ from prioritybench.generate import (  # noqa: E402
     W1_MASTER_SEED,
     W2_MASTER_SEED,
     W2B_MASTER_SEED,
+    W2D_MASTER_SEED,
     generate_tool_schema_pilot,
     generate_w2_mixed_pilot,
     generate_w2b_pilot,
+    generate_w2d_pilot,
     gold_tool_call,
     write_split_dirs,
 )
@@ -52,9 +54,9 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument(
         "--mode",
-        choices=["w1", "w2", "w2b"],
+        choices=["w1", "w2", "w2b", "w2d"],
         default="w1",
-        help="w1=tool; w2=tool+super; w2b=all 3 cats (~145)",
+        help="w1=tool; w2=tool+super; w2b=all 3 cats v1 (~145); w2d=all 3 cats v2 non-leak",
     )
     ap.add_argument(
         "--out-dir",
@@ -68,6 +70,7 @@ def main() -> int:
             "w1": "w1_pilot.json",
             "w2": "w2_pilot.json",
             "w2b": "w2b_pilot.json",
+            "w2d": "w2d_pilot.json",
         }[args.mode]
         args.manifest = ROOT / "data" / "prioritybench" / "manifests" / name
     if args.seed is None:
@@ -75,14 +78,17 @@ def main() -> int:
             "w1": W1_MASTER_SEED,
             "w2": W2_MASTER_SEED,
             "w2b": W2B_MASTER_SEED,
+            "w2d": W2D_MASTER_SEED,
         }[args.mode]
 
     if args.mode == "w1":
         examples = generate_tool_schema_pilot(args.n, master_seed=args.seed)
     elif args.mode == "w2":
         examples = generate_w2_mixed_pilot(master_seed=args.seed)
-    else:
+    elif args.mode == "w2b":
         examples = generate_w2b_pilot(master_seed=args.seed)
+    else:
+        examples = generate_w2d_pilot(master_seed=args.seed)
 
     for ex in examples:
         payload = _synth_pass(ex)

@@ -74,3 +74,9 @@ Append-only. Newest at bottom.
 
 - **Symptom on H200:** FullKV+FP8 OK; INT4 fell through to fake path and crashed with `ValueError: too many values to unpack (expected 2)` — Qwen3/HF cache layers are not plain `(k, v)` pairs.
 - **Fix:** mutate DynamicCache / `.layers` / legacy ≥2-tuples safely; prefer `cache_implementation="quantized"`; checkpoint vLLM partial JSON before INT4.
+
+## 2026-07-14 — W2c INT4 result + template leak
+
+- **Result:** `n=15 full=1.000 fp8=1.000 int4=1.000 d_int4=+0.000 modes=['fake_groupwise_prefill']` (all cats 1.0).
+- **Read:** quanto path did not stick (fell back to prefill-only fake INT4). More importantly, **v1 multi_turn / supersession FINAL asks restated the gold** → trivial even under compression.
+- **Fix:** v2 non-leaking templates + `mk_bench --mode w2d` + `configs/w2d_pb_quality_16k.yaml`. Next H200: rebuild w2d then `run_pilot3` on w2d.
