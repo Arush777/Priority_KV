@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Build W1 PriorityBench pilot + compact ID manifest (CPU).
-
-Usage:
-  python scripts/mk_bench.py
-  python scripts/mk_bench.py --n 40 --out-dir data/prioritybench
-"""
+"""Build PriorityBench pilots + compact ID manifests (CPU)."""
 
 from __future__ import annotations
 
@@ -20,12 +15,35 @@ sys.path.insert(0, str(ROOT / "src"))
 from prioritybench.generate import (  # noqa: E402
     W1_MASTER_SEED,
     W2_MASTER_SEED,
+    W2B_MASTER_SEED,
     generate_tool_schema_pilot,
     generate_w2_mixed_pilot,
+    generate_w2b_pilot,
     gold_tool_call,
     write_split_dirs,
 )
 from prioritybench.scoring import score_example  # noqa: E402
+
+
+def _synth_pass(ex) -> str | None:
+    cat = ex.category.value
+    if cat == "tool_schema":
+        return gold_tool_call(ex)
+    if cat == "instruction_supersession":
+        latest = ex.scoring.get("latest_constraint")
+        if latest:
+            return f"[[FMT:{latest}]] ok sentence about topic."
+        for tok in ("alpha", "bravo", "charlie"):
+            if tok in str(ex.scoring.get("constraint_pattern", "")):
+                return f"Short reply with {tok}."
+        return None
+    if cat == "multi_turn_state":
+        slots = ex.scoring.get("required_slots") or {}
+        # Prefer the joined line if present.
+        if "line" in slots:
+            return str(slots["line"])
+        return " ".join(str(v) for v in slots.values())
+    return None
 
 
 def main() -> int:
@@ -34,56 +52,43 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument(
         "--mode",
-        choices=["w1", "w2"],
+        choices=["w1", "w2", "w2b"],
         default="w1",
-        help="w1=tool_schema only; w2=tool+supersession mixed",
+        help="w1=tool; w2=tool+super; w2b=all 3 cats (~145)",
     )
     ap.add_argument(
         "--out-dir",
         type=Path,
         default=ROOT / "data" / "prioritybench",
     )
-    ap.add_argument(
-        "--manifest",
-        type=Path,
-        default=None,
-    )
+    ap.add_argument("--manifest", type=Path, default=None)
     args = ap.parse_args()
     if args.manifest is None:
-        name = "w1_pilot.json" if args.mode == "w1" else "w2_pilot.json"
+        name = {
+            "w1": "w1_pilot.json",
+            "w2": "w2_pilot.json",
+            "w2b": "w2b_pilot.json",
+        }[args.mode]
         args.manifest = ROOT / "data" / "prioritybench" / "manifests" / name
     if args.seed is None:
-        args.seed = W1_MASTER_SEED if args.mode == "w1" else W2_MASTER_SEED
+        args.seed = {
+            "w1": W1_MASTER_SEED,
+            "w2": W2_MASTER_SEED,
+            "w2b": W2B_MASTER_SEED,
+        }[args.mode]
 
     if args.mode == "w1":
         examples = generate_tool_schema_pilot(args.n, master_seed=args.seed)
-    else:
-        # Default w2 mix: 80 tool + 40 supersession (=120); --n ignored unless set via knobs later
+    elif args.mode == "w2":
         examples = generate_w2_mixed_pilot(master_seed=args.seed)
+    else:
+        examples = generate_w2b_pilot(master_seed=args.seed)
 
-    # Validate gold for tool_schema; soft-check supersession patterns exist.
     for ex in examples:
-        if ex.category.value == "tool_schema":
-            g = gold_tool_call(ex)
-            if score_example(ex, g) != 1.0:
-                print(f"gold fail {ex.example_id}", file=sys.stderr)
-                return 1
-        else:
-            # Supersession: synthesize a string that must pass the deterministic scorer.
-            latest = ex.scoring.get("latest_constraint")
-            if latest:
-                payload = f"[[FMT:{latest}]] ok sentence about topic."
-            else:
-                # language_flip: constraint_pattern is the escaped codename
-                payload = ex.scoring.get("constraint_pattern") or "alpha"
-                # pattern may be regex-escaped; prefer a raw token from meta if present
-                for tok in ("alpha", "bravo", "charlie"):
-                    if tok in str(ex.scoring.get("constraint_pattern", "")):
-                        payload = f"Short reply with {tok}."
-                        break
-            if score_example(ex, payload) != 1.0:
-                print(f"synth fail {ex.example_id} payload={payload!r}", file=sys.stderr)
-                return 1
+        payload = _synth_pass(ex)
+        if payload is None or score_example(ex, payload) != 1.0:
+            print(f"synth fail {ex.example_id} payload={payload!r}", file=sys.stderr)
+            return 1
 
     counts = write_split_dirs(args.out_dir, examples)
     manifest = {
@@ -92,6 +97,7 @@ def main() -> int:
         "split_counts": counts,
         "context_hist": dict(Counter(ex.context_length for ex in examples)),
         "template_hist": dict(Counter(ex.template_id for ex in examples)),
+        "category_hist": dict(Counter(ex.category.value for ex in examples)),
         "examples": [
             {
                 "example_id": ex.example_id,
@@ -107,9 +113,7 @@ def main() -> int:
     }
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    print(
-        f"n={len(examples)} splits={counts} manifest={args.manifest}"
-    )
+    print(f"n={len(examples)} splits={counts} manifest={args.manifest}")
     return 0
 
 

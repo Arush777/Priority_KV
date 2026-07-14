@@ -60,3 +60,7 @@ Append-only. Newest at bottom.
 ## 2026-07-14 — language_flip case fix
 
 - **16k miss:** `...language_flip...s20271049` scored 0 because output had `Bravo` vs required `bravo` (case-sensitive). Flags now include `IGNORECASE`.
+
+## 2026-07-14 — choose multi_turn next
+
+- **Decided:** Highest-signal next step is `multi_turn_state` (exact ID/path recall), not 32k FP8 (likely still delta≈0) or SnapKV wiring yet. Target ~145 with w2b pilot + 16k 3-category quality run.

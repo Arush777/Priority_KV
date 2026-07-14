@@ -158,6 +158,22 @@ python scripts/run_pilot.py --config configs/w2_pb_quality_16k.yaml
 python scripts/snap_status.py
 ```
 
-Paste the `run_pilot` summary lines when done.
+## W2b — multi_turn + ~145 bench + 16k 3-cat pilot
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git pull origin main
+source .venv/bin/activate
+set -a && source .env && set +a
+
+# CPU: build 145-example manifest (80+40+25)
+python scripts/mk_bench.py --mode w2b \
+  --out-dir "$PRIORITYKV_SCRATCH/datasets/prioritybench"
+
+# GPU: FullKV vs FP8 on 5+5+5 cal/16k
+python scripts/run_pilot.py --config configs/w2b_pb_quality_16k.yaml
+```
+
+Paste the `run_pilot` summary line.
 
 Do not commit `.env`. Do not run agents on this host.

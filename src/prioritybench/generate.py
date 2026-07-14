@@ -17,6 +17,7 @@ from prioritybench.schema import (
 )
 from prioritybench.templates import (
     INSTRUCTION_SUPERSESSION_TEMPLATES,
+    MULTI_TURN_STATE_TEMPLATES,
     TEMPLATES_BY_ID,
     TOOL_SCHEMA_TEMPLATES,
 )
@@ -25,6 +26,7 @@ from prioritybench.templates.base import TemplateSpec, messages_approx_tokens
 # Stable master seed for the W1 40-example pilot (tool_schema first).
 W1_MASTER_SEED = 20260714
 W2_MASTER_SEED = 20260721
+W2B_MASTER_SEED = 20260728
 
 # Split fractions from plan §3.2 (calibration 40% / validation 20% / test 40%).
 _SPLIT_THRESHOLDS = (
@@ -117,6 +119,30 @@ def generate_w2_mixed_pilot(
         templates=INSTRUCTION_SUPERSESSION_TEMPLATES,
     )
     return tools + supers
+
+
+def generate_w2b_pilot(
+    n_tool: int = 80,
+    n_supersession: int = 40,
+    n_multi_turn: int = 25,
+    *,
+    master_seed: int = W2B_MASTER_SEED,
+    context_lengths: Sequence[int] = CONTEXT_LENGTHS,
+) -> List[PriorityExample]:
+    """W2b: ~145 examples across all three categories (80+40+25)."""
+    base = generate_w2_mixed_pilot(
+        n_tool=n_tool,
+        n_supersession=n_supersession,
+        master_seed=master_seed,
+        context_lengths=context_lengths,
+    )
+    multi = _generate_round_robin(
+        n_multi_turn,
+        master_seed=master_seed + 20_000,
+        context_lengths=context_lengths,
+        templates=MULTI_TURN_STATE_TEMPLATES,
+    )
+    return base + multi
 
 
 def _generate_round_robin(
