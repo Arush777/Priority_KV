@@ -122,7 +122,7 @@ def _build_language_flip(
         "constraint_pattern": re.escape(word),
         "forbidden_pattern": None,
         "latest_language": b[0],
-        "flags": [],
+        "flags": ["IGNORECASE"],
     }
     return messages, scoring
 
