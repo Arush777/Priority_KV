@@ -1,6 +1,6 @@
 # W2 PriorityBench quality pilot @ 16k (FullKV vs FP8).
 manifest_id: w2_pb_quality_16k
-rev: 1
+rev: 2
 bench_manifest: data/prioritybench/manifests/w2_pilot.json
 selection:
   split: calibration
@@ -16,8 +16,9 @@ decode:
   temperature: 0.0
 vllm:
   tensor_parallel_size: 1
-  gpu_memory_utilization: 0.60
-  max_model_len: 20480
+  gpu_memory_utilization: 0.65
+  # Approx char/4 underestimates tokenizer+chat-template length; keep headroom.
+  max_model_len: 32768
 fp8:
   kv_cache_dtype: fp8
   calculate_kv_scales: true
