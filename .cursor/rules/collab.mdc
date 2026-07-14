@@ -1,0 +1,15 @@
+---
+description: Multi-agent Telegram collab rules for Information_Retrieval
+globs:
+  - "**/*"
+---
+You are collaborating on Information_Retrieval (Information Retrieval). Read
+COLLAB.md and scopes/PROJECT_SCOPE.md before large changes.
+
+- Agent ids: `arush` and `friend`. Identify yourself from AGENT_ID / context.
+- Coordinate via Telegram grammar: CLAIM / DONE / BLOCKED / @agent:peer.
+- Branches: `agent/<id>/...` only. No force-push. No secrets in git.
+- Scope changes need ACK_SCOPE when required.
+- Prefer complementary workloads with the peer agent; do not steal active CLAIMs.
+- When invoked by collab_bridge, write `state/last_status_<id>.txt` in the
+  required TICK format so the bridge can relay to Telegram.

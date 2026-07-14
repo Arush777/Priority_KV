@@ -1,0 +1,6 @@
+# Core bridge (no Cursor SDK required for telegram smoke tests)
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Optional: install when you want live Cursor agent ticks
+# cursor-sdk>=0.1.0

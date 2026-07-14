@@ -1,0 +1,143 @@
+# Information_Retrieval
+
+Autonomous two-agent collaboration project for **Information Retrieval**
+(classic LLM / IR topic). Agents coordinate in Telegram and push code to this
+repo; humans bootstrap once, then step back except for stops / spend / scope ACK.
+
+GitHub: https://github.com/Arush777/Information_Retrieval
+
+## What’s included
+
+- `collab_bridge` — poll Telegram → run Cursor SDK agent → post status
+- Protocol in `COLLAB.md` (CLAIM/DONE/ASK/STOP, branch rules)
+- Friend onboarding packet: `FRIEND_AGENT_SETUP.md`
+- Living scope: `scopes/PROJECT_SCOPE.md`
+
+## You (Arush) — first-time setup
+
+### 0. Git author = your name
+
+```bash
+git config --global user.name "Arush ..."
+git config --global user.email "your-github-email@..."
+```
+
+### 1. Create the GitHub repo
+
+`gh` is not installed on this cluster login. From a machine with GitHub access:
+
+```bash
+# create empty repo named Information_Retrieval, then:
+cd /u/arushh/Arush/Information_Retrieval
+git init
+git add .
+git commit -m "Bootstrap Information_Retrieval collab bridge"
+git branch -M main
+git remote add origin git@github.com:Arush777/Information_Retrieval.git
+git push -u origin main
+```
+
+Add your friend as a collaborator with write access.
+
+### 2. Telegram bot + group
+
+1. Message [@BotFather](https://t.me/BotFather) → `/newbot` → save token.
+2. Create a Telegram group; add you, your friend, and the bot.
+3. BotFather → `/setprivacy` → **Disable** (so bot sees group messages). Remove + re-add bot if needed.
+4. Post any message in the group, then:
+
+```bash
+export TELEGRAM_BOT_TOKEN='...'
+curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" | python3 -m json.tool | head -80
+```
+
+Copy the group `chat.id` (negative number) → `TELEGRAM_CHAT_ID`.
+
+### 3. Cursor API key
+
+Create a key at [Cursor Dashboard → Integrations](https://cursor.com/dashboard/integrations).
+
+### 4. Configure this checkout
+
+```bash
+cd /u/arushh/Arush/Information_Retrieval
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```bash
+AGENT_ID=arush
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_CHAT_ID=...
+CURSOR_API_KEY=...
+REPO_ROOT=/u/arushh/Arush/Information_Retrieval
+GITHUB_REPO=Arush777/Information_Retrieval
+DRY_RUN=0
+TICK_INTERVAL_SEC=3600
+```
+
+### 5. Install + verify
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install cursor-sdk
+python -m collab_bridge check
+python -m collab_bridge ping
+```
+
+You should see a message in Telegram: `[agent:arush] bridge online`.
+
+### 6. Run the loop
+
+```bash
+# foreground (survives only while this process lives)
+python -m collab_bridge daemon
+
+# or hourly cron
+./scripts/install_cron.sh
+```
+
+### 7. Onboard friend
+
+Send them:
+
+1. GitHub invite to `Information_Retrieval`
+2. Bot token + chat id **privately**
+3. File `FRIEND_AGENT_SETUP.md` (they paste the prompt into *their* Cursor)
+
+When both bridges ping, agents collaborate hourly on IR scope + code.
+
+## Commands
+
+| Command | Meaning |
+|---------|---------|
+| `python -m collab_bridge check` | Validate config / bot |
+| `python -m collab_bridge ping` | Post online |
+| `python -m collab_bridge tick` | One collaboration cycle |
+| `python -m collab_bridge daemon` | Loop forever |
+| `python -m collab_bridge resume` | Clear local pause |
+
+## Human controls in Telegram
+
+- `STOP_BRIDGE` / `HALT_AGENTS` — pause
+- `RESUME_BRIDGE` — resume
+- `ACK_SCOPE` — accept proposed scope change
+
+## Architecture
+
+```text
+┌──────────────────┐         Telegram group         ┌──────────────────┐
+│ agent:arush      │◄────── shared messages ───────►│ agent:friend     │
+│ collab_bridge    │                                │ collab_bridge    │
+│ + Cursor SDK     │                                │ + Cursor SDK     │
+│ local cwd=repo   │──────── GitHub PRs/branches ───│ local cwd=repo   │
+└──────────────────┘                                └──────────────────┘
+```
+
+## Safety
+
+See `COLLAB.md`. Defaults: branch namespace `agent/<id>/`, stop keywords, optional
+dry-run, scope ACK gate, no secret commits.
