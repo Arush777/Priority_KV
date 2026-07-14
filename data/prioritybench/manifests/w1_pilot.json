@@ -1,0 +1,386 @@
+{
+  "master_seed": 20260714,
+  "n": 40,
+  "split_counts": {
+    "calibration": 21,
+    "validation": 9,
+    "test": 10
+  },
+  "context_hist": {
+    "8000": 14,
+    "16000": 13,
+    "32000": 13
+  },
+  "template_hist": {
+    "tool_schema.search_docs.v1": 5,
+    "tool_schema.read_file.v1": 5,
+    "tool_schema.sql_query.v1": 5,
+    "tool_schema.http_get.v1": 5,
+    "tool_schema.create_ticket.v1": 5,
+    "tool_schema.set_config.v1": 5,
+    "tool_schema.schedule_job.v1": 5,
+    "tool_schema.send_email.v1": 5
+  },
+  "examples": [
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20260714",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 8000,
+      "seed": 20260714,
+      "approx_tokens": 7409
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20260732",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 16000,
+      "seed": 20260732,
+      "approx_tokens": 14755
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c32000__s20260750",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 32000,
+      "seed": 20260750,
+      "approx_tokens": 29479
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c8000__s20260768",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 8000,
+      "seed": 20260768,
+      "approx_tokens": 7386
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c16000__s20260786",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 16000,
+      "seed": 20260786,
+      "approx_tokens": 14749
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c32000__s20260804",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 32000,
+      "seed": 20260804,
+      "approx_tokens": 29515
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c8000__s20260822",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 8000,
+      "seed": 20260822,
+      "approx_tokens": 7413
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20260833",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 16000,
+      "seed": 20260833,
+      "approx_tokens": 14748
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c32000__s20260851",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 32000,
+      "seed": 20260851,
+      "approx_tokens": 29490
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c8000__s20260869",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 8000,
+      "seed": 20260869,
+      "approx_tokens": 7429
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c16000__s20260887",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 16000,
+      "seed": 20260887,
+      "approx_tokens": 14773
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c32000__s20260905",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 32000,
+      "seed": 20260905,
+      "approx_tokens": 29445
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c8000__s20260923",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 8000,
+      "seed": 20260923,
+      "approx_tokens": 7392
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20260941",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 16000,
+      "seed": 20260941,
+      "approx_tokens": 14764
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c32000__s20260952",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 32000,
+      "seed": 20260952,
+      "approx_tokens": 29460
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c8000__s20260970",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 8000,
+      "seed": 20260970,
+      "approx_tokens": 7408
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c16000__s20260988",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 16000,
+      "seed": 20260988,
+      "approx_tokens": 14761
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c32000__s20261006",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 32000,
+      "seed": 20261006,
+      "approx_tokens": 29448
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c8000__s20261024",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 8000,
+      "seed": 20261024,
+      "approx_tokens": 7416
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c16000__s20261042",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 16000,
+      "seed": 20261042,
+      "approx_tokens": 14773
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c32000__s20261060",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 32000,
+      "seed": 20261060,
+      "approx_tokens": 29495
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c8000__s20261071",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 8000,
+      "seed": 20261071,
+      "approx_tokens": 7386
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c16000__s20261089",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 16000,
+      "seed": 20261089,
+      "approx_tokens": 14776
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c32000__s20261107",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 32000,
+      "seed": 20261107,
+      "approx_tokens": 29442
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20261125",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 8000,
+      "seed": 20261125,
+      "approx_tokens": 7386
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20261143",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 16000,
+      "seed": 20261143,
+      "approx_tokens": 14755
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c32000__s20261161",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 32000,
+      "seed": 20261161,
+      "approx_tokens": 29485
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c8000__s20261179",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 8000,
+      "seed": 20261179,
+      "approx_tokens": 7388
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c16000__s20261190",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 16000,
+      "seed": 20261190,
+      "approx_tokens": 14771
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c32000__s20261208",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 32000,
+      "seed": 20261208,
+      "approx_tokens": 29482
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c8000__s20261226",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 8000,
+      "seed": 20261226,
+      "approx_tokens": 7396
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20261244",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 16000,
+      "seed": 20261244,
+      "approx_tokens": 14752
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c32000__s20261262",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 32000,
+      "seed": 20261262,
+      "approx_tokens": 29464
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c8000__s20261280",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 8000,
+      "seed": 20261280,
+      "approx_tokens": 7420
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c16000__s20261298",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 16000,
+      "seed": 20261298,
+      "approx_tokens": 14762
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c32000__s20261309",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 32000,
+      "seed": 20261309,
+      "approx_tokens": 29461
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c8000__s20261327",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 8000,
+      "seed": 20261327,
+      "approx_tokens": 7391
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20261345",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 16000,
+      "seed": 20261345,
+      "approx_tokens": 14765
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c32000__s20261363",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 32000,
+      "seed": 20261363,
+      "approx_tokens": 29443
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c8000__s20261381",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 8000,
+      "seed": 20261381,
+      "approx_tokens": 7408
+    }
+  ]
+}
