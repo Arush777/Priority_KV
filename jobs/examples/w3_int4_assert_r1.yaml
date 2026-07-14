@@ -1,0 +1,6 @@
+# Example only — copy into jobs/pending/ to enqueue (do not leave examples in pending/).
+id: w3_int4_assert_r1
+command: python scripts/run_pilot3.py --config configs/w3_int4_assert.yaml --modes int4_only
+gpus: "6,7"
+sync_cuda: false
+timeout_sec: 7200

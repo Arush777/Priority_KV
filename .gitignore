@@ -22,12 +22,16 @@ models/
 artifacts/
 outputs/
 runs/
+scratch_mirror/
 *.safetensors
 *.bin
 *.pt
 *.pth
 *.ckpt
 *.gguf
+
+# H200 worker claim dir (local only)
+jobs/running/
 
 # PriorityBench generated splits (fixtures + manifests stay tracked)
 data/prioritybench/calibration/

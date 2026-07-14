@@ -15,18 +15,24 @@ Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 executi
 
 | Where | Role |
 |---|---|
-| **Agent machine** (Cursor / IBM CCC) | Write code, CPU tests, commit, **push** |
-| **H200** (`anupam@dgre2`) | Human-only: `git pull`, **`uv` / `./scripts/sync.sh --cuda`**, GPU runs |
+| **Agent machine** (Cursor / IBM CCC) | Write code, CPU tests, enqueue `jobs/pending/*.yaml`, **push**, then `./scripts/fetch_results.sh` |
+| **H200** (`anupam@dgre2`) | No coding agents. One-time: `./scripts/sync.sh --cuda` + tmux `remote_worker.sh`. Worker pulls, runs queued jobs, tees logs |
 
 Agents never run on the H200. **Deps = uv only** — never `pip install` into `.venv` (that already broke torch/vLLM once).
 
 ```bash
-# H200 env restore / sync
+# H200 — one-time bootstrap + worker
 ./scripts/sync.sh --cuda          # ≡ uv sync --extra gpu --extra dev
 export CUDA_VISIBLE_DEVICES=6,7
 export PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
+mkdir -p "$PRIORITYKV_SCRATCH/logs"
+tmux new -s pkworker './scripts/remote_worker.sh'
+
+# Agent machine — after push, pull artifacts
+./scripts/fetch_results.sh        # → scratch_mirror/{runs,logs}/
 ```
 
+Job queue docs: [`jobs/README.md`](jobs/README.md) · H200 detail: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 ---
 
 ## Results so far (H200, Qwen3-8B)
@@ -81,13 +87,13 @@ Continue from [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md) §§A–B (co
 ```
 src/prioritybench/   # PriorityBench-A generator + scorers
 src/prioritykv/      # page manager, INT4 path, keep policies, mixed-cache ref
-scripts/             # mk_bench, pilots, stress runners, audit
+scripts/             # pilots, worker, fetch_results, audit
+jobs/                # pending/done/failed queue for H200 worker
 tests/               # CPU unit tests
 configs/             # frozen run YAMLs (w3_structured_paged, w3_int4_assert, …)
 data/prioritybench/  # manifests tracked; JSONL splits gitignored (rebuild with mk_bench)
 docs/                # plan, decisions, H200 setup, handoff
 ```
-
 ---
 
 ## Quick start
@@ -108,11 +114,11 @@ cd /data/anupam/scratch/Priority_KV                   # typical path
 git pull
 ./scripts/sync.sh --cuda
 # edit .env: REPO_ROOT, PRIORITYKV_SCRATCH, HF_*, CUDA_VISIBLE_DEVICES=6,7
+mkdir -p "$PRIORITYKV_SCRATCH/logs"
+tmux new -s pkworker './scripts/remote_worker.sh'   # poll jobs/pending
 
-uv run python scripts/mk_bench.py --mode w3_lock
-uv run python scripts/audit_bench.py
+# Or manual: uv run python scripts/mk_bench.py --mode w3_lock
 ```
-
 ---
 
 ## Collaborator / Cursor handoff
