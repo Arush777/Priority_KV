@@ -56,3 +56,7 @@ Append-only. Newest at bottom.
 
 - **16k r2:** full=0.933 fp8=0.933 delta=0; tool_schema 1.0/1.0; supersession 0.80/0.80.
 - **Read:** longer context slightly hurts supersession on FullKV already; FP8 still tracks FullKV (no extra agent damage yet). INT4 / 32k / harder templates are the next stress.
+
+## 2026-07-14 — language_flip case fix
+
+- **16k miss:** `...language_flip...s20271049` scored 0 because output had `Bravo` vs required `bravo` (case-sensitive). Flags now include `IGNORECASE`.
