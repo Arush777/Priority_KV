@@ -21,12 +21,14 @@ class KeepPolicyConfig:
 
 
 def _message_role_stress(msg: Mapping[str, str]) -> PageRole:
-    """Like role_for_message but short early user/asst turns are kept as state (OTHER)."""
+    """Like role_for_message but short early user/asst turns are kept as state (OTHER).
+
+    Deliberately does NOT key on the word FINAL (benchmark markup / oracle smell).
+    Trailing ask is retained via force_recent, not string match.
+    """
     base = role_for_message(msg)
     content = msg.get("content") or ""
     role = (msg.get("role") or "").lower()
-    if "FINAL" in content.upper():
-        return PageRole.RECENT
     if base == PageRole.FILLER and len(content) < 500:
         # Short turn establishing IDs/prefs — treat as structure, not pad.
         return PageRole.OTHER

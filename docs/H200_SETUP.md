@@ -297,3 +297,18 @@ Paste the four `uniform/structure/random/keep_all` summary lines.
 **Gate:** `keep_all` mean must be ≈1.0 (allow tiny transformers-vs-vLLM drift, e.g. |d|<0.15).
 If `keep_all` is far from FullKV, abort reading the other arms — backend drift, not structure.
 Note: "uniform" = StreamingLLM sink+recent, not evenly spaced tokens.
+
+## W2-close adversarial — buried state (Fable MIXED follow-up)
+
+Same 4 arms @ keep_frac=0.25, but gold turns are wrapped in long filler (length heuristic can't find them). Regenerates FullKV (do **not** reuse unburied).
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git fetch origin && git reset --hard origin/main
+source .venv/bin/activate && set -a && source .env && set +a
+
+python scripts/run_stress_structured.py \
+  --config configs/stress_structured_25_buried.yaml
+```
+
+Expect: `keep_all≈1`; `structure` **drops** toward uniform. If structure stays 1.0 → leak. ~60–90 min.
