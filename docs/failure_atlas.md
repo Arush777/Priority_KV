@@ -11,11 +11,11 @@ equal bytes. See `docs/IMPLEMENTATION_PLAN.md` §3.3.
 |---|---|---|
 | FullKV (S0) | w2 / w2b 8k+16k | green on **leaky v1** templates |
 | FP8 (S1) | w2b + w2c 16k | delta=0 (v1 too easy) |
-| Uniform INT4 (Q2) | w2c 16k | **int4=1.0** but mode=`fake_groupwise_prefill`; **v1 FINALs leaked gold** |
+| Uniform INT4 (Q2) | w2c / w2d 16k | soft/broken path → still ~1.0; not decisive |
+| DropKeep ~64× | stress_dropkeep_16k | **HIT:** full=1.0 drop=0.0 all cats — first G2 signal |
 | SnapKV (Q3) | — | scaffold / optional KVPress |
 
-**2026-07-14 finding:** w2c perfect scores are not a G2 miss yet — multi_turn/supersession
-v1 restated the answer in the FINAL user turn. Fixed in v2 templates; next pilot is **w2d**.
+**2026-07-15:** `run_stress.py` → full=1.000 drop=0.000 @ ~63.8×. Agent reliability collapses under aggressive eviction.
 
 ## How to append rows
 

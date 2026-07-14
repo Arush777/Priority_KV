@@ -80,3 +80,10 @@ Append-only. Newest at bottom.
 - **W2d still perfect** because quanto never engaged (`group_size` ≠ `q_group_size`) and uniform INT4 fake-quant is too weak for these tasks.
 - **Decided:** next decisive H200 job is `scripts/run_stress.py` — FullKV vs StreamingLLM-style **sink+recent DropKeep** (~16+256 keep ≈ **60×** at 16k). Expect multi_turn_state crash. That is the information-loss signal, not another soft INT4 1.0.
 - Fixed quanto kw to `q_group_size` for later; not the stress focus.
+
+## 2026-07-15 — DropKeep stress HIT (G2 path a open)
+
+- **Result:** `n=14 full=1.000 drop=0.000 d_drop=-1.000 compression≈63.8x`
+- **Cats (full/drop):** supersession 1.00/0.00 · multi_turn 1.00/0.00 · tool_schema 1.00/0.00
+- **Read:** first real info-loss on PriorityBench. Soft FP8/INT4 at ≤16k were too weak; ~64× eviction destroys all three agent categories while FullKV stays perfect.
+- **Next:** keep-budget sweep (512→4k) for the drop-off curve, then structure-protected recovery at matched bytes.
