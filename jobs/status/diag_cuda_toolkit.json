@@ -1,0 +1,7 @@
+{
+  "job_id": "diag_cuda_toolkit",
+  "exit": 0,
+  "finished_at": "2026-07-14T21:39:39Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/diag_cuda_toolkit.log",
+  "job_yaml": "jobs/done/diag_cuda_toolkit.yaml"
+}
