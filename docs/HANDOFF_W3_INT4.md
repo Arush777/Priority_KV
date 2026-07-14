@@ -1,8 +1,8 @@
 # Handoff: PriorityKV W3 — INT4 / quanto_cuda (continue here)
 
 **Audience:** collaborator taking over H200 INT4 debug from Arush’s Cursor session.  
-**Date:** 2026-07-15 · **Repo:** https://github.com/Arush777/Priority_KV · **Commit at handoff:** `3abfe3d` (`main`)  
-**There is no Cursor `/export`.** This file + the starter prompt below *is* the portability layer. Paste the prompt into a fresh Cursor chat on your machine after `git pull`.
+**Date:** 2026-07-15 · **Repo:** https://github.com/Arush777/Priority_KV · **Commits:** W3 code `3abfe3d` · this handoff `f35adeb+` (`main`)  
+**There is no Cursor `/export`.** This file + §9 prompt *is* the portability layer. **§A–B below list every H200 command already run and the exact next commands.**
 
 ---
 
@@ -86,14 +86,186 @@ So: `optimum.quanto` *imports* (“READY”), but **JIT CUDA extension build fai
 
 ---
 
-## 4. Active bug — full forensic context
+## A. Commands already run on H200 (`anupam@dgre2`)
 
-### Symptom
+Host path: `/data/anupam/scratch/Priority_KV` · env: `.venv` / `(priority-kv)` · GPUs: `6,7`.
+
+### A1 — DONE (do not redo unless pulling new commits)
 
 ```bash
-uv run python scripts/run_w3_baselines_check.py   # says quanto READY
+cd /data/anupam/scratch/Priority_KV
+git pull
+# rebuild gitignored JSONL from lock (done once after W3 pull)
+python scripts/mk_bench.py --mode w3_lock          # or: uv run python …
+python scripts/audit_bench.py                      # PASS · SHA256 fc44b966…
+
+# PAGE-LEVEL STRUCTURE — SUCCEEDED
+# (exports typically already set in their session; CUDA_VISIBLE_DEVICES=6,7)
+python scripts/run_stress_structured.py --config configs/w3_structured_paged.yaml
+# → out: $PRIORITYKV_SCRATCH/runs/stress_structured/w3_structured_paged_r1.json
+# → uniform=0.000 · structure=0.643 · random=0.286 · keep_all=1.000
+```
+
+### A2 — FAILED attempts (forensics; do not copy blindly)
+
+```bash
+# BAD — broke the env (torch 2.11 → 2.13). NEVER REPEAT.
+pip install optimum-quanto
+python -m pip install --upgrade pip          # also failed: No module named pip (briefly)
+python -m pip install --no-cache-dir --force-reinstall "optimum-quanto"
+# → pulled torch 2.13; broke vllm/torchvision; Qwen3ForCausalLM import exploded
+
+# Recovery that was intended (use this if env still broken):
+./scripts/sync.sh --cuda                     # uv sync --extra gpu --extra dev
+
+# INT4 assert — LAST COMMAND THAT FAILED (still the active bug)
+python scripts/run_w3_baselines_check.py
+# printed: quanto INT4: READY … LOUD SKIP SnapKV
+
+python scripts/run_pilot3.py --config configs/w3_int4_assert.yaml --modes int4_only
+# THIS IS THE LAST FAILED COMMAND. Full error below in §4.
+```
+
+### A3 — Diagnostics they already printed
+
+```text
+torch 2.11.0+cu130  (before the bad pip) / later briefly 2.13 then sync back
+cuda 13.0
+cap (9, 0)
+gpu NVIDIA H200
+nvcc: command not found   when CUDA_HOME unset
+CUDA_HOME=                (empty at first diagnostics)
+# first RuntimeError line still showed nvcc at /usr/local/cuda/bin/nvcc during JIT
+```
+
+---
+
+## B. Exact commands YOU run next (copy in order)
+
+Do **not** re-run page stress unless you changed keep code. Focus = INT4.
+
+```bash
+################################################################################
+# 0) Identity + pull latest handoff
+################################################################################
+cd /data/anupam/scratch/Priority_KV
+git fetch origin && git checkout main && git pull --ff-only
+# expect docs/HANDOFF_W3_INT4.md present
+
+################################################################################
+# 1) Restore uv.lock stack (if anyone pip'd) — ALWAYS SAFE
+################################################################################
+./scripts/sync.sh --cuda
+# same as: uv sync --extra gpu --extra dev
+
+################################################################################
+# 2) Session env (every new shell)
+################################################################################
+export CUDA_HOME=/usr/local/cuda
+export PATH="$CUDA_HOME/bin:$PATH"
+export TORCH_CUDA_ARCH_LIST="9.0"
+export CUDA_VISIBLE_DEVICES=6,7
+export PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
+rm -rf ~/.cache/torch_extensions
+
+################################################################################
+# 3) HARD GATE — stop here if this exits non-zero
+################################################################################
+which nvcc
+nvcc --version
+uv run python - <<'PY'
+import re, shutil, subprocess, torch
+nvcc = shutil.which("nvcc")
+print("torch", torch.__version__, "cuda", torch.version.cuda, "cap", torch.cuda.get_device_capability())
+if not nvcc:
+    raise SystemExit("FAIL: nvcc missing — install/link CUDA 13.x toolkit; do not JIT yet")
+out = subprocess.check_output(["nvcc", "--version"], text=True)
+print(out)
+tmaj = str(torch.version.cuda).split(".")[0]
+m = re.search(r"release (\d+)\.", out)
+nmaj = m.group(1) if m else "?"
+if nmaj != tmaj:
+    raise SystemExit(f"FAIL: nvcc major {nmaj} != torch.cuda major {tmaj}")
+print("OK: toolkit/torch CUDA major match")
+PY
+
+################################################################################
+# 4) Bench present + baselines status
+################################################################################
+uv run python scripts/mk_bench.py --mode w3_lock      # no-op-ish if already built; OK to re-run
+uv run python scripts/audit_bench.py                  # expect PASS + SHA256 fc44b966…
+uv run python scripts/run_w3_baselines_check.py       # quanto READY; SnapKV LOUD SKIP OK
+
+################################################################################
+# 5) THE JOB — same as last failed command, with FULL log
+################################################################################
+uv run python scripts/run_pilot3.py \
+  --config configs/w3_int4_assert.yaml \
+  --modes int4_only \
+  2>&1 | tee /tmp/w3_int4_assert.log
+
+# On success: summary line with modes=[hf_cache_implementation_quantized|quanto_quantized_cache]
+# On failure: grep -n "error:\|Error\|FAILED\|undefined" /tmp/w3_int4_assert.log | head -40
+# Fix FIRST nvcc/g++ error under gptq_marlin_repack / marlin_cuda_kernel — not torch upgrades.
+```
+
+**Done when:** `int4_modes_seen` shows a real quanto mode **and** ≥1 example scored. Then append `docs/decisions.md`.
+
+---
+
+## 4. Active bug — detailed issue write-up
+
+### What we want
+
+Uniform INT4 KV baseline (plan **Q2**) via HuggingFace `cache_implementation="quantized"` / `QuantoQuantizedCache`, with `configs/w3_int4_assert.yaml` setting:
+
+```yaml
+int4:
+  allow_fake_fallback: false   # MUST stay false
+```
+
+Code: `src/prioritykv/int4_baseline.py` → `run_transformers_int4(..., allow_fake_fallback=False)`.
+
+### What happens instead
+
+1. Import check passes → `run_w3_baselines_check.py` prints **`quanto INT4: READY`**.
+2. Model weights load (Qwen3-8B, 399 shards).
+3. First of 6 prompts starts (`tool_schema.search_docs.v1__c8000__s20260804`).
+4. Transformers/quanto tries to **JIT-compile** native extension `quanto_cuda` (Marlin kernels: `gptq_marlin_repack`, `marlin_cuda_kernel`) via `torch.utils.cpp_extension` + `nvcc`.
+5. Build fails → caught as `quanto_impl_error` → Path B may also fail → with `allow_fake_fallback=False` we **raise** (correct W3 behavior; not a silent fake):
+
+```text
+RuntimeError: INT4 quanto path failed and allow_fake_fallback=False
+(id=tool_schema.search_docs.v1__c8000__s20260804
+ errors={'quanto_impl_error': "Error building extension 'quanto_cuda':
+   [1/9] /usr/local/cuda/bin/nvcc -MD -MF marlin_cuda_kernel.cuda.o.d …"
+   # later retries showed [1/6] … gptq_marlin_repack.cuda.o.d …
+})
+```
+
+The traceback tip truncates the **real** compiler diagnostic. Collaborator must `tee` a full log (§B step 5) and find the first `error:` from `nvcc`/`g++`.
+
+### Why this is hard / likely causes (ranked)
+
+1. **CUDA toolkit major ≠ torch CUDA major** (torch is `2.11.0+cu130` → expect toolkit **13.x**). Mismatch → Marlin JIT fails.
+2. **`nvcc` not on PATH** until `CUDA_HOME=/usr/local/cuda` is exported (already seen).
+3. Stale/partial JIT cache under `~/.cache/torch_extensions` after failed builds.
+4. H200 arch: set `TORCH_CUDA_ARCH_LIST=9.0` (sm_90).
+5. Broken env after pip upgraded torch to 2.13 (must `./scripts/sync.sh --cuda` first).
+
+### What is NOT the bug
+
+- Page-level structure stress (already green).
+- PriorityBench lock/SHA256 (already audited PASS).
+- SnapKV missing (expected LOUD SKIP).
+- Assert raising on fake fallback (that is the *feature*).
+
+### Symptom one-liner
+
+```bash
+uv run python scripts/run_w3_baselines_check.py   # READY
 uv run python scripts/run_pilot3.py --config configs/w3_int4_assert.yaml --modes int4_only
-# loads Qwen3-8B, then dies on first example with quanto_cuda build error
+# ↑ last failed command: loads model, then quanto_cuda JIT dies on example 0/6
 ```
 
 Example id at fail: `tool_schema.search_docs.v1__c8000__s20260804`
@@ -188,6 +360,8 @@ In Cursor: you can also @-mention files and ask the agent to shell out to that C
 
 ## 7. First 15 minutes on H200 (checklist)
 
+**Prefer §B** (numbered exact commands). This section is the same flow compressed for muscle memory.
+
 ```bash
 cd /data/anupam/scratch/Priority_KV
 git fetch origin && git checkout main && git pull --ff-only
@@ -249,13 +423,13 @@ If JIT fails again: open `/tmp/w3_int4_assert.log`, find the **first real nvcc/g
 Opus-confirmed (2026-07-15):
 
 ```
-Continuing PriorityKV-Agent. Read docs/HANDOFF_W3_INT4.md end-to-end (§0 non-negotiables, §3–4) before acting.
-Mission: unblock real uniform INT4 (Q2) on H200 for configs/w3_int4_assert.yaml under allow_fake_fallback=False. Success = int4_modes_seen has hf_cache_implementation_quantized or quanto_quantized_cache AND ≥1 example scored — never fake_groupwise_prefill, never 0-example "passes".
-FIRST diagnostic: confirm `nvcc --version` major == `python -c "import torch;print(torch.version.cuda)"` major (expect 13). If mismatch or nvcc absent, that IS the bug — get a matching CUDA 13.x toolkit or CUDA-matched torch wheel; do not build until they match.
-Constraints: uv only (./scripts/sync.sh --cuda); never pip install anything into .venv, including ninja/build tools. Do not weaken allow_fake_fallback. Do not retune SHA256-locked bench (docs/audit_w3.md). Page-structure run already passed — don't re-litigate.
-Env: GPU only on H200, CUDA_VISIBLE_DEVICES=6,7, CUDA_HOME=/usr/local/cuda, TORCH_CUDA_ARCH_LIST=9.0. Keep torch at uv.lock pin (2.11.x).
-Repro with a full tee'd log; find the FIRST nvcc/g++ error under gptq_marlin_repack/marlin_cuda_kernel and fix that.
-Ask Fable (claude --model fable) for concept/acceptance changes; Opus (--model opus) for code review before push.
+Continuing PriorityKV-Agent. Read docs/HANDOFF_W3_INT4.md fully — especially §A (commands already run), §B (exact next commands), §4 (issue detail).
+Mission: unblock real uniform INT4 (Q2) on H200. Last failed command was:
+  python scripts/run_pilot3.py --config configs/w3_int4_assert.yaml --modes int4_only
+(quanto_cuda JIT build fails; allow_fake_fallback=False correctly raises). Success = int4_modes_seen has hf_cache_implementation_quantized or quanto_quantized_cache AND ≥1 example scored — never fake_groupwise_prefill.
+Run §B steps 0→5 exactly (uv sync, CUDA_HOME, CUDA major gate, tee full log). Do not re-run page stress (already green: structure=0.643).
+Constraints: uv only; never pip into .venv; do not weaken allow_fake_fallback; do not retune SHA256-locked bench.
+Ask Fable for concept/acceptance changes; Opus for code review before push.
 ```
 
 ---
