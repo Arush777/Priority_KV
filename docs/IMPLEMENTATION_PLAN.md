@@ -1,11 +1,31 @@
-# PriorityKV-Agent — Implementation Plan (v2, DeepMind-targeted)
+# PriorityKV-Agent — Implementation Plan (v2.1, execution overlay)
 
-**Supersedes:** PRIORITYKV_RESEARCH_PLAN.md (v1)
-**Team:** 2 students (A = research/eval lead, B = systems/kernel lead)
-**Duration:** 10 weeks core + 2-week buffer, starting Week 0 = Mon 2026-07-20
-**Primary hardware:** 2× H200 · **Secondary:** 1× H100 or A100 (validation only)
-**Primary model:** Qwen3-8B · **Secondary model:** Gemma (latest 7–12B instruct variant; verify current release at kickoff)
-**Positioning:** Research Engineer application artifact — systems-first, motivated by an agent-reliability finding
+**Supersedes:** PRIORITYKV_RESEARCH_PLAN.md (v1)  
+**Plan lineage:** v2 DeepMind-targeted scope (below) · **v2.1 = this file**, annotated with what actually shipped through **2026-07-15**  
+**Execution status log:** [`docs/decisions.md`](decisions.md) · **H200 / INT4 handoff:** [`docs/HANDOFF_W3_INT4.md`](HANDOFF_W3_INT4.md) · **README results:** [`../README.md`](../README.md)
+
+**Team:** originally scoped as 2 students (A = research/eval, B = systems); **current execution is solo-first** with an H200 collaborator for GPU runs. Owner labels A/B still describe *workstreams*, not headcount.  
+**Duration:** 10 weeks core + 2-week buffer · **Calendar W0 in v2 copy = Mon 2026-07-20**; **actual work began ~2026-07-14** (ahead of formal W0). Treat week numbers as *gates*, not calendar prisons.  
+**Primary hardware:** H200 (`dgre2`, `CUDA_VISIBLE_DEVICES=6,7`) · Agent box writes code / CPU only  
+**Primary model:** Qwen3-8B @ `b968826d9c46dd6066d109eabc6255188de91218` · Gemma secondary still planned  
+**Deps:** **`uv` / `./scripts/sync.sh --cuda` only** — never ad-hoc `pip` into `.venv`
+
+---
+
+## Status snapshot (2026-07-15) — read this first
+
+| Gate / item | Plan intent | Actual |
+|---|---|---|
+| **G0** | Env + FullKV stable | **Met** — vLLM FullKV pilots green |
+| **G1** (end W2) | Freeze baselines; FP8/INT4/SnapKV reproduce | **Met with written deferrals** — FullKV + FP8 frozen; **Q2 INT4** and **Q3 SnapKV** deferred (not silent). Interim eviction: **Q_dropkeep** (prompt-level sink+recent). See `docs/decisions.md` |
+| **G2** (end W4) | ≥5pt uniform drop *or* structure≥3pt vs uniform | **Path (b) early evidence** — structure vs uniform at matched `keep_frac=0.25` (token: +1.0; buried scopes; **page: structure 0.643 vs uniform 0.000**). Path (a) still needs **real** Q2 INT4 |
+| **D1** PriorityBench-A 240 + audit | End W3 | **Generator + lock + audit done** · SHA256 `fc44b966…` · JSONL rebuild via `mk_bench --mode w3_lock`. Manual 15% dual audit still open |
+| **W3 page-perturb labels** | Begin W3 | **Cut → W4** (Fable). Attention-KL deferred |
+| **INT4 append/decode ref** | W3–4 | **CPU numpy ref + tests green** · **H200 quanto path BLOCKED** (`quanto_cuda` JIT) under `allow_fake_fallback=false` |
+| **Multi-call + LSE (FlashInfer)** | Begin W3–4 | **Not started** (deferred behind working Q2 / page atlas) |
+| **Guardrails RULER/SCBench** | W2 harness | **Stubbed SKIPPED** — must run real before W4 G2 close |
+
+**Do not claim Q2 closed on fake groupwise INT4.** W2 already showed quiet fake-INT4 / quanto-miss can look “perfect.”
 
 ---
 
@@ -28,168 +48,245 @@
 
 Everything below exists to make that one paragraph true, reproducible, and public.
 
+### 0.1 Execution corrections vs original v2 text (learned on the wire)
+
+These are **not** scope expansions — they are precision updates so the plan matches reality:
+
+| Original v2 assumption | What we learned | Current practice |
+|---|---|---|
+| FP8 / gentle INT4 would show PriorityBench drops ≤16k | FP8 δ≈0; wrong `group_size` kw → quanto never engaged; weak fake INT4 stayed ~1.0 | Prefer **matched-budget eviction / keep** stress + **assert-no-fake** INT4 (`allow_fake_fallback=false`) |
+| SnapKV ready by G1 | Scaffold / loud-skip only | **Q_dropkeep** interim eviction (StreamingLLM-style sink+recent, **prompt-level / RoPE-safe** — KV-tensor surgical drop broke RoPE) |
+| Structure tagging safe | `"FINAL"` substring → RECENT smelled like oracle | Removed; trailing ask via `force_recent` only |
+| Structure = universal win | Buried-state adversarial: structure **0.429** (tool still 1.0) | Claim scoped: wins when state is **role/length-separable**; buried free-form needs better tags / page risk |
+| Page-perturb + KL in W3 | Timeboxed cut | **W4**; score_delta tuples OK if revived early |
+| `pip install` OK on H200 | Broke torch 2.11→2.13 / vLLM | **`uv sync` / `./scripts/sync.sh --cuda` only** |
+
 ---
 
-## 1. Locked scope decisions (change requires both students + written note)
+## 1. Locked scope decisions (change requires written note in `docs/decisions.md`)
 
-1. **Models:** Qwen3-8B primary; Gemma secondary (reduced matrix only). One 0.5–1.7B model for unit tests, never for evidence.
-2. **Storage classes:** BF16 and INT4 (group-wise asymmetric, KIVI-style, group size 32 along the token axis for K, channel for V — confirm against KVPress reference in Week 1). No FP8 storage, no 2/3-bit, no eviction in the shipped policy (eviction appears only as a baseline).
-3. **Page layout:** backend-native 16-token physical pages; 128-token allocation units (one ablation at 64).
-4. **Policy:** ProtectedRole++ — deterministic structural rules (protect system/tool/constraint/sink/recent-window pages in BF16, rest INT4) plus a calibrated **linear** risk score used only to break ties when the byte budget forces demoting protected pages. No MLP, no trees in the shipped system.
-5. **Budgets:** 50% and 30% of FullKV bytes (30% not 25%: BF16-protected pages plus INT4 metadata make 25% unreachable without eviction; verify with the byte model in Week 1 and adjust once, before freeze).
-6. **Backend:** multi-call homogeneous paged attention (FlashInfer) + exact log-sum-exp merge. Fused Triton decode kernel only if merge/launch overhead > 12% at 32K, and only for decode, batch 1 and 8.
-7. **Serving comparison target:** calibrated vLLM FP8 (per-head scales via llm-compressor). Beating it at *equal quality on agent workloads* at the 30% budget is the systems win condition. At 50% we expect parity-ish throughput with better reliability — frame accordingly.
+1. **Models:** Qwen3-8B primary (revision pinned above); Gemma secondary (reduced matrix only). One small model for unit tests, never for evidence.
+2. **Storage classes:** BF16 and INT4 (group-wise asymmetric, KIVI-style, group size 32 — confirm against KVPress/quanto once Q2 runs). No FP8 *storage* in the shipped policy; **calibrated vLLM FP8 remains S1 baseline**. No 2/3-bit. Eviction only as baseline (now: DropKeep; SnapKV if reproduced).
+3. **Page layout:** backend-native **16-token** physical pages; 128-token allocation units (one ablation at 64). **Page-granularity keep** stress implemented (floor page count to token budget).
+4. **Policy (shipping target):** ProtectedRole++ — deterministic structural rules (protect system/tool/constraint/sink/recent-window in BF16, rest INT4) plus a calibrated **linear** risk score only to break ties. No MLP/trees in the shipped system. **Today:** structure keep policies + page manager scaffolding; linear risk **not fitted yet** (needs atlas / labels).
+5. **Budgets:** 50% and 30% of FullKV bytes for final comparisons; **matched `keep_frac=0.25`** used as the early G2 path-(b) operating point on H200.
+6. **Backend:** multi-call homogeneous paged attention (FlashInfer) + exact LSE merge — **not started**. CPU **dequant-then-attend** reference exists (`mixed_cache_reference.py`) as the correctness oracle for later kernels.
+7. **Serving comparison target:** calibrated vLLM FP8. Beating it at *equal agent quality* at ~30% bytes is the systems win. Reliability-at-parity remains an allowed reframe (G4).
 
 ---
 
-## 2. Deliverables (all core, none stretch)
+## 2. Deliverables (all core) — progress
 
-| # | Deliverable | Owner | Due |
+| # | Deliverable | Due | Status |
 |---|---|---|---|
-| D1 | PriorityBench-A: 240 programmatically scored agent-reliability examples + generator + audit log | A | End W3 |
-| D2 | Failure-atlas tech note + 3 headline figures (the "flat accuracy, collapsing schema conformance" figure is F1) | A | End W4 |
-| D3 | Mixed-precision paged cache backend: page manager, INT4 append/decode, LSE merge, full correctness suite | B | End W6 |
-| D4 | Optimized H200 results: TTFT/TPOT/throughput/concurrency frontier + Nsight roofline analysis | B | End W9 |
-| D5 | Upstream PR (target order: KVPress method PR → FlashInfer example/kernel PR → vLLM RFC), opened by W8, iterated to merge | B (A reviews) | Open W8 |
-| D6 | 6-page workshop paper (verify live CFPs in W1: NeurIPS 2026 efficiency/agents workshops if deadlines permit, else EuroMLSys / ICLR 2027 workshop cycle) | A (B: systems section) | Draft W9, submit per CFP |
-| D7 | Public blog post: failure atlas + system, 5 figures, reproduction script | A | W10 |
-| D8 | Repro artifact: one-command smoke test + full-run script on a single H100/H200 | Both | W10 |
-| D9 | Outreach log: ≥6 substantive contacts (paper authors, Gemma/FlashInfer/vLLM maintainers) | Both | Continuous, reviewed W5/W8/W10 |
-| D10 | (Buffer only) Pallas decode-kernel port + 1-page TPU memory-hierarchy mapping appendix | B | W11–12 if D1–D8 done |
+| D1 | PriorityBench-A: 240 scored ex + generator + audit | End W3 | **🟢 Lock+audit+generator** · manual dual audit open · templates v2 non-leaking |
+| D2 | Failure-atlas tech note + headline figures | End W4 | **🟡 Scaffold** (`docs/failure_atlas.md`) · need Q2 + denser curves |
+| D3 | Mixed-precision paged backend + correctness suite | End W6 | **🟡** page manager / tagging / INT4 CPU path · FlashInfer multi-call **not started** · H200 quanto **blocked** |
+| D4 | H200 TTFT/TPOT/throughput + Nsight | End W9 | **⬜** |
+| D5 | Upstream PR | Open W8 | **⬜** |
+| D6 | Workshop paper | Draft W9 | **⬜** (CFP check still due) |
+| D7 | Public blog + repro | W10 | **⬜** |
+| D8 | One-command smoke + full-run script | W10 | **🟡** partial scripts; not one-command clean-machine yet |
+| D9 | Outreach log ≥6 | Continuous | **⬜** |
+| D10 | Pallas/TPU appendix (buffer) | W11–12 | **⬜** conditional |
 
 ---
 
 ## 3. Workstream A — PriorityBench-A (agent reliability)
 
-### 3.1 Categories (80 examples each, 240 total)
+### 3.1 Categories (80 examples each, 240 total) — **LOCKED**
 
-1. **Tool-schema conformance under long context.** A tool schema (JSON, 3–8 tools, nested params) defined early; 8–32K of interleaved turns/tool results; final task requires an exactly valid call. Score: JSON-schema validation + required-field/enum checks.
-2. **Instruction supersession.** Constraint issued, later explicitly updated or revoked mid-conversation; model must follow the *latest* version. Score: deterministic constraint checkers on the output (regex/parser per template, no LLM judge).
-3. **Multi-turn state persistence.** Facts/IDs established in early turns must be reused verbatim 10–30 turns later (order IDs, file paths, user preferences). Score: exact-match slot extraction.
+1. **Tool-schema conformance** — JSON-schema + required/enum checks.  
+2. **Instruction supersession** — latest-constraint checkers (v2 templates: **no gold leakage** in FINAL ask).  
+3. **Multi-turn state persistence** — exact-match slots (v2 non-leaking).
 
-### 3.2 Construction rules
-- 12–15 templates per category × held-out lexical/filler variations; filler sampled independently of the target span so page-position confounds are controlled.
-- Context-length strata: 8K / 16K / 32K per category.
-- Splits: 40% calibration, 20% validation, 40% locked test. Dedup across splits by normalized template hash + 8-gram overlap check.
-- Manual audit: 15% of examples, both students independently, disagreements resolved in `docs/decisions.md`.
-- Publish: templates, seeds, generator, scorer unit tests (≥3 per category, including adversarial near-miss outputs).
+**Locked artifact:** `data/prioritybench/manifests/w3_lock.json`  
+**SHA256:** `fc44b966725738c94008ba61ce57ad7366169b9c0be73074f8161d909ccfae89`  
+**Audit:** `docs/audit_w3.md` · W2d 145 IDs preserved · buried 20/80 for supersession + multi_turn (tool 0 — W2d filled quota)
 
-### 3.3 Failure atlas (W3–4)
-- Run FullKV, calibrated FP8, uniform INT4, SnapKV at 50%/30% bytes on calibration+validation splits (Qwen3-8B).
-- Page-perturbation study: sample ~600 (page, demotion) pairs across page classes × layer quartiles × positions; label with teacher-forced KL + attention-output error + outcome flip. This calibrates the linear risk score and produces figure F5 (predicted vs measured risk).
-- **Gate G2 (end W4):** proceed with PriorityKV only if (a) uniform compression produces a ≥5-point absolute drop in at least one PriorityBench-A category while guardrail accuracy moves <1 point, OR (b) oracle structure-aware allocation beats uniform INT4 by ≥3 points at equal bytes. Otherwise pivot: the deliverable becomes the benchmark + failure atlas + backend with a *static* hot/cold policy, and the paper becomes a measurement paper. (This pivot is still a strong RE artifact — do not treat it as failure.)
+### 3.2 Construction rules — status
+
+| Rule | Status |
+|---|---|
+| Templates × lexical/filler variation | **Done** (tool + supersession v2 + multi_turn v2) |
+| Strata 8K / 16K / 32K | **Done** in lock |
+| Splits 40/20/40 via stable hash | **Done** (`assign_split`) |
+| Dedup / 8-gram | Partial — ID uniqueness enforced; deepen if needed |
+| Manual audit 15% dual | **Open** |
+| Scorer unit tests ≥3/cat | **Partial** — tests exist under `tests/` / scripts; keep expanding |
+
+Rebuild on H200 (JSONL gitignored):
+
+```bash
+uv run python scripts/mk_bench.py --mode w3_lock
+uv run python scripts/audit_bench.py
+```
+
+### 3.3 Failure atlas (W3–4) — refined schedule
+
+**Original:** FullKV / FP8 / uniform INT4 / SnapKV @ 50%/30% + ~600 page-perturb pairs with KL.
+
+**Updated:**
+
+| Piece | When | Notes |
+|---|---|---|
+| FullKV vs FP8 on PriorityBench | **Done** ≤16k (δ≈0) | Not informative alone |
+| DropKeep / matched keep_frac structure | **Done** pilots | Primary early atlas signal |
+| Page-level structure | **Done** `w3_structured_paged_r1` (structure **0.643**) | Keep densifying |
+| Real uniform INT4 (Q2) | **Blocking** | `configs/w3_int4_assert.yaml` · see handoff |
+| SnapKV @ matched bytes | ≤4-day W3 attempt else keep DropKeep | Loud-skip today |
+| Page-perturb labels (~score_delta OK; KL later) | **W4** | Fable cut from W3 finish package |
+| Guardrails RULER/SCBench | **Before W4 G2 close** | Stub must become real |
+
+**Gate G2 (end W4)** — unchanged logically:
+
+Proceed with PriorityKV only if **(a)** uniform compression ≥5pt drop in ≥1 category while guardrails move <1pt, **OR (b)** oracle/structure-aware allocation beats uniform by ≥3pt at equal bytes.
+
+- **(b)** already has strong pilot signal (token structure 1.0 vs uniform 0; page 0.643 vs 0). Needs denser + locked-split discipline before declaring G2 closed.  
+- **(a)** still needs **working Q2**.
+
+Pivot rule unchanged: measurement paper + static hot/cold is still a valid RE artifact.
 
 ---
 
 ## 4. Workstream B — Mixed-precision serving backend
 
-### 4.1 Components
-1. **Byte model & accounting** (W1): exact formula for bytes/page incl. INT4 scales/zero-points, page table, controller metadata; unit tests for partial pages. All budgets defined in *realized* bytes.
-2. **Page manager** (W2–3): allocation units, structural tagging from chat-template spans, demotion of aged generated pages every 128 tokens, protected invariants (sinks never demoted below BF16, newest W tokens BF16, budget never exceeded).
-3. **INT4 path** (W3–4): append (quantize on write) and decode (dequant fused into gather where FlashInfer permits; else explicit dequant kernel in Triton). Verify against KIVI/KVPress reference within tolerance.
-4. **Multi-call attention + LSE merge** (W4–5): partition page table by dtype; homogeneous FlashInfer calls; exact merge `O = Σ_g exp(LSE_g − LSE)·O_g`. Reuse index/workspace buffers; CUDA-graph capture for stable shapes.
-5. **Fused decode kernel** (W6–7, conditional): only if profiling shows >12% overhead from launches/partitioning at 32K, batch 8.
+### 4.1 Components — status
 
-### 4.2 Correctness suite (blocking; runs in CI on the small model)
-- all-BF16 == dense paged attention (bitwise where kernels permit, else tol 1e-3 rel);
-- all-INT4 == homogeneous INT4 reference;
-- mixed == dequantize-then-attend reference;
-- empty dtype group; single page; partial last page; page-boundary context lengths; GQA head mapping; batch 1/8/32; large-logit numerical stress; CUDA-graph replay.
+| Component | Plan weeks | Status |
+|---|---|---|
+| Byte model & accounting | W1 | **Done early** (`byte_model`, reports) |
+| Page manager + structural tagging | W2–3 | **Substantial** — roles, protected invariants, keep policies (token + page) |
+| INT4 append/decode | W3–4 | **CPU ref + tests** · HF quanto on H200 **JIT-blocked** (`quanto_cuda`) |
+| Multi-call attention + LSE merge | W4–5 | **Not started** — numpy `mixed_attend_kv` is the interim oracle |
+| Fused decode kernel | W6–7 cond. | **Not started** |
+
+### 4.2 Correctness suite
+
+**Partial (CPU):** all-BF16 / all-INT4 / mixed / empty / partial page tests against dequant-then-attend.  
+**Missing:** FlashInfer parity, GQA mapping, CUDA-graph, batch sweeps, CI on small model.
 
 ### 4.3 Systems measurement protocol
-- Workload: agent-trace replay built from PriorityBench-A sessions (long input, multi-turn, 256 and 2,048-token outputs) — *not* synthetic uniform prompts.
-- Configs: contexts 8K/32K/64K × concurrency 1/8/32 (+ sweep to OOM or p95 TPOT > 2× concurrency-1); 5 timed reps after warmup; randomized order; clocks pinned; contaminated runs rejected by predeclared utilization rule.
-- Report full latency–throughput frontier, controller overhead (<2% budget), metadata overhead (<5% unexplained bytes), Nsight kernel breakdown, roofline placement of the INT4 decode path.
-- **Gate G4 (end W7):** backend passes all correctness tests AND beats FullKV decode at ≥32K AND shows ≥1.15× throughput or a clear concurrency gain vs FullKV. If it cannot beat calibrated FP8 at the 30% budget at equal quality, the claim becomes "reliability at parity cost" — decided here, in writing, before final runs.
+
+Unchanged as *target*. Not yet run. Agent-trace replay should use W3-lock sessions once Q2/atlas allow honest baselines.
+
+**Gate G4 (end W7):** unchanged.
 
 ---
 
-## 5. Baselines (reduced, frozen end of W2)
+## 5. Baselines — as frozen at G1 (with deferrals)
 
-| ID | Method | Role |
-|---|---|---|
-| S0/Q0 | FullKV BF16 (vLLM) | Ceiling |
-| S1/Q1 | Calibrated vLLM FP8 (per-head scales) | Deployment baseline to beat |
-| Q2 | Uniform INT4 (KIVI-style via KVPress) | Low-bit quality reference |
-| Q3 | SnapKV @ matched bytes | The one eviction baseline (drop H2O/StreamingLLM/MiKV unless SnapKV fails to reproduce in ≤4 days; then substitute, don't add) |
-| Q6 | FixedHot (recent BF16, old INT4) | Static hot/cold control |
-| Q7 | ProtectedRole (structure rules, no risk score) | The critical ablation — is the linear risk score worth anything? |
-| Q8 | Random allocation @ matched bytes | Sanity |
-| P2 | PriorityKV (structure + linear risk) | Proposed |
+| ID | Method | Role | Status |
+|---|---|---|---|
+| S0 | FullKV BF16 (vLLM) | Ceiling | **🟢 Frozen** |
+| S1 | Calibrated vLLM FP8 | Deployment baseline | **🟢 Frozen** (δ≈0 on PB ≤16k — cite, don't overclaim stress) |
+| **Q_dropkeep** | Prompt-level sink+recent | Interim eviction (plan Q3 stand-in) | **🟢 In use** for stress / RoPE-safe |
+| Q2 | Uniform INT4 (quanto / KIVI-style) | Low-bit quality ref | **🔴 Blocking** — assert-no-fake; `quanto_cuda` JIT fail on H200 |
+| Q3 | SnapKV @ matched bytes | Eviction baseline | **🟡 Scaffold / LOUD SKIP** — ≤4-day attempt else keep DropKeep |
+| Q6 | FixedHot | Static hot/cold | **⬜** |
+| Q7 | ProtectedRole (no risk score) | Critical ablation | **🟡 Early** via structure keep policies (not yet full P2 stack) |
+| Q8 | Random @ matched bytes | Sanity | **🟢** in structure stress |
+| P2 | PriorityKV (structure + linear risk) | Proposed | **⬜** risk not fitted |
 
-Primary statistical comparisons (Holm–Bonferroni corrected, paired bootstrap ×10,000, margins pre-registered at W7 freeze): P2 vs Q1, P2 vs Q3, P2 vs Q7 on PriorityBench-A locked test; optimized P2 vs S1 end-to-end. Everything else exploratory.
-
----
-
-## 6. Week-by-week plan
-
-**W0 (setup, part-time).** Repo, CI, env lock, issue tracker. Pin all versions. Verify current Gemma release + license; verify live workshop CFPs and set D6 target. First outreach touch: introduce PriorityBench-A idea in KVPress/FlashInfer discussion threads.
-
-**W1.** A: template engine + first 40 PriorityBench-A examples + scorer tests. B: byte model + accounting tests; FullKV in vLLM validated vs Transformers on 20 prompts; calibrated FP8 up; first profiler traces at 8K/32K. **G0:** manifests reproduce runs; FullKV stable.
-
-**W2.** A: finish calibration+validation splits (~145 ex); run FullKV/FP8/INT4 pilot on them; RULER 2-task + SCBench 2-task guardrail harness. B: page manager + structural tagging + protected invariants; SnapKV reproduction started. **G1:** FP8/INT4/SnapKV reproduce documented numbers within tolerance; realized bytes measured. Freeze baseline list.
-
-**W3.** A: locked test split done; audit; page-perturbation labeling begins. B: INT4 append/decode verified vs reference; begin multi-call attention.
-
-**W4.** A: failure atlas complete; figures F1/F5 drafted; fit + calibrate linear risk score. B: LSE merge working end-to-end; correctness suite green on small model. **G2 (§3.3).** Publish failure-atlas tech note (early visibility; also stakes the claim against concurrent work). Begin interview-prep track (6 h/wk each: LeetCode-style + ML fundamentals + one mock/wk from W7).
-
-**W5.** A: implement ProtectedRole, FixedHot, Random, P2 allocators in KVPress reference path; validation sweep at 50/30%. B: backend integration of P2 policy; overhead measurement; fused-kernel go/no-go data. Outreach: email TurboQuant authors + 2 closest-paper authors with F1 attached.
-
-**W6.** A: mandatory ablations (structure vs risk vs combined; shuffled roles; no recent-window; 64 vs 128 unit). B: fused kernel if triggered, else optimization polish (buffer reuse, CUDA graphs). **G3:** P2 Pareto-beats ≥2 strong baselines incl. Q7 on validation — if Q7 ties P2, ship Q7 as the system and reframe the risk score as a negative result (say so plainly in the paper).
-
-**W7.** Pilot full pipeline on 15% of final IDs. Freeze: commit, revisions, sample IDs, budgets, seeds, margins, analysis notebook → signed `FINAL_RUN_MANIFEST.yaml`. **G4 (§4.3).**
-
-**W8.** Locked quality runs, Qwen3-8B: PriorityBench-A locked test + guardrails (RULER 2×3 lengths×100, SCBench 2×50, MATH-500 greedy) × {S0,S1,Q2,Q3,Q6,Q7,Q8,P2} × {50%,30%}. Open D5 upstream PR with the verified reference method.
-
-**W9.** Locked systems runs (H200 matrix §4.3; H100/A100 reduced: 32K/64K × conc 1/16). Gemma reduced matrix: FullKV, S1, Q2, P2@50/30 on PriorityBench-A locked + RULER 8K/32K. Paper draft complete.
-
-**W10.** Frozen analysis notebook executed untouched; 50-output audit + every failure category inspected; paper finalized per CFP; blog post + repro artifact published; outreach round 3 (share paper + PR with all prior contacts; ask two for referral conversations, not jobs).
-
-**W11–12 (buffer).** Priority order: unfinished D1–D8 → PR review iteration → Pallas decode port + TPU appendix (D10) → extra ablations. Never new scope.
+Primary comparisons at paper time still: P2 vs S1, P2 vs Q3 (or DropKeep), P2 vs Q7 on locked test.
 
 ---
 
-## 7. Google/DeepMind-specific hooks (do all three, they're cheap)
+## 6. Week-by-week plan — original targets + reality overlay
 
-1. **Gemma finding:** one figure dedicated to Gemma's PriorityBench-A behavior under compression, replicated or contrasted with Qwen. If Gemma shows a distinct fragility pattern, that's the email subject line to Gemma team contacts.
-2. **TurboQuant engagement:** cite it as the quantization-quality frontier, position PriorityKV as orthogonal (allocation, not quantizer), and send authors the failure-atlas note in W5 with one concrete question.
-3. **Pallas appendix (buffer):** port the decode path's inner loop to Pallas on CPU-simulated or Colab TPU; write one page mapping page layout → TPU memory hierarchy (HBM/VMEM tiling, why 128-token units align with lane width). Signals stack fluency without claiming TPU performance numbers.
+Legend: ✅ done · 🚧 in progress / partial · ⏸ deferred with note · ⬜ not started
 
----
+**W0 (setup).** ✅ Repo, uv lock, dual-machine workflow, Qwen3-8B pin, smoke CPU. 🚧 Gemma license + live CFP still open. ⬜ First outreach.
 
-## 8. Compute & storage envelope (revise once after W2 measurements)
+**W1.** ✅ Template engine + pilot examples + scorers + byte model + FullKV/FP8 path. (Executed compressed into mid-July ahead of formal calendar W0.)
 
-- W1–2 env/baselines: 40 H200 GPU-h · W3–4 atlas/labels: 70 · W5–6 policy+backend: 90 · W7 pilot: 30 · W8–9 locked runs: 220 · buffer 20% → **~540 H200 GPU-h cap.**
-- Storage: models <50GB; datasets/frozen IDs <100GB; generations + sampled logits <500GB (top-k logits only, full logits solely for KL calibration positions); traces <150GB; artifacts <20GB. Secondary machine: stage model to scratch, delete after runs (30GB persistent limit).
+**W2.** ✅ ~145→expanded pilots (w2d non-leak) · FullKV/FP8 · DropKeep kill · structure matched-keep HIT · buried adversarial · **G1 freeze with INT4/SnapKV/guardrails deferred in writing.**  
+⏸ RULER/SCBench harness real runs.  
+≠ Original “INT4/SnapKV reproduce within tolerance” — **explicitly not met**; substituted Q_dropkeep + written deferral.
 
----
+**W3.** ✅ Locked 240 + audit SHA · INT4 CPU path + mixed ref · page-level structure stress (0.643) · assert-no-fake wiring · baselines check script.  
+🚧 **Q2 H200 quanto** (collaborator handoff).  
+⏸ Page-perturb labeling · FlashInfer multi-call begin · SnapKV day-count.  
+⬜ Multi-call attention beyond numpy ref.
 
-## 9. Risks & pivots
+**W4.** Atlas complete · F1/F5 · linear risk fit · LSE merge · **G2 formal close** · guardrails must be real · page-perturb if still cut from W3. Interview-prep track starts.
 
-| Risk | Signal | Response |
-|---|---|---|
-| G2 fails (no reliability gap) | Flat PriorityBench-A deltas W4 | Measurement-paper pivot (§3.3); backend ships with static policy |
-| SnapKV won't reproduce | >4 days off documented numbers | Substitute StreamingLLM; document attempt; never run baseline-less |
-| INT4 decode too slow | Dequant dominates ≥32K | Restrict INT4 to K or to old pages only; report honestly; FP8-storage fallback only if backend-native and <2 days |
-| Q7 (ProtectedRole) == P2 | W6 validation | Ship Q7; risk score becomes reported negative result — still publishable |
-| Multi-call overhead >12% | W5 profiling | Trigger fused kernel; if fused kernel slips past W7, cap systems claim at 50% budget where 2 dtype groups suffice |
-| Concurrent paper lands | Weekly arXiv audit (owner alternates) | Cite immediately; sharpen to agent-trace lifecycle + serving implementation, which concurrent quality papers rarely have |
-| CFP deadline before results | W1 CFP check | Submit failure atlas alone to earlier venue; full system to next cycle |
-| Compute overrun | W2 pilot extrapolation | Cut Gemma matrix and 64K systems points first; never cut Q1/Q3/Q7 or locked-test size |
+**W5–W6.** As original (allocators Q6/Q7/Q8/P2, ablations, fused go/no-go) — **G3**.
 
-**Kill rule (unchanged from v1):** no branch lives >1 week without a correctness, quality-frontier, systems, or falsification result.
+**W7.** Pilot 15% IDs · `FINAL_RUN_MANIFEST.yaml` · **G4**.
+
+**W8–W10.** Locked quality/systems · Gemma reduced · paper/blog/PR/outreach — as original.
+
+**W11–12.** Buffer — unfinished D1–D8 first; never new scope.
 
 ---
 
-## 10. Definition of done
+## 7. Google/DeepMind-specific hooks (unchanged intent)
+
+1. **Gemma finding** — still planned (reduced matrix).  
+2. **TurboQuant engagement** — still planned (W5 email with F1).  
+3. **Pallas appendix** — buffer only.
+
+---
+
+## 8. Compute & storage envelope
+
+Original ~540 H200 GPU-h cap still the ceiling.  
+**Spent so far (order-of-magnitude):** W1–W3 pilots (FP8, DropKeep sweeps, structure ×2, buried, page stress) — tens of GPU-h, not hundreds. Reserve remains for Q2 debug, atlas, locked W8–9.
+
+Storage paths on H200: `$PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv` · clone often `/data/anupam/scratch/Priority_KV`.
+
+---
+
+## 9. Risks & pivots — updated signals
+
+| Risk | Signal | Response | Live signal (2026-07-15) |
+|---|---|---|---|
+| G2 fails | Flat PB deltas W4 | Measurement-paper pivot | Path (b) looking **good** on pilots; don't declare G2 early |
+| SnapKV won't reproduce | >4 days | Substitute StreamingLLM/DropKeep; document | **Already substituted** interim; attempt still open |
+| INT4 path won't run on box | quanto JIT / CUDA mismatch | Document platform blocker; CPU ref + own kernels; **never silent fake** | **Active** — see `HANDOFF_W3_INT4.md` |
+| Fake/missed INT4 looks perfect | modes=`fake_*` or config kw bugs | Assert-no-fake; log `int4_modes_seen` | Learned in W2; gated in W3 |
+| Q7 == P2 | W6 val | Ship Q7; risk = negative result | Too early |
+| Multi-call overhead >12% | W5 profile | Fused kernel / claim cap | N/A yet |
+| Concurrent paper | Weekly arXiv | Cite; sharpen lifecycle+serving | Ongoing |
+| CFP earlier than results | W1 check | Atlas-only then full system | **CFP pick still open** |
+| Compute overrun | Extrapolation | Cut Gemma/64K first | Watch after Q2 |
+| Env drift via pip | torch/vLLM skew | **uv only** | Incident already happened — documented |
+
+**Kill rule (unchanged):** no branch lives >1 week without a correctness, quality-frontier, systems, or falsification result.
+
+---
+
+## 10. Definition of done (unchanged targets)
 
 - [ ] One-command smoke test passes on a clean H100/H200
 - [ ] All correctness tests green; controller <2% latency; unexplained bytes <5%
 - [ ] Figure F1 (flat accuracy vs collapsing agent reliability) reproduced from frozen manifest
-- [ ] P2 (or Q7 per G3) beats S1 and Q3 on ≥2 of 3 PriorityBench-A categories at 30% bytes, corrected CIs excluding zero
+- [ ] P2 (or Q7 per G3) beats S1 and Q3/DropKeep on ≥2 of 3 PriorityBench-A categories at 30% bytes, corrected CIs excluding zero
 - [ ] Full H200 latency–throughput frontier + Nsight roofline published
 - [ ] Workshop paper submitted; blog post live; upstream PR open with maintainer engagement
 - [ ] Gemma generalization figure included
 - [ ] ≥6 substantive outreach contacts logged; ≥2 referral conversations requested
 - [ ] Negative results and limitations section written with the same care as the wins
--
+
+### Partial progress toward Done (checklist helper)
+
+- [x] PriorityBench-A locked 240 + SHA256 audit artifact  
+- [x] Reproducible structure > uniform signal at matched keep (token + page)  
+- [x] Buried-state scope check  
+- [x] CPU mixed BF16/INT4 attend reference + tests  
+- [ ] Real Q2 INT4 on H200 (`int4_modes_seen` ∈ {`hf_cache_implementation_quantized`,`quanto_quantized_cache`})  
+- [ ] Guardrails real (<1pt move)  
+- [ ] G2 formally closed in `docs/decisions.md`  
+- [ ] FlashInfer multi-call == mixed reference  
+- [ ] Linear risk calibrated  
+
+---
+
+## 11. Immediate next actions (execution queue)
+
+1. **H200:** finish Q2 per [`HANDOFF_W3_INT4.md`](HANDOFF_W3_INT4.md) §B (uv sync, CUDA major gate, tee'd `w3_int4_assert`).  
+2. Log INT4 outcome in `docs/decisions.md` (green modes or platform blocker).  
+3. Real guardrails stub → runnable before treating G2 as closed.  
+4. W4: denser atlas + page-perturb pilot + linear risk inputs; begin LSE/multi-call only after Q2 story is honest.  
+5. Pick D6 CFP; note Gemma license in decisions.

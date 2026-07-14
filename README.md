@@ -5,7 +5,7 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 **Headline claim:** uniform KV compression silently breaks tool schemas / instruction hierarchies in long agent traces even when average accuracy looks fine; PriorityKV keeps structure-critical pages so agent reliability holds at matched byte/keep budgets.
 
-Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
+Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
 **Status (2026-07-15):** W2 closed · W3 bench locked · page-level structure green on H200 · **uniform INT4 (Q2) blocked on `quanto_cuda` JIT** — collaborator handoff: [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md)
 
