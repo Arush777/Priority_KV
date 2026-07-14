@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Optional
+import time
 
 from prioritykv.fullkv_compare import PromptRow, _apply_chat
 from prioritykv.int4_kv import Int4KvConfig, fake_quant_roundtrip, make_quantized_cache
@@ -125,6 +126,11 @@ def run_transformers_int4(
             model_path, torch_dtype=torch.bfloat16, **load_kwargs
         )
     model.eval()
+    print(
+        f"[int4] model loaded; running {len(prompts)} prompts "
+        f"(no vLLM bar here — per-example progress below)",
+        flush=True,
+    )
 
     out: list[tuple[str, list[int], dict[str, Any]]] = []
     cache_cfg = {
@@ -133,7 +139,20 @@ def run_transformers_int4(
         "group_size": int(cfg.group_size),
     }
 
-    for row in prompts:
+    try:
+        from tqdm import tqdm
+    except Exception:  # noqa: BLE001
+        tqdm = None  # type: ignore
+
+    iterator = (
+        tqdm(prompts, desc="INT4 examples", unit="ex")
+        if tqdm is not None
+        else prompts
+    )
+    for i, row in enumerate(iterator):
+        t_ex = time.time()
+        if tqdm is None:
+            print(f"[int4] example {i + 1}/{len(prompts)} id={row.id}", flush=True)
         text = _apply_chat(tok, row.messages)
         raw = tok(text, return_tensors="pt")
         budget = max_model_len - max_new_tokens - 8
@@ -229,6 +248,16 @@ def run_transformers_int4(
                 new_text = tok.decode(gen_ids, skip_special_tokens=True)
                 out.append((new_text, gen_ids, meta))
 
+        if tqdm is None:
+            print(
+                f"[int4] done {i + 1}/{len(prompts)} mode={meta['mode']} "
+                f"tok={meta['prompt_tokens']} {time.time() - t_ex:.1f}s",
+                flush=True,
+            )
+        elif hasattr(iterator, "set_postfix"):
+            iterator.set_postfix(mode=meta["mode"], tok=meta["prompt_tokens"])
+
     del model
     torch.cuda.empty_cache()
+    print(f"[int4] finished {len(out)} examples", flush=True)
     return out
