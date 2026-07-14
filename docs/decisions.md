@@ -87,3 +87,10 @@ Append-only. Newest at bottom.
 - **Cats (full/drop):** supersession 1.00/0.00 · multi_turn 1.00/0.00 · tool_schema 1.00/0.00
 - **Read:** first real info-loss on PriorityBench. Soft FP8/INT4 at ≤16k were too weak; ~64× eviction destroys all three agent categories while FullKV stays perfect.
 - **Next:** keep-budget sweep (512→4k) for the drop-off curve, then structure-protected recovery at matched bytes.
+
+## 2026-07-15 — Sweep flat zeros: two real bugs / physics
+
+- **Sweep r1:** all recent=256…4096 gave drop=0.0. Compression × changed (so budgets applied) but:
+  1. **Physics:** sink+recent never keeps early IDs until `recent ≳ seq_len − id_pos` (~7–15k here). 256–4096 still deletes the hold ID on 8k/16k.
+  2. **Implementation bug:** KV-cache slicing without RoPE/position fix → decode garbage at every budget (would also zero a true keep_all if we had included one).
+- **Fix:** prompt-level sink+recent concat + normal `generate` (RoPE-safe). Sweep r2 adds `recent=999999` keep_all control (must ≈ FullKV) and larger windows (7k/12k) to see the middle of the curve.

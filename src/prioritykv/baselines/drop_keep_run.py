@@ -1,4 +1,4 @@
-"""HF generation with aggressive DropKeep eviction (must show PriorityBench damage)."""
+"""HF generation with prompt-level sink+recent DropKeep (RoPE-safe)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-from prioritykv.baselines.drop_keep import DropKeepConfig, drop_keep_past, realized_keep_frac
+from prioritykv.baselines.drop_keep import DropKeepConfig, apply_drop_keep_ids
 from prioritykv.fullkv_compare import PromptRow, _apply_chat
 
 
@@ -46,8 +46,8 @@ def run_transformers_dropkeep(
         )
     model.eval()
     print(
-        f"[dropkeep] sink={cfg.sink_tokens} recent={cfg.recent_tokens} "
-        f"keep_tokens={cfg.keep_tokens} n={len(prompts)}",
+        f"[dropkeep] mode=prompt_sink_recent sink={cfg.sink_tokens} "
+        f"recent={cfg.recent_tokens} keep_tokens={cfg.keep_tokens} n={len(prompts)}",
         flush=True,
     )
 
@@ -65,82 +65,46 @@ def run_transformers_dropkeep(
         budget = max_model_len - max_new_tokens - 8
         ids = raw["input_ids"][0]
         if ids.numel() > budget:
+            # Prefer keeping head (schemas) + tail (FINAL) already under max len.
             head = ids[: budget // 4]
             tail = ids[-(budget - int(head.numel())) :]
             ids = torch.cat([head, tail])
-            inputs = {
-                "input_ids": ids.unsqueeze(0),
-                "attention_mask": torch.ones(1, ids.numel(), dtype=torch.long),
-            }
-        else:
-            inputs = {k: v for k, v in raw.items()}
-        inputs = {k: v.to(model.device) for k, v in inputs.items()}
-        prompt_len = int(inputs["input_ids"].shape[-1])
-        keep_frac = realized_keep_frac(prompt_len, cfg)
+
+        ids_c, meta_keep = apply_drop_keep_ids(ids, cfg)
+        inputs = {
+            "input_ids": ids_c.unsqueeze(0).to(model.device),
+            "attention_mask": torch.ones(1, ids_c.numel(), dtype=torch.long, device=model.device),
+        }
 
         with torch.no_grad():
-            pre = model(**inputs, use_cache=True, return_dict=True)
-            past = drop_keep_past(pre.past_key_values, cfg)
-
-            def _past_len(p) -> int:
-                layers = getattr(p, "layers", None)
-                if layers:
-                    for layer in layers:
-                        for attr in ("keys", "key_cache", "key"):
-                            t = getattr(layer, attr, None)
-                            if t is not None and hasattr(t, "shape") and t.ndim >= 3:
-                                return int(t.shape[-2])
-                kc = getattr(p, "key_cache", None)
-                if isinstance(kc, list) and kc and kc[0] is not None:
-                    return int(kc[0].shape[-2])
-                if isinstance(p, (tuple, list)) and p:
-                    return int(p[0][0].shape[-2])
-                return min(prompt_len, cfg.sink_tokens + cfg.recent_tokens)
-
-            kept = _past_len(past)
-            attn = torch.ones(
-                (1, kept), device=model.device, dtype=inputs["attention_mask"].dtype
+            gen = model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                do_sample=False,
+                temperature=None,
+                top_p=None,
             )
-            next_id = int(torch.argmax(pre.logits[:, -1, :], dim=-1).item())
-            gen_ids = [next_id]
-            cur = torch.tensor([[next_id]], device=model.device)
-            for _ in range(max_new_tokens - 1):
-                attn = torch.cat(
-                    [attn, torch.ones((1, 1), device=model.device, dtype=attn.dtype)],
-                    dim=1,
-                )
-                step = model(
-                    input_ids=cur,
-                    attention_mask=attn,
-                    past_key_values=past,
-                    use_cache=True,
-                    return_dict=True,
-                )
-                past = step.past_key_values
-                nid = int(torch.argmax(step.logits[:, -1, :], dim=-1).item())
-                gen_ids.append(nid)
-                cur = torch.tensor([[nid]], device=model.device)
-                if tok.eos_token_id is not None and nid == tok.eos_token_id:
-                    break
-            new_text = tok.decode(gen_ids, skip_special_tokens=True)
+        new_ids = gen[0, inputs["input_ids"].shape[-1] :].tolist()
+        new_text = tok.decode(new_ids, skip_special_tokens=True)
 
         meta = {
-            "mode": "drop_keep_sink_recent",
-            "prompt_tokens": prompt_len,
-            "kept_tokens": kept,
-            "keep_frac": kept / max(prompt_len, 1),
-            "approx_compression_x": prompt_len / max(kept, 1),
+            "mode": "prompt_sink_recent",
+            **meta_keep,
+            "preview": new_text[:120],
             "seconds": time.time() - t0,
         }
-        out.append((new_text, gen_ids, meta))
+        out.append((new_text, new_ids, meta))
         if tqdm is None:
             print(
-                f"[dropkeep] {i + 1}/{len(prompts)} keep_frac={keep_frac:.3f} "
-                f"{meta['seconds']:.1f}s",
+                f"[dropkeep] {i + 1}/{len(prompts)} kept={meta['kept_tokens']}/"
+                f"{meta['prompt_tokens']} {meta['seconds']:.1f}s",
                 flush=True,
             )
         elif hasattr(iterator, "set_postfix"):
-            iterator.set_postfix(keep=f"{keep_frac:.3f}")
+            iterator.set_postfix(
+                kept=f"{meta['kept_tokens']}/{meta['prompt_tokens']}",
+                dropped=str(meta["dropped"]),
+            )
 
     del model
     torch.cuda.empty_cache()

@@ -256,10 +256,10 @@ python scripts/run_stress.py --config configs/stress_dropkeep_16k.yaml
 Success looks like: `full≈1.0 drop≪1.0` especially on `multi_turn_state`.
 Paste that line.
 
-## STRESS sweep — find the drop-off curve (~30–60 min)
+## STRESS sweep — find the drop-off curve (rev2, RoPE-safe)
 
-Same 14 examples; FullKV once; DropKeep at recent=256/512/1024/2048/4096.
-Reuse FullKV texts from the kill run to skip vLLM:
+Rev1 flat zeros were misleading: (1) recent≤4k still drops early IDs on 8k/16k,
+(2) cache slicing broke RoPE. Rev2 uses **prompt-level** sink+recent + keep_all control.
 
 ```bash
 cd /data/anupam/scratch/Priority_KV
@@ -271,4 +271,5 @@ python scripts/run_stress_sweep.py \
   --reuse-full $PRIORITYKV_SCRATCH/runs/stress_dropkeep/stress_dropkeep_16k_r1.json
 ```
 
-Paste the printed curve (one line per `recent=`).
+Expect: small recent → drop≈0; `recent=999999` (keep_all) → drop≈1.0; middle budgets → in between.
+Paste the curve. ~40–90 min (6 budgets × 14 ex).
