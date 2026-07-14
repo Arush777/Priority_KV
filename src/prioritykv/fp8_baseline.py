@@ -69,7 +69,19 @@ def _run_vllm_mode(
         skip_special_tokens=True,
     )
     texts = [_apply_chat(tok, r.messages) for r in prompts]
-    outputs = llm.generate(texts, sampling)
+    # Soft guard: truncate from the left (keep system + final ask) if over budget.
+    budget = max_model_len - max_new_tokens - 8
+    trimmed: list[str] = []
+    for t in texts:
+        ids = tok(t, add_special_tokens=False)["input_ids"]
+        if len(ids) <= budget:
+            trimmed.append(t)
+            continue
+        # Keep tail (final instruction) + head (schemas/constraints).
+        head = ids[: budget // 4]
+        tail = ids[-(budget - len(head)) :]
+        trimmed.append(tok.decode(head + tail, skip_special_tokens=False))
+    outputs = llm.generate(trimmed, sampling)
     out: list[tuple[str, list[int]]] = []
     for o in outputs:
         seq = o.outputs[0]

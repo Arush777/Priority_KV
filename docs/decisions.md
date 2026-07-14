@@ -46,3 +46,8 @@ Append-only. Newest at bottom.
 - **8k pilot (r1):** full=0.800 fp8=0.800 delta=0; tool_schema 1.0/1.0; supersession 0.40/0.40. Failures were format_flip scorer (looked for format *names* in prose), not FP8.
 - **Fix:** format_flip now requires explicit `[[FMT:...]]` tags (rev 2). Re-run 8k then 16k pilots.
 - **SnapKV:** scaffold only (`scripts/snap_status.py`); not runnable yet.
+
+## 2026-07-14 — 8k pilot rev2 + 16k OOM-length fix
+
+- **8k r2:** full=1.000 fp8=1.000 delta=0; both categories 1.0 — tag fix worked; FP8 still no harm at 8k.
+- **16k r1 failed:** chat-templated prompts exceeded max_model_len 20480. Bumped to 32768 + defensive trim.
