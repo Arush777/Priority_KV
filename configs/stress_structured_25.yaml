@@ -1,0 +1,28 @@
+# W2-close / G2 path (b) pilot: matched keep_frac arms.
+# keep_frac=0.25 ≈ mid of DropKeep sweep where uniform was still ~0 on 16k.
+manifest_id: stress_structured_25
+rev: 1
+bench_manifest: data/prioritybench/manifests/w2d_pilot.json
+selection:
+  splits: [calibration, validation]
+  context_lengths: [16000, 8000]
+  n_tool_schema: 2
+  n_instruction_supersession: 4
+  n_multi_turn_state: 8
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 32768
+keep:
+  keep_frac: 0.25
+  sink_tokens: 16
+  force_recent: 128
+  seed: 0
+  policies: [uniform, structure, random, keep_all]

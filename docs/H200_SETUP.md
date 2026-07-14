@@ -273,3 +273,27 @@ python scripts/run_stress_sweep.py \
 
 Expect: small recent → drop≈0; `recent=999999` (keep_all) → drop≈1.0; middle budgets → in between.
 Paste the curve. ~40–90 min (6 budgets × 14 ex).
+
+## W2-close — structured vs uniform vs random @ keep_frac=0.25
+
+Matched **fraction** of prompt tokens (not absolute recent). Predict: structure > random ≥ uniform on multi_turn; keep_all ≈ 1.0.
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git fetch origin && git reset --hard origin/main
+source .venv/bin/activate && set -a && source .env && set +a
+
+# optional CPU stub
+python scripts/run_guardrails.py
+
+# ~45–90 min; DropKeep bars per arm
+python scripts/run_stress_structured.py \
+  --config configs/stress_structured_25.yaml \
+  --reuse-full $PRIORITYKV_SCRATCH/runs/stress_dropkeep/stress_dropkeep_16k_r1.json
+```
+
+Paste the four `uniform/structure/random/keep_all` summary lines.
+
+**Gate:** `keep_all` mean must be ≈1.0 (allow tiny transformers-vs-vLLM drift, e.g. |d|<0.15).
+If `keep_all` is far from FullKV, abort reading the other arms — backend drift, not structure.
+Note: "uniform" = StreamingLLM sink+recent, not evenly spaced tokens.
