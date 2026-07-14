@@ -1,140 +1,157 @@
-# FRIEND_AGENT_SETUP — paste this into your friend's Cursor agent
+# FRIEND_AGENT_SETUP — Priority_KV
 
-**Repo:** `Information_Retrieval` (Information Retrieval collaboration)  
+**Repo:** https://github.com/Arush777/Priority_KV  
 **Your agent id:** `friend`  
-**Peer agent id:** `arush`
+**Peer agent id:** `arush`  
+**Telegram bot:** `@arush_ir_collab_bot`  
+**Telegram group:** `Information_Retrieval agents`  
+**Telegram chat id:** `-5470510083`  
+**Canon plan:** `docs/PRIORITYKV_IMPLEMENTATION_PLAN.md`  
+**Do not implement large features during setup** — bridge first, then CLAIM work.
 
-Copy everything below the line into your friend's Cursor chat after they clone
-the repo.
+Arush must send you the **bot token privately** (not via GitHub).
 
 ---
 
-## Prompt for friend's Cursor agent
+## Prompt for friend's Cursor agent (paste as-is)
 
 ```text
-You are agent `friend` on the shared GitHub repo Information_Retrieval
-(Information Retrieval research). Your peer is agent `arush`.
+You are agent `friend` on https://github.com/Arush777/Priority_KV (PriorityKV-Agent).
+Your peer is agent `arush`.
 
 Read and follow:
 - COLLAB.md
 - scopes/PROJECT_SCOPE.md
 - FRIEND_AGENT_SETUP.md
 - AGENTS.md
+- docs/PRIORITYKV_IMPLEMENTATION_PLAN.md  (canon research plan)
 
-Your job:
-1. Lead the concrete IR research idea (datasets, methods, eval metrics).
-2. Collaborate via the Telegram collab_bridge (hourly ticks).
-3. Implement experiments on THIS machine under branches `agent/friend/...`.
-4. Post clear CLAIM / DONE / BLOCKED / ASK messages; tag `@agent:arush` when
-   you need infra or scaffolding help.
-5. Never push secrets. Never force-push main. Use our human's git author.
+Rules for now:
+1. Do NOT implement research/systems code until the human says setup is done.
+2. Your role after setup: lead Workstream A / PriorityBench / eval angle from the plan.
+3. Collaborate via Telegram collab_bridge (ticks/daemon).
+4. Branches only under `agent/friend/...`. Never force-push main. Never commit secrets.
+5. Commits use THIS machine's git user.name / user.email (the human owner).
+6. Message grammar: CLAIM / DONE / BLOCKED / @agent:arush / PROPOSE_SCOPE.
 
-Setup checklist (do with the human if not done):
-- Clone Information_Retrieval
-- Copy .env.example → .env
-- Set AGENT_ID=friend
-- Set the SAME TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID as Arush
-- Set CURSOR_API_KEY for THIS Cursor account
-- Set REPO_ROOT to this checkout
-- Set GITHUB_REPO correctly
-- python -m venv .venv && source .venv/bin/activate
+Setup with the human (do this first):
+- git clone git@github.com:Arush777/Priority_KV.git && cd Priority_KV
+- cp .env.example .env
+- AGENT_ID=friend
+- SAME TELEGRAM_BOT_TOKEN as Arush (private share)
+- TELEGRAM_CHAT_ID=-5470510083
+- CURSOR_API_KEY for THIS Cursor account
+- CURSOR_MODEL=auto
+- REPO_ROOT=/absolute/path/to/Priority_KV
+- GITHUB_REPO=Arush777/Priority_KV
+- DRY_RUN=0
+- python3 -m venv .venv && source .venv/bin/activate
 - pip install -r requirements.txt
 - pip install cursor-sdk
+- If pip fails with "versions: none", use: python -m pip install cursor-sdk
+  and verify `which python` / `which pip` point inside .venv
 - python -m collab_bridge check
 - python -m collab_bridge ping
-- Start daemon or cron: python -m collab_bridge daemon
+- python -m collab_bridge tick   # one ack only
+- start: python -m collab_bridge daemon   (or hourly cron)
 
-After bridge is live: propose the IR idea as PROPOSE_SCOPE / CLAIM S1, then
-break work into T-tasks and invite @agent:arush to take complementary pieces.
+When bridge ping appears in Telegram, post:
+[agent:friend] online — CLAIM S1 after humans confirm setup complete.
+Do not start coding the plan until humans say so.
 ```
+
+---
 
 ## Friend human setup (step by step)
 
-### 1. Git identity (commits under *their* name)
+### 0. Prerequisites from Arush
+- GitHub write invite to `Arush777/Priority_KV` accepted
+- Added to Telegram group `Information_Retrieval agents`
+- Received `TELEGRAM_BOT_TOKEN` in a **private** message
+
+### 1. Git identity (your name on commits)
 
 ```bash
-git config --global user.name "Friend Name"
-git config --global user.email "friend@email-used-on-github.com"
+git config --global user.name "YOUR NAME"
+git config --global user.email "YOUR_GITHUB_EMAIL"
 ```
 
-### 2. Clone the shared repo
+### 2. Clone
 
 ```bash
 git clone git@github.com:Arush777/Priority_KV.git
-cd Information_Retrieval
+cd Priority_KV
 ```
 
-(Use the real OWNER/url Arush shares.)
-
-### 3. Telegram (same group as Arush)
-
-If Arush already created the bot + group:
-
-- Get `TELEGRAM_BOT_TOKEN` from Arush **via a private channel** (not GitHub).
-- Get `TELEGRAM_CHAT_ID` (same negative id).
-- Confirm the friend human is in the Telegram group.
-
-If not yet created, see README § Telegram setup.
-
-### 4. Configure `.env`
+### 3. `.env`
 
 ```bash
 cp .env.example .env
-# edit .env:
-# AGENT_ID=friend
-# TELEGRAM_BOT_TOKEN=...
-# TELEGRAM_CHAT_ID=...
-# CURSOR_API_KEY=...   # friend's Cursor API key
-# REPO_ROOT=/absolute/path/to/Information_Retrieval
-# GITHUB_REPO=Arush777/Priority_KV
-# DRY_RUN=0
 ```
 
-Cursor API key: [Cursor Dashboard → Integrations / API Keys](https://cursor.com/dashboard/integrations)
+Set at least:
 
-### 5. Install + smoke test
+```bash
+AGENT_ID=friend
+TELEGRAM_BOT_TOKEN=<from Arush privately>
+TELEGRAM_CHAT_ID=-5470510083
+CURSOR_API_KEY=<your Cursor API key>
+CURSOR_MODEL=auto
+REPO_ROOT=/absolute/path/to/Priority_KV
+GITHUB_REPO=Arush777/Priority_KV
+DRY_RUN=0
+```
+
+Cursor API key: https://cursor.com/dashboard/integrations
+
+### 4. Install + smoke
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install cursor-sdk
+python -m pip install -U pip
+python -m pip install -r requirements.txt
+python -m pip install cursor-sdk
 python -m collab_bridge check
 python -m collab_bridge ping
-python -m collab_bridge tick    # one live collaboration tick
 ```
 
-### 6. Keep the loop running
+You should see `[agent:friend] bridge online` in Telegram.
 
-Foreground:
+### 5. Keep the bridge alive
 
 ```bash
+# recommended while testing
+tmux new -s pk-bridge
+source .venv/bin/activate
 python -m collab_bridge daemon
+# Ctrl-b then d to detach
 ```
 
-Or cron hourly:
+Or hourly cron via `./scripts/install_cron.sh`.
 
-```bash
-crontab -e
-# example:
-0 * * * * cd /path/to/Information_Retrieval && . .venv/bin/activate && python -m collab_bridge tick >> state/cron_friend.log 2>&1
-```
+### 6. Paste the Cursor agent prompt
 
-Also: `./scripts/install_cron.sh` (edit paths first).
+Open Cursor on the `Priority_KV` checkout and paste the prompt block above.
 
-### 7. Tell agent `arush` you are online
-
-In Telegram:
+### 7. Announce in Telegram
 
 ```text
-[human] friend agent joining. @agent:arush ack when your bridge is live.
+[human] friend joined. agent friend setup starting.
 ```
 
-Then both daemons chat each hour: idea from friend → scaffolding from arush →
-shared PRs.
+After ping succeeds:
+
+```text
+[agent:friend] online — waiting for humans before CLAIM S1
+```
+
+---
 
 ## Emergency controls (either human)
 
-- `STOP_BRIDGE` or `HALT_AGENTS` in the group → agents pause
-- `RESUME_BRIDGE` → continue
-- `ACK_SCOPE` → accept a pending scope proposal
+| Message | Effect |
+|---------|--------|
+| `STOP_BRIDGE` / `HALT_AGENTS` | Pause |
+| `RESUME_BRIDGE` | Resume |
+| `ACK_SCOPE` | Accept scope proposal |
