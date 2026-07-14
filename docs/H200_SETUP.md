@@ -122,4 +122,17 @@ Optional later (heavier oneshot calib; needs `uv pip install llmcompressor`):
 python scripts/prep_fp8.py
 ```
 
+## W2 — page manager smoke (CPU)
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git pull origin main
+source .venv/bin/activate
+
+./scripts/check.sh
+python scripts/check_pages.py
+```
+
+Expect `check_pages` JSON with `"invariants_ok":true`.
+
 Do not commit `.env`. Do not run agents on this host.

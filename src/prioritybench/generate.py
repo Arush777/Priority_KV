@@ -15,11 +15,16 @@ from prioritybench.schema import (
     Split,
     validate_example_shape,
 )
-from prioritybench.templates import TEMPLATES_BY_ID, TOOL_SCHEMA_TEMPLATES
+from prioritybench.templates import (
+    INSTRUCTION_SUPERSESSION_TEMPLATES,
+    TEMPLATES_BY_ID,
+    TOOL_SCHEMA_TEMPLATES,
+)
 from prioritybench.templates.base import TemplateSpec, messages_approx_tokens
 
 # Stable master seed for the W1 40-example pilot (tool_schema first).
 W1_MASTER_SEED = 20260714
+W2_MASTER_SEED = 20260721
 
 # Split fractions from plan §3.2 (calibration 40% / validation 20% / test 40%).
 _SPLIT_THRESHOLDS = (
@@ -83,6 +88,44 @@ def generate_tool_schema_pilot(
     templates: Sequence[TemplateSpec] = TOOL_SCHEMA_TEMPLATES,
 ) -> List[PriorityExample]:
     """W1 pilot: ``n`` tool_schema examples round-robin across templates × strata."""
+    return _generate_round_robin(
+        n,
+        master_seed=master_seed,
+        context_lengths=context_lengths,
+        templates=templates,
+    )
+
+
+def generate_w2_mixed_pilot(
+    n_tool: int = 80,
+    n_supersession: int = 40,
+    *,
+    master_seed: int = W2_MASTER_SEED,
+    context_lengths: Sequence[int] = CONTEXT_LENGTHS,
+) -> List[PriorityExample]:
+    """W2 growth toward ~145: more tool_schema + first supersession set."""
+    tools = _generate_round_robin(
+        n_tool,
+        master_seed=master_seed,
+        context_lengths=context_lengths,
+        templates=TOOL_SCHEMA_TEMPLATES,
+    )
+    supers = _generate_round_robin(
+        n_supersession,
+        master_seed=master_seed + 10_000,
+        context_lengths=context_lengths,
+        templates=INSTRUCTION_SUPERSESSION_TEMPLATES,
+    )
+    return tools + supers
+
+
+def _generate_round_robin(
+    n: int,
+    *,
+    master_seed: int,
+    context_lengths: Sequence[int],
+    templates: Sequence[TemplateSpec],
+) -> List[PriorityExample]:
     if n <= 0:
         return []
     if not templates:
