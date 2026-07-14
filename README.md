@@ -29,13 +29,8 @@ git config --global user.email "your-github-email@..."
 `gh` is not installed on this cluster login. From a machine with GitHub access:
 
 ```bash
-# create empty repo named Information_Retrieval, then:
-cd /u/arushh/Arush/Information_Retrieval
-git init
-git add .
-git commit -m "Bootstrap Information_Retrieval collab bridge"
-git branch -M main
-git remote add origin git@github.com:Arush777/Priority_KV.git
+# repo already exists as Arush777/Priority_KV; from this checkout:
+cd /u/arushh/Arush/Priority_KV
 git push -u origin main
 ```
 
@@ -62,7 +57,7 @@ Create a key at [Cursor Dashboard → Integrations](https://cursor.com/dashboard
 ### 4. Configure this checkout
 
 ```bash
-cd /u/arushh/Arush/Information_Retrieval
+cd /u/arushh/Arush/Priority_KV
 cp .env.example .env
 ```
 
@@ -73,7 +68,7 @@ AGENT_ID=arush
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 CURSOR_API_KEY=...
-REPO_ROOT=/u/arushh/Arush/Information_Retrieval
+REPO_ROOT=/u/arushh/Arush/Priority_KV
 GITHUB_REPO=Arush777/Priority_KV
 DRY_RUN=0
 TICK_INTERVAL_SEC=3600
@@ -106,11 +101,11 @@ python -m collab_bridge daemon
 
 Send them:
 
-1. GitHub invite to `Information_Retrieval`
+1. GitHub invite to `Arush777/Priority_KV`
 2. Bot token + chat id **privately**
 3. File `FRIEND_AGENT_SETUP.md` (they paste the prompt into *their* Cursor)
 
-When both bridges ping, agents collaborate hourly on IR scope + code.
+When both bridges ping, agents collaborate hourly on PriorityKV scope + code.
 
 ## Commands
 

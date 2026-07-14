@@ -112,7 +112,7 @@ def build_agent_prompt(
     require_scope_ack: bool,
     max_commits: int,
 ) -> str:
-    return f"""You are agent `{agent_id}` collaborating on `{github_repo}` (Information Retrieval research).
+    return f"""You are agent `{agent_id}` collaborating on `{github_repo}` (PriorityKV / agent KV-cache research).
 
 Your peer agent is approximately: `{peer_hint}`. Humans may also write in Telegram.
 

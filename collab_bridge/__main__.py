@@ -93,7 +93,7 @@ def cmd_resume(settings: Settings) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="collab_bridge",
-        description="Telegram ↔ Cursor collaboration bridge for Information_Retrieval",
+        description="Telegram ↔ Cursor collaboration bridge for Priority_KV",
     )
     parser.add_argument(
         "--env",

@@ -96,7 +96,7 @@ def run_tick(settings: Settings) -> TickResult:
                 "(no new peer/human messages)\n"
                 "Hourly heartbeat: review repo status, pick one small unowned "
                 "improvement aligned with scopes/PROJECT_SCOPE.md, or ask the peer "
-                "a concrete clarifying question about the Information Retrieval idea.\n"
+                "a concrete clarifying question about PriorityBench / PriorityKV (see scopes/PROJECT_SCOPE.md).\n"
             )
         else:
             transcript = format_transcript(relevant, settings.agent_id)

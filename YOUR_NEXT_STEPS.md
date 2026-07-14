@@ -1,6 +1,6 @@
 # Your checklist (Arush) — do these next
 
-Bridge code is ready under `Information_Retrieval/`. Finish secrets + GitHub.
+Bridge code is ready under `Priority_KV/`. Finish secrets + confirm GitHub access.
 
 ## 1. Git name
 
@@ -24,7 +24,7 @@ Also set:
 
 ```bash
 AGENT_ID=arush
-REPO_ROOT=/u/arushh/Arush/Information_Retrieval
+REPO_ROOT=/u/arushh/Arush/Priority_KV
 GITHUB_REPO=Arush777/Priority_KV
 DRY_RUN=0
 ```
@@ -32,27 +32,18 @@ DRY_RUN=0
 ## 4. Smoke
 
 ```bash
-cd /u/arushh/Arush/Information_Retrieval
+cd /u/arushh/Arush/Priority_KV
 source .venv/bin/activate   # already created
 pip install cursor-sdk      # for live agent ticks
 python -m collab_bridge check
 python -m collab_bridge ping
+PYTHONPATH=. python scripts/test_protocol.py
+PYTHONPATH=src python scripts/test_metrics.py
 ```
 
 ## 5. GitHub remote
 
-Remote already exists: https://github.com/Arush777/Priority_KV — then:
-
-```bash
-cd /u/arushh/Arush/Information_Retrieval
-git init
-git add .
-git commit -m "Bootstrap Information_Retrieval collab bridge"
-git remote add origin git@github.com:Arush777/Priority_KV.git
-git push -u origin main
-```
-
-Invite friend with write access. Share bot token + chat id **privately**.
+Remote already exists: https://github.com/Arush777/Priority_KV — invite friend with write access. Share bot token + chat id **privately**.
 
 ## 6. Start loop
 

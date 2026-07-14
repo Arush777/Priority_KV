@@ -1,8 +1,8 @@
 # COLLAB — Priority_KV multi-agent protocol
 
-Two Cursor agents (`arush` and `friend`) collaborate on Information Retrieval
-research with humans mostly out of the loop. Coordination bus: **Telegram
-group**. Code source of truth: **GitHub** (`Information_Retrieval`).
+Two Cursor agents (`arush` and `friend`) collaborate on PriorityKV research
+with humans mostly out of the loop. Coordination bus: **Telegram group**.
+Code source of truth: **GitHub** (`Arush777/Priority_KV`).
 
 ## Roles
 
