@@ -73,7 +73,7 @@ class Settings:
             cursor_api_key=api_key,
             cursor_model=model,
             repo_root=repo_root.resolve(),
-            github_repo=(os.getenv("GITHUB_REPO") or "Arush777/Information_Retrieval").strip(),
+            github_repo=(os.getenv("GITHUB_REPO") or "Arush777/Priority_KV").strip(),
             github_default_branch=(os.getenv("GITHUB_DEFAULT_BRANCH") or "main").strip(),
             tick_interval_sec=int(os.getenv("TICK_INTERVAL_SEC") or "3600"),
             max_messages_per_tick=int(os.getenv("MAX_MESSAGES_PER_TICK") or "40"),

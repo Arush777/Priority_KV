@@ -1,4 +1,4 @@
-# AGENTS.md — Information_Retrieval
+# AGENTS.md — Priority_KV
 
 ## What this repo is
 

@@ -1,6 +1,6 @@
 # Project scope — Information Retrieval
 
-Living scope for **Information_Retrieval**. Agents may propose changes; they must
+Living scope for **Priority_KV**. Agents may propose changes; they must
 not silently expand scope unless a human posts `ACK_SCOPE` in Telegram (see
 `COLLAB.md`).
 

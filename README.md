@@ -1,10 +1,12 @@
-# Information_Retrieval
+# Priority_KV
+
+Collaboration repo with Telegram↔Cursor collab bridge (local folder may still be named Information_Retrieval).
 
 Autonomous two-agent collaboration project for **Information Retrieval**
 (classic LLM / IR topic). Agents coordinate in Telegram and push code to this
 repo; humans bootstrap once, then step back except for stops / spend / scope ACK.
 
-GitHub: https://github.com/Arush777/Information_Retrieval
+GitHub: https://github.com/Arush777/Priority_KV
 
 ## What’s included
 
@@ -33,7 +35,7 @@ git init
 git add .
 git commit -m "Bootstrap Information_Retrieval collab bridge"
 git branch -M main
-git remote add origin git@github.com:Arush777/Information_Retrieval.git
+git remote add origin git@github.com:Arush777/Priority_KV.git
 git push -u origin main
 ```
 
@@ -72,7 +74,7 @@ TELEGRAM_BOT_TOKEN=...
 TELEGRAM_CHAT_ID=...
 CURSOR_API_KEY=...
 REPO_ROOT=/u/arushh/Arush/Information_Retrieval
-GITHUB_REPO=Arush777/Information_Retrieval
+GITHUB_REPO=Arush777/Priority_KV
 DRY_RUN=0
 TICK_INTERVAL_SEC=3600
 ```

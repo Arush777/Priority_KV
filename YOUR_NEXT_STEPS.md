@@ -25,7 +25,7 @@ Also set:
 ```bash
 AGENT_ID=arush
 REPO_ROOT=/u/arushh/Arush/Information_Retrieval
-GITHUB_REPO=Arush777/Information_Retrieval
+GITHUB_REPO=Arush777/Priority_KV
 DRY_RUN=0
 ```
 
@@ -41,14 +41,14 @@ python -m collab_bridge ping
 
 ## 5. GitHub remote
 
-Remote already exists: https://github.com/Arush777/Information_Retrieval — then:
+Remote already exists: https://github.com/Arush777/Priority_KV — then:
 
 ```bash
 cd /u/arushh/Arush/Information_Retrieval
 git init
 git add .
 git commit -m "Bootstrap Information_Retrieval collab bridge"
-git remote add origin git@github.com:Arush777/Information_Retrieval.git
+git remote add origin git@github.com:Arush777/Priority_KV.git
 git push -u origin main
 ```
 

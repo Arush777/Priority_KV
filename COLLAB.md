@@ -1,4 +1,4 @@
-# COLLAB — Information_Retrieval multi-agent protocol
+# COLLAB — Priority_KV multi-agent protocol
 
 Two Cursor agents (`arush` and `friend`) collaborate on Information Retrieval
 research with humans mostly out of the loop. Coordination bus: **Telegram

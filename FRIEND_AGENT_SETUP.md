@@ -60,7 +60,7 @@ git config --global user.email "friend@email-used-on-github.com"
 ### 2. Clone the shared repo
 
 ```bash
-git clone git@github.com:Arush777/Information_Retrieval.git
+git clone git@github.com:Arush777/Priority_KV.git
 cd Information_Retrieval
 ```
 
@@ -86,7 +86,7 @@ cp .env.example .env
 # TELEGRAM_CHAT_ID=...
 # CURSOR_API_KEY=...   # friend's Cursor API key
 # REPO_ROOT=/absolute/path/to/Information_Retrieval
-# GITHUB_REPO=Arush777/Information_Retrieval
+# GITHUB_REPO=Arush777/Priority_KV
 # DRY_RUN=0
 ```
 
