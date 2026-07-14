@@ -1,6 +1,7 @@
-# Keep-budget sweep after DropKeep 64× kill: find where PriorityBench recovers.
+# Fixed DropKeep sweep: prompt-level sink+recent (RoPE-safe).
+# Includes keep_all (recent=999999) as a control that must score near FullKV.
 manifest_id: stress_dropkeep_sweep
-rev: 1
+rev: 2
 bench_manifest: data/prioritybench/manifests/w2d_pilot.json
 selection:
   splits: [calibration, validation]
@@ -21,5 +22,5 @@ vllm:
   max_model_len: 32768
 dropkeep:
   sink_tokens: 16
-  # progressive keep: ~60× → ~4× at 16k
-  recent_tokens_sweep: [256, 512, 1024, 2048, 4096]
+  # Small → early IDs gone. Large → IDs enter recent window. 999999 = keep_all control.
+  recent_tokens_sweep: [256, 2048, 4096, 7000, 12000, 999999]
