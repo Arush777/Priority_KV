@@ -40,31 +40,21 @@ docs/                # plan + H200 setup
 
 ```bash
 cd /u/arushh/Arush/Priority_KV
-curl -LsSf https://astral.sh/uv/install.sh | sh   # once
-export PATH="$HOME/.local/bin:$PATH"
-
-./scripts/setup_env.sh          # uv sync + CPU smoke
-git add -A
-git status                      # review
-# then commit + push when ready
+./scripts/sync.sh
 git push origin main
 ```
 
-## First steps (H200 — you, after the push)
+## First steps (H200 — you)
 
 ```bash
-# 1) clone (once)
 git clone git@github.com:Arush777/Priority_KV.git
 cd Priority_KV
-
-# 2) env + CPU smoke
-./scripts/setup_env.sh
-
-# 3) GPU stack (when nvidia-smi works)
-./scripts/setup_env.sh --gpu
-
-# 4) models — see docs/H200_SETUP.md Step 4
+./scripts/sync.sh            # CPU deps + checks
+# edit .env: REPO_ROOT, scratch, HF_*, CUDA_VISIBLE_DEVICES=6,7
+./scripts/sync.sh --cuda     # GPU stack; capped to two devices via .env
 ```
+
+See [`docs/H200_SETUP.md`](docs/H200_SETUP.md).
 
 ---
 
