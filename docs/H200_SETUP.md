@@ -56,8 +56,30 @@ mkdir -p /data/anupam/scratch/prioritykv/{models,datasets,runs,hf_cache}
 
 ```bash
 cd /data/anupam/scratch/Priority_KV
-git pull origin main
+git fetch origin && git reset --hard origin/main   # after force-pushes
+# or: git pull origin main
 ./scripts/sync.sh --cuda    # only if lockfile/deps changed
 ```
+
+## W1 — FullKV backend compare (G0)
+
+Uses GPUs from `CUDA_VISIBLE_DEVICES` (default 6,7). Runs Transformers then vLLM greedy decode on 20 prompts.
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git fetch origin && git reset --hard origin/main
+source .venv/bin/activate
+set -a && source .env && set +a
+
+python scripts/cmp_gen.py
+```
+
+Success line looks like:
+
+```text
+n=20 exact=0.xxx tok=0.xxx pass=1 out=/data/anupam/scratch/prioritykv/runs/w1_fullkv/...
+```
+
+`pass=1` means gate G0 green. `pass=0` → paste the json path here.
 
 Do not commit `.env`. Do not run agents on this host.
