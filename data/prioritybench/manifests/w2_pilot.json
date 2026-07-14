@@ -1,0 +1,1108 @@
+{
+  "master_seed": 20260721,
+  "n": 120,
+  "split_counts": {
+    "calibration": 56,
+    "validation": 27,
+    "test": 37
+  },
+  "context_hist": {
+    "8000": 41,
+    "16000": 40,
+    "32000": 39
+  },
+  "template_hist": {
+    "tool_schema.search_docs.v1": 10,
+    "tool_schema.read_file.v1": 10,
+    "tool_schema.sql_query.v1": 10,
+    "tool_schema.http_get.v1": 10,
+    "tool_schema.create_ticket.v1": 10,
+    "tool_schema.set_config.v1": 10,
+    "tool_schema.schedule_job.v1": 10,
+    "tool_schema.send_email.v1": 10,
+    "instruction_supersession.format_flip.v1": 20,
+    "instruction_supersession.language_flip.v1": 20
+  },
+  "examples": [
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20260721",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 8000,
+      "seed": 20260721,
+      "approx_tokens": 7387
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20260739",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 16000,
+      "seed": 20260739,
+      "approx_tokens": 14760
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c32000__s20260757",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 32000,
+      "seed": 20260757,
+      "approx_tokens": 29494
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c8000__s20260775",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 8000,
+      "seed": 20260775,
+      "approx_tokens": 7391
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c16000__s20260793",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 16000,
+      "seed": 20260793,
+      "approx_tokens": 14747
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c32000__s20260811",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 32000,
+      "seed": 20260811,
+      "approx_tokens": 29445
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c8000__s20260829",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 8000,
+      "seed": 20260829,
+      "approx_tokens": 7408
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20260840",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 16000,
+      "seed": 20260840,
+      "approx_tokens": 14755
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c32000__s20260858",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 32000,
+      "seed": 20260858,
+      "approx_tokens": 29474
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c8000__s20260876",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 8000,
+      "seed": 20260876,
+      "approx_tokens": 7403
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c16000__s20260894",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 16000,
+      "seed": 20260894,
+      "approx_tokens": 14769
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c32000__s20260912",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 32000,
+      "seed": 20260912,
+      "approx_tokens": 29464
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c8000__s20260930",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 8000,
+      "seed": 20260930,
+      "approx_tokens": 7391
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20260948",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 16000,
+      "seed": 20260948,
+      "approx_tokens": 14767
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c32000__s20260959",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 32000,
+      "seed": 20260959,
+      "approx_tokens": 29440
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c8000__s20260977",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 8000,
+      "seed": 20260977,
+      "approx_tokens": 7387
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c16000__s20260995",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 16000,
+      "seed": 20260995,
+      "approx_tokens": 14765
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c32000__s20261013",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 32000,
+      "seed": 20261013,
+      "approx_tokens": 29451
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c8000__s20261031",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 8000,
+      "seed": 20261031,
+      "approx_tokens": 7388
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c16000__s20261049",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 16000,
+      "seed": 20261049,
+      "approx_tokens": 14770
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c32000__s20261067",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 32000,
+      "seed": 20261067,
+      "approx_tokens": 29474
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c8000__s20261078",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 8000,
+      "seed": 20261078,
+      "approx_tokens": 7412
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c16000__s20261096",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 16000,
+      "seed": 20261096,
+      "approx_tokens": 14756
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c32000__s20261114",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 32000,
+      "seed": 20261114,
+      "approx_tokens": 29462
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20261132",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 8000,
+      "seed": 20261132,
+      "approx_tokens": 7389
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20261150",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 16000,
+      "seed": 20261150,
+      "approx_tokens": 14761
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c32000__s20261168",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 32000,
+      "seed": 20261168,
+      "approx_tokens": 29479
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c8000__s20261186",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 8000,
+      "seed": 20261186,
+      "approx_tokens": 7389
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c16000__s20261197",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 16000,
+      "seed": 20261197,
+      "approx_tokens": 14749
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c32000__s20261215",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 32000,
+      "seed": 20261215,
+      "approx_tokens": 29444
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c8000__s20261233",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 8000,
+      "seed": 20261233,
+      "approx_tokens": 7408
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20261251",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 16000,
+      "seed": 20261251,
+      "approx_tokens": 14751
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c32000__s20261269",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 32000,
+      "seed": 20261269,
+      "approx_tokens": 29451
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c8000__s20261287",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 8000,
+      "seed": 20261287,
+      "approx_tokens": 7407
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c16000__s20261305",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 16000,
+      "seed": 20261305,
+      "approx_tokens": 14763
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c32000__s20261316",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 32000,
+      "seed": 20261316,
+      "approx_tokens": 29464
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c8000__s20261334",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 8000,
+      "seed": 20261334,
+      "approx_tokens": 7400
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20261352",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 16000,
+      "seed": 20261352,
+      "approx_tokens": 14761
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c32000__s20261370",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 32000,
+      "seed": 20261370,
+      "approx_tokens": 29441
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c8000__s20261388",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 8000,
+      "seed": 20261388,
+      "approx_tokens": 7387
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c16000__s20261406",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 16000,
+      "seed": 20261406,
+      "approx_tokens": 14766
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c32000__s20261424",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 32000,
+      "seed": 20261424,
+      "approx_tokens": 29457
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c8000__s20261435",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 8000,
+      "seed": 20261435,
+      "approx_tokens": 7408
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c16000__s20261453",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 16000,
+      "seed": 20261453,
+      "approx_tokens": 14751
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c32000__s20261471",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 32000,
+      "seed": 20261471,
+      "approx_tokens": 29452
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c8000__s20261489",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 8000,
+      "seed": 20261489,
+      "approx_tokens": 7408
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c16000__s20261507",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 16000,
+      "seed": 20261507,
+      "approx_tokens": 14748
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c32000__s20261525",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 32000,
+      "seed": 20261525,
+      "approx_tokens": 29475
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20261543",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 8000,
+      "seed": 20261543,
+      "approx_tokens": 7390
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20261554",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 16000,
+      "seed": 20261554,
+      "approx_tokens": 14750
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c32000__s20261572",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 32000,
+      "seed": 20261572,
+      "approx_tokens": 29461
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c8000__s20261590",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 8000,
+      "seed": 20261590,
+      "approx_tokens": 7389
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c16000__s20261608",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 16000,
+      "seed": 20261608,
+      "approx_tokens": 14746
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c32000__s20261626",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 32000,
+      "seed": 20261626,
+      "approx_tokens": 29482
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c8000__s20261644",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 8000,
+      "seed": 20261644,
+      "approx_tokens": 7398
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20261662",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 16000,
+      "seed": 20261662,
+      "approx_tokens": 14748
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c32000__s20261673",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 32000,
+      "seed": 20261673,
+      "approx_tokens": 29463
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c8000__s20261691",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 8000,
+      "seed": 20261691,
+      "approx_tokens": 7427
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c16000__s20261709",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 16000,
+      "seed": 20261709,
+      "approx_tokens": 14765
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c32000__s20261727",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 32000,
+      "seed": 20261727,
+      "approx_tokens": 29463
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c8000__s20261745",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 8000,
+      "seed": 20261745,
+      "approx_tokens": 7403
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20261763",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 16000,
+      "seed": 20261763,
+      "approx_tokens": 14759
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c32000__s20261781",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 32000,
+      "seed": 20261781,
+      "approx_tokens": 29458
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c8000__s20261792",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 8000,
+      "seed": 20261792,
+      "approx_tokens": 7383
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c16000__s20261810",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 16000,
+      "seed": 20261810,
+      "approx_tokens": 14760
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c32000__s20261828",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 32000,
+      "seed": 20261828,
+      "approx_tokens": 29453
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c8000__s20261846",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 8000,
+      "seed": 20261846,
+      "approx_tokens": 7390
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c16000__s20261864",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 16000,
+      "seed": 20261864,
+      "approx_tokens": 14765
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c32000__s20261882",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 32000,
+      "seed": 20261882,
+      "approx_tokens": 29460
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c8000__s20261900",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 8000,
+      "seed": 20261900,
+      "approx_tokens": 7399
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c16000__s20261911",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 16000,
+      "seed": 20261911,
+      "approx_tokens": 14751
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c32000__s20261929",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 32000,
+      "seed": 20261929,
+      "approx_tokens": 29440
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20261947",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.search_docs.v1",
+      "context_length": 8000,
+      "seed": 20261947,
+      "approx_tokens": 7387
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20261965",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.read_file.v1",
+      "context_length": 16000,
+      "seed": 20261965,
+      "approx_tokens": 14760
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c32000__s20261983",
+      "split": "validation",
+      "category": "tool_schema",
+      "template_id": "tool_schema.sql_query.v1",
+      "context_length": 32000,
+      "seed": 20261983,
+      "approx_tokens": 29463
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c8000__s20262001",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.http_get.v1",
+      "context_length": 8000,
+      "seed": 20262001,
+      "approx_tokens": 7434
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c16000__s20262019",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.create_ticket.v1",
+      "context_length": 16000,
+      "seed": 20262019,
+      "approx_tokens": 14773
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c32000__s20262030",
+      "split": "test",
+      "category": "tool_schema",
+      "template_id": "tool_schema.set_config.v1",
+      "context_length": 32000,
+      "seed": 20262030,
+      "approx_tokens": 29454
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c8000__s20262048",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.schedule_job.v1",
+      "context_length": 8000,
+      "seed": 20262048,
+      "approx_tokens": 7393
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20262066",
+      "split": "calibration",
+      "category": "tool_schema",
+      "template_id": "tool_schema.send_email.v1",
+      "context_length": 16000,
+      "seed": 20262066,
+      "approx_tokens": 14748
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c8000__s20270721",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 8000,
+      "seed": 20270721,
+      "approx_tokens": 7375
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c16000__s20270739",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 16000,
+      "seed": 20270739,
+      "approx_tokens": 14738
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c32000__s20270757",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 32000,
+      "seed": 20270757,
+      "approx_tokens": 29497
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c8000__s20270775",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 8000,
+      "seed": 20270775,
+      "approx_tokens": 7368
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c16000__s20270793",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 16000,
+      "seed": 20270793,
+      "approx_tokens": 14755
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c32000__s20270811",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 32000,
+      "seed": 20270811,
+      "approx_tokens": 29492
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c8000__s20270829",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 8000,
+      "seed": 20270829,
+      "approx_tokens": 7370
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c16000__s20270840",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 16000,
+      "seed": 20270840,
+      "approx_tokens": 14741
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c32000__s20270858",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 32000,
+      "seed": 20270858,
+      "approx_tokens": 29468
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c8000__s20270876",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 8000,
+      "seed": 20270876,
+      "approx_tokens": 7370
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c16000__s20270894",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 16000,
+      "seed": 20270894,
+      "approx_tokens": 14801
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c32000__s20270912",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 32000,
+      "seed": 20270912,
+      "approx_tokens": 29444
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c8000__s20270930",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 8000,
+      "seed": 20270930,
+      "approx_tokens": 7368
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c16000__s20270948",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 16000,
+      "seed": 20270948,
+      "approx_tokens": 14747
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c32000__s20270959",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 32000,
+      "seed": 20270959,
+      "approx_tokens": 29495
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c8000__s20270977",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 8000,
+      "seed": 20270977,
+      "approx_tokens": 7393
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c16000__s20270995",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 16000,
+      "seed": 20270995,
+      "approx_tokens": 14746
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c32000__s20271013",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 32000,
+      "seed": 20271013,
+      "approx_tokens": 29499
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c8000__s20271031",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 8000,
+      "seed": 20271031,
+      "approx_tokens": 7370
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c16000__s20271049",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 16000,
+      "seed": 20271049,
+      "approx_tokens": 14744
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c32000__s20271067",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 32000,
+      "seed": 20271067,
+      "approx_tokens": 29490
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c8000__s20271078",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 8000,
+      "seed": 20271078,
+      "approx_tokens": 7368
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c16000__s20271096",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 16000,
+      "seed": 20271096,
+      "approx_tokens": 14750
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c32000__s20271114",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 32000,
+      "seed": 20271114,
+      "approx_tokens": 29496
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c8000__s20271132",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 8000,
+      "seed": 20271132,
+      "approx_tokens": 7369
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c16000__s20271150",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 16000,
+      "seed": 20271150,
+      "approx_tokens": 14746
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c32000__s20271168",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 32000,
+      "seed": 20271168,
+      "approx_tokens": 29467
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c8000__s20271186",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 8000,
+      "seed": 20271186,
+      "approx_tokens": 7373
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c16000__s20271197",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 16000,
+      "seed": 20271197,
+      "approx_tokens": 14721
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c32000__s20271215",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 32000,
+      "seed": 20271215,
+      "approx_tokens": 29499
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c8000__s20271233",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 8000,
+      "seed": 20271233,
+      "approx_tokens": 7374
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c16000__s20271251",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 16000,
+      "seed": 20271251,
+      "approx_tokens": 14738
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c32000__s20271269",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 32000,
+      "seed": 20271269,
+      "approx_tokens": 29498
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c8000__s20271287",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 8000,
+      "seed": 20271287,
+      "approx_tokens": 7392
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c16000__s20271305",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 16000,
+      "seed": 20271305,
+      "approx_tokens": 14795
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c32000__s20271316",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 32000,
+      "seed": 20271316,
+      "approx_tokens": 29495
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c8000__s20271334",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 8000,
+      "seed": 20271334,
+      "approx_tokens": 7416
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c16000__s20271352",
+      "split": "test",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 16000,
+      "seed": 20271352,
+      "approx_tokens": 14721
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v1__c32000__s20271370",
+      "split": "validation",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.format_flip.v1",
+      "context_length": 32000,
+      "seed": 20271370,
+      "approx_tokens": 29495
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v1__c8000__s20271388",
+      "split": "calibration",
+      "category": "instruction_supersession",
+      "template_id": "instruction_supersession.language_flip.v1",
+      "context_length": 8000,
+      "seed": 20271388,
+      "approx_tokens": 7394
+    }
+  ]
+}
