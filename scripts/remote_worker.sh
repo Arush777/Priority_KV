@@ -174,6 +174,10 @@ run_one_job() {
   export CUDA_VISIBLE_DEVICES="$gpus"
   export PRIORITYKV_SCRATCH="$SCRATCH"
   export PYTHONPATH="${ROOT}/src${PYTHONPATH:+:$PYTHONPATH}"
+  # H200 INT4 / torch JIT (HANDOFF_W3_INT4 §B): toolkit on PATH for nvcc.
+  export CUDA_HOME="${CUDA_HOME:-/usr/local/cuda}"
+  export PATH="${CUDA_HOME}/bin:${PATH}"
+  export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-9.0}"
 
   local log_path="$LOG_DIR/${job_id}.log"
   log "START ${job_id}: ${command} (gpus=${gpus} timeout=${timeout_sec})"
@@ -181,6 +185,8 @@ run_one_job() {
     echo "=== remote_worker job=${job_id} started=$(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
     echo "command=${command}"
     echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES}"
+    echo "CUDA_HOME=${CUDA_HOME}"
+    echo "TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}"
     echo "PRIORITYKV_SCRATCH=${PRIORITYKV_SCRATCH}"
     echo "cwd=${ROOT}"
   } >"$log_path"
