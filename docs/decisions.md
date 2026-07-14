@@ -141,3 +141,8 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **CPU landed:** mixed BF16/INT4 dequant-then-attend ref (`mixed_cache_reference.py`); INT4 path tests; page-granularity keep (floor to token budget); `allow_fake_fallback=False` assert mode; SnapKV/quanto loud-skip via `scripts/run_w3_baselines_check.py`
 - **Cut (Fable D):** `label_page_perturb` deferred W4; FlashInfer multi-call deferred; attention-KL deferred
 - **H200 next:** `configs/w3_structured_paged.yaml` + install quanto/kvpress then `configs/w3_int4_assert.yaml`
+
+## 2026-07-15 — Handoff doc for INT4 / quanto_cuda
+
+- Collaborator continues from **`docs/HANDOFF_W3_INT4.md`** (Opus-reviewed language).
+- Page stress already green (`w3_structured_paged_r1`); active bug = `quanto_cuda` JIT under assert-no-fake.
