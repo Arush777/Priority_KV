@@ -99,4 +99,27 @@ python scripts/mk_bench.py --n 40 \
 Expect `bytes_report` to show all-INT4 floor ≈0.297 and 30% budget with tiny `maxBF16`.
 Expect `mk_bench` → `n=40 ... manifest=.../w1_pilot.json`.
 
+## W1 — FP8 KV smoke (GPU)
+
+FullKV vs FP8 KV inside vLLM (on-the-fly scales). Uses 2 GPUs from `.env`.
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git pull origin main
+source .venv/bin/activate
+set -a && source .env && set +a
+
+python scripts/cmp_fp8.py
+```
+
+Expect ~10–20 min. Success:
+```text
+n=20 exact=… tok=… pass=1 out=.../runs/w1_fp8/...
+```
+
+Optional later (heavier oneshot calib; needs `uv pip install llmcompressor`):
+```bash
+python scripts/prep_fp8.py
+```
+
 Do not commit `.env`. Do not run agents on this host.
