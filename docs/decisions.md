@@ -118,3 +118,9 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Cats:** structure 1.00 all three; uniform/random 0.00 all three; both 8k and 16k
 - **Read:** at matched 25% keep, structure-protected retention restores agent reliability; sink+recent and random-at-matched-budget do not. This is the PriorityKV / G2 path-(b) pilot signal (≥3pt oracle structure vs uniform — here +100pt).
 - **Caveat to scrub next:** structure=1.0 everywhere is very clean — confirm OTHER/short-turn tagging isn't over-protecting; denser keep_frac sweep + page-level (not prompt-gather) path in W3.
+
+## 2026-07-15 — Fable on structured HIT: MIXED
+
+- **Verdict:** LEGIT on-benchmark path-(b) signal; bimodal 1/0 is expected because bench puts gold in short turns and policy protects short turns. Scope is "state length-separable from filler," not all traces.
+- **Fix applied:** removed `"FINAL" in content` → RECENT oracle keying.
+- **Next before W2 close:** buried-state adversarial H200 (`configs/stress_structured_25_buried.yaml`) — expect structure to drop; if still 1.0, leak.

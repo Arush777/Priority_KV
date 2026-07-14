@@ -31,15 +31,22 @@ def main() -> int:
     )
     ap.add_argument("--out", default=None)
     ap.add_argument("--reuse-full", default=None)
+    ap.add_argument(
+        "--buried",
+        action="store_true",
+        help="Embed gold turns in long filler (adversarial scope check)",
+    )
     args = ap.parse_args()
     result = run_structured_stress(
         Path(args.config),
         Path(args.out) if args.out else None,
         reuse_full_path=Path(args.reuse_full) if args.reuse_full else None,
+        buried=True if args.buried else None,
     )
     print(
         f"n={result['n']} full={result['fullkv_mean']:.3f} "
-        f"keep_frac={result['keep']['keep_frac']} out={result['out_path']}"
+        f"keep_frac={result['keep']['keep_frac']} "
+        f"buried={result.get('buried_state')} out={result['out_path']}"
     )
     for p, arm in result["arms"].items():
         cats = " ".join(
