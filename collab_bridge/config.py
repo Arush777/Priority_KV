@@ -46,7 +46,9 @@ class Settings:
     @classmethod
     def load(cls, env_file: str | Path | None = None) -> "Settings":
         root = _repo_root_default()
-        load_dotenv(env_file or (root / ".env"))
+        # override=True so a stale exported GITHUB_REPO/TELEGRAM_* in the shell
+        # cannot silently win over the project .env
+        load_dotenv(env_file or (root / ".env"), override=True)
 
         agent_id = (os.getenv("AGENT_ID") or "").strip().lower()
         token = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
