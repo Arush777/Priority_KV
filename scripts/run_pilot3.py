@@ -8,6 +8,8 @@ import os
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -31,12 +33,25 @@ def main() -> int:
     ap.add_argument(
         "--reuse",
         default=None,
-        help="Prior FullKV/FP8 pilot JSON with fullkv_text/fp8_text (skip vLLM)",
+        help="Prior FullKV/FP8 JSON with fullkv_text/fp8_text (skip vLLM)",
+    )
+    ap.add_argument(
+        "--modes",
+        default=None,
+        choices=["all", "skip_fp8", "int4_only", "vllm_only"],
+        help="Override config int4.modes (int4_only + --reuse skips vLLM)",
     )
     args = ap.parse_args()
+    cfg_path = Path(args.config)
+    if args.modes is not None:
+        cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+        cfg.setdefault("int4", {})["modes"] = args.modes
+        tmp = cfg_path.with_name(f"{cfg_path.stem}_{args.modes}.yaml")
+        tmp.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+        cfg_path = tmp
     out = Path(args.out) if args.out else None
     reuse = Path(args.reuse) if args.reuse else None
-    result = run_triple_pilot(Path(args.config), out_path=out, reuse_path=reuse)
+    result = run_triple_pilot(cfg_path, out_path=out, reuse_path=reuse)
     cats = " ".join(
         f"{k}:{v.get('fullkv_mean', float('nan')):.2f}/"
         f"{v.get('fp8_mean', float('nan')):.2f}/"
