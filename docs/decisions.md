@@ -124,3 +124,11 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Verdict:** LEGIT on-benchmark path-(b) signal; bimodal 1/0 is expected because bench puts gold in short turns and policy protects short turns. Scope is "state length-separable from filler," not all traces.
 - **Fix applied:** removed `"FINAL" in content` → RECENT oracle keying.
 - **Next before W2 close:** buried-state adversarial H200 (`configs/stress_structured_25_buried.yaml`) — expect structure to drop; if still 1.0, leak.
+
+## 2026-07-15 — Buried-state adversarial (W2 close)
+
+- **Run:** `stress_structured_25_buried_r1` · buried=true · keep_frac=0.25 · n=14
+- **Results:** full=1.000 · uniform=0.000 · **structure=0.429** · random=0.000 · keep_all=1.000 (gate OK)
+- **Cats (structure):** supersession 0.00 · multi_turn 0.00 · **tool_schema 1.00** · len 16k:0.67 / 8k:0.00
+- **Read:** structure **drops** when gold is buried in long filler (no leak). Remaining structure win is mostly TOOL/SYSTEM-tagged schemas (role priors, not length). Scopes W2 claim: structure wins when state is role/length-separable; buried free-form state needs better tagging / page risk in W3.
+- **W2 status:** closed on evidence. G1 freeze stands. Next = W3 (INT4 path, SnapKV attempt, denser atlas, page-level protect).
