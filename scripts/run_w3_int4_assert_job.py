@@ -48,6 +48,9 @@ def main() -> int:
     _run([py, "scripts/mk_bench.py", "--mode", "w3_lock"])
     _run([py, "scripts/audit_bench.py"])
     _run([py, "scripts/run_w3_baselines_check.py"])
+    # Force C++20 for Marlin JIT (torch List_inl.h fails under default c++17).
+    _run([py, "scripts/prebuild_quanto_cuda.py"])
+    # Also wipe package-local stale objects left by prior c++17 failures.
     # THE JOB — full stderr/stdout go to remote_worker tee.
     _run(
         [
