@@ -176,4 +176,43 @@ python scripts/run_pilot.py --config configs/w2b_pb_quality_16k.yaml
 
 Paste the `run_pilot` summary line.
 
+## W2c — FullKV vs FP8 vs uniform INT4 (Q2) — LARGE GPU RUN
+
+INT4 uses HF `QuantizedCache` (quanto) when available, else a groupwise
+fake-quant-after-prefill path. Expect **much slower** than the FP8 pilots
+(~1–3+ hours for 15×16k depending on mode). Prefer a screen/tmux session.
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git fetch origin && git reset --hard origin/main
+source .venv/bin/activate
+set -a && source .env && set +a
+
+# refresh GPU deps (now includes optimum-quanto)
+./scripts/sync.sh --cuda
+
+# optional: SnapKV library
+# uv sync --extra gpu --extra kvpress --extra dev -q
+# python scripts/snap_status.py
+
+python scripts/int4_status.py   # quanto_available / transformers_cache
+
+# Full triple pilot (FullKV + FP8 vLLM, then INT4 HF)
+python scripts/run_pilot3.py --config configs/w2c_pb_quality_16k.yaml
+```
+
+Success summary looks like:
+```text
+n=15 full=… fp8=… int4=… d_int4=… modes=[…] cats[…] out=.../w2c_pb_quality/...
+```
+
+Paste that line + note `modes` (`quanto_quantized_cache` preferred; `fake_groupwise_prefill` is OK for first signal).
+
+Normalize into the failure atlas:
+```bash
+python scripts/atlas_collect.py \
+  --pilot "$PRIORITYKV_SCRATCH/runs/w2c_pb_quality/w2c_pb_quality_16k_r1.json" \
+  --out "$PRIORITYKV_SCRATCH/runs/atlas/w2c_rows.jsonl"
+```
+
 Do not commit `.env`. Do not run agents on this host.
