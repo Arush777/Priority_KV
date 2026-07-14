@@ -1,0 +1,24 @@
+# W2b PriorityBench quality pilot @ 16k: all 3 categories vs FP8.
+manifest_id: w2b_pb_quality_16k
+rev: 1
+bench_manifest: data/prioritybench/manifests/w2b_pilot.json
+selection:
+  split: calibration
+  context_length: 16000
+  n_tool_schema: 5
+  n_instruction_supersession: 5
+  n_multi_turn_state: 5
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 96
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 32768
+fp8:
+  kv_cache_dtype: fp8
+  calculate_kv_scales: true

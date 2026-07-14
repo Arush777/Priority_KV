@@ -31,9 +31,11 @@ def select_rows(bench: dict[str, Any], sel: dict[str, Any]) -> list[dict[str, An
     ]
     tools = [e for e in pool if e["category"] == "tool_schema"]
     supers = [e for e in pool if e["category"] == "instruction_supersession"]
+    multi = [e for e in pool if e["category"] == "multi_turn_state"]
     n_t = int(sel.get("n_tool_schema", 10))
     n_s = int(sel.get("n_instruction_supersession", 5))
-    chosen = tools[:n_t] + supers[:n_s]
+    n_m = int(sel.get("n_multi_turn_state", 0))
+    chosen = tools[:n_t] + supers[:n_s] + multi[:n_m]
     if not chosen:
         raise ValueError("no examples matched selection")
     return chosen
