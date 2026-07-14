@@ -17,10 +17,12 @@ from prioritybench.generate import (  # noqa: E402
     W2_MASTER_SEED,
     W2B_MASTER_SEED,
     W2D_MASTER_SEED,
+    W3_MASTER_SEED,
     generate_tool_schema_pilot,
     generate_w2_mixed_pilot,
     generate_w2b_pilot,
     generate_w2d_pilot,
+    generate_w3_lock_pilot,
     gold_tool_call,
     write_split_dirs,
 )
@@ -54,9 +56,9 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument(
         "--mode",
-        choices=["w1", "w2", "w2b", "w2d"],
+        choices=["w1", "w2", "w2b", "w2d", "w3_lock"],
         default="w1",
-        help="w1=tool; w2=tool+super; w2b=all 3 cats v1 (~145); w2d=all 3 cats v2 non-leak",
+        help="w1=tool; w2=tool+super; w2b=~145 v1; w2d=~145 v2; w3_lock=240 locked",
     )
     ap.add_argument(
         "--out-dir",
@@ -71,6 +73,7 @@ def main() -> int:
             "w2": "w2_pilot.json",
             "w2b": "w2b_pilot.json",
             "w2d": "w2d_pilot.json",
+            "w3_lock": "w3_lock.json",
         }[args.mode]
         args.manifest = ROOT / "data" / "prioritybench" / "manifests" / name
     if args.seed is None:
@@ -79,6 +82,7 @@ def main() -> int:
             "w2": W2_MASTER_SEED,
             "w2b": W2B_MASTER_SEED,
             "w2d": W2D_MASTER_SEED,
+            "w3_lock": W3_MASTER_SEED,
         }[args.mode]
 
     if args.mode == "w1":
@@ -87,8 +91,10 @@ def main() -> int:
         examples = generate_w2_mixed_pilot(master_seed=args.seed)
     elif args.mode == "w2b":
         examples = generate_w2b_pilot(master_seed=args.seed)
-    else:
+    elif args.mode == "w2d":
         examples = generate_w2d_pilot(master_seed=args.seed)
+    else:
+        examples = generate_w3_lock_pilot(master_seed=args.seed)
 
     for ex in examples:
         payload = _synth_pass(ex)
@@ -97,13 +103,37 @@ def main() -> int:
             return 1
 
     counts = write_split_dirs(args.out_dir, examples)
+    w2d_ids = set()
+    if args.mode == "w3_lock":
+        from prioritybench.generate import generate_w2d_pilot
+
+        w2d_ids = {ex.example_id for ex in generate_w2d_pilot()}
     manifest = {
         "master_seed": args.seed,
         "n": len(examples),
+        "mode": args.mode,
         "split_counts": counts,
         "context_hist": dict(Counter(ex.context_length for ex in examples)),
         "template_hist": dict(Counter(ex.template_id for ex in examples)),
         "category_hist": dict(Counter(ex.category.value for ex in examples)),
+        "buried_hist": {
+            cat: {
+                "buried": sum(
+                    1
+                    for ex in examples
+                    if ex.category.value == cat and bool(ex.meta.get("buried_state"))
+                ),
+                "plain": sum(
+                    1
+                    for ex in examples
+                    if ex.category.value == cat and not bool(ex.meta.get("buried_state"))
+                ),
+            }
+            for cat in sorted({ex.category.value for ex in examples})
+        },
+        "w2d_preserved_n": (
+            sum(1 for ex in examples if ex.example_id in w2d_ids) if w2d_ids else None
+        ),
         "examples": [
             {
                 "example_id": ex.example_id,
@@ -113,6 +143,8 @@ def main() -> int:
                 "context_length": ex.context_length,
                 "seed": ex.seed,
                 "approx_tokens": ex.meta.get("approx_tokens"),
+                "buried_state": bool(ex.meta.get("buried_state")),
+                "w2d_preserved": bool(ex.meta.get("w2d_preserved")),
             }
             for ex in examples
         ],

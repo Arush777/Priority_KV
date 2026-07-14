@@ -30,6 +30,7 @@ W1_MASTER_SEED = 20260714
 W2_MASTER_SEED = 20260721
 W2B_MASTER_SEED = 20260728
 W2D_MASTER_SEED = 20260804
+W3_MASTER_SEED = 20260811
 
 # Split fractions from plan §3.2 (calibration 40% / validation 20% / test 40%).
 _SPLIT_THRESHOLDS = (
@@ -176,6 +177,135 @@ def generate_w2d_pilot(
         templates=MULTI_TURN_STATE_TEMPLATES_V2,
     )
     return tools + supers + multi
+
+
+def generate_w3_lock_pilot(
+    *,
+    master_seed: int = W3_MASTER_SEED,
+    context_lengths: Sequence[int] = CONTEXT_LENGTHS,
+    preserve_w2d: bool = True,
+    buried_per_cat: int = 20,
+) -> List[PriorityExample]:
+    """W3 locked pool: 240 examples (80/cat); ~25% buried at *pool* level.
+
+    Preserves all W2d example_ids when ``preserve_w2d``. Adds new plain/buried
+    rows so each category that has room hits ``buried_per_cat`` buried (default
+    20/80). ``tool_schema`` is already full from W2d (0 buried) — documented in
+    audit; supersession/multi get buried backfill.
+    """
+    from prioritykv.baselines.buried_state import bury_short_state_turns
+
+    out: List[PriorityExample] = []
+    seen: set[str] = set()
+    if preserve_w2d:
+        for ex in generate_w2d_pilot(master_seed=W2D_MASTER_SEED):
+            out.append(
+                PriorityExample(
+                    example_id=ex.example_id,
+                    category=ex.category,
+                    split=ex.split,
+                    context_length=ex.context_length,
+                    template_id=ex.template_id,
+                    seed=ex.seed,
+                    messages=ex.messages,
+                    scoring=ex.scoring,
+                    meta={**dict(ex.meta), "buried_state": False, "w2d_preserved": True},
+                )
+            )
+            seen.add(ex.example_id)
+
+    def _count(cat: Category) -> int:
+        return sum(1 for e in out if e.category == cat)
+
+    def _buried(cat: Category) -> int:
+        return sum(
+            1 for e in out if e.category == cat and bool(e.meta.get("buried_state"))
+        )
+
+    def _add_one(
+        cat: Category,
+        templates: Sequence[TemplateSpec],
+        seed_base: int,
+        counter: int,
+        *,
+        bury: bool,
+    ) -> bool:
+        template = templates[counter % len(templates)]
+        ctx = list(context_lengths)[counter % len(context_lengths)]
+        seed = seed_base + counter * 19 + (counter % 11)
+        ex = generate_one(template, seed=seed, context_length=ctx)
+        if ex.category != cat:
+            return False
+        if bury:
+            eid = f"{ex.example_id}__buried"
+            if eid in seen:
+                return False
+            buried_msgs = bury_short_state_turns(ex.messages, seed=seed)
+            ex = PriorityExample(
+                example_id=eid,
+                category=ex.category,
+                split=assign_split(eid),
+                context_length=ex.context_length,
+                template_id=ex.template_id + ".buried",
+                seed=ex.seed,
+                messages=buried_msgs,
+                scoring=ex.scoring,
+                meta={
+                    **dict(ex.meta),
+                    "buried_state": True,
+                    "parent_id": ex.example_id,
+                    "w2d_preserved": False,
+                },
+            )
+        else:
+            if ex.example_id in seen:
+                return False
+            ex = PriorityExample(
+                example_id=ex.example_id,
+                category=ex.category,
+                split=ex.split,
+                context_length=ex.context_length,
+                template_id=ex.template_id,
+                seed=ex.seed,
+                messages=ex.messages,
+                scoring=ex.scoring,
+                meta={**dict(ex.meta), "buried_state": False, "w2d_preserved": False},
+            )
+        out.append(ex)
+        seen.add(ex.example_id)
+        return True
+
+    plans = (
+        (Category.TOOL_SCHEMA, TOOL_SCHEMA_TEMPLATES, master_seed + 100_000),
+        (
+            Category.INSTRUCTION_SUPERSESSION,
+            INSTRUCTION_SUPERSESSION_TEMPLATES_V2,
+            master_seed + 200_000,
+        ),
+        (
+            Category.MULTI_TURN_STATE,
+            MULTI_TURN_STATE_TEMPLATES_V2,
+            master_seed + 300_000,
+        ),
+    )
+    for cat, templates, seed_base in plans:
+        # Prefer buried backfill first so pool-level 25% is hit when room exists.
+        i = 0
+        while _count(cat) < 80 and _buried(cat) < buried_per_cat and i < 400:
+            if _add_one(cat, templates, seed_base + 50_000, i, bury=True):
+                pass
+            i += 1
+        i = 0
+        while _count(cat) < 80 and i < 800:
+            if _add_one(cat, templates, seed_base, i, bury=False):
+                pass
+            i += 1
+        if _count(cat) != 80:
+            raise RuntimeError(
+                f"w3_lock failed {cat.value}: got {_count(cat)}/80 "
+                f"(buried={_buried(cat)})"
+            )
+    return out
 
 
 def _generate_round_robin(

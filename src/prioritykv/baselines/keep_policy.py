@@ -18,6 +18,9 @@ class KeepPolicyConfig:
     # Always retain this many trailing tokens (FINAL ask lives here).
     force_recent: int = 128
     seed: int = 0
+    # Page-level stress (W3): majority-role then whole-page keep.
+    page_tokens: int = 16
+    granularity: str = "token"  # token | page
 
 
 def _message_role_stress(msg: Mapping[str, str]) -> PageRole:
@@ -140,6 +143,159 @@ def select_structure(n: int, roles: Sequence[PageRole], cfg: KeepPolicyConfig) -
         must.add(pos)
         pos -= 1
     return _finalize(list(must), n)
+
+
+def page_bounds(n: int, page_tokens: int) -> list[tuple[int, int]]:
+    """Inclusive-start exclusive-end page spans covering ``n`` tokens."""
+    if page_tokens <= 0:
+        raise ValueError("page_tokens must be > 0")
+    return [(s, min(s + page_tokens, n)) for s in range(0, n, page_tokens)]
+
+
+def majority_page_role(roles: Sequence[PageRole], start: int, end: int) -> PageRole:
+    counts: dict[PageRole, int] = {}
+    for r in roles[start:end]:
+        counts[r] = counts.get(r, 0) + 1
+    # Prefer protected / OTHER on ties (conservative for structure stress).
+    def _key(item: tuple[PageRole, int]):
+        role, c = item
+        prefer = 2 if role in PROTECTED_ROLES else (1 if role == PageRole.OTHER else 0)
+        return (c, prefer)
+
+    return max(counts.items(), key=_key)[0]
+
+
+def _token_budget(n: int, cfg: KeepPolicyConfig) -> int:
+    budget = max(cfg.sink_tokens + cfg.force_recent, int(round(n * cfg.keep_frac)))
+    return min(budget, n)
+
+
+def _pages_covering_tokens(spans: Sequence[tuple[int, int]], token_indices: set[int]) -> set[int]:
+    keep: set[int] = set()
+    for pi, (s, e) in enumerate(spans):
+        if any(t in token_indices for t in range(s, e)):
+            keep.add(pi)
+    return keep
+
+
+def _expand_pages_to_tokens(spans: Sequence[tuple[int, int]], page_ids: set[int]) -> list[int]:
+    toks: list[int] = []
+    for pi in sorted(page_ids):
+        s, e = spans[pi]
+        toks.extend(range(s, e))
+    return toks
+
+
+def select_uniform_pages(n: int, cfg: KeepPolicyConfig) -> np.ndarray:
+    """Whole-page sink+recent keep, floored to token budget (Fable W3)."""
+    spans = page_bounds(n, cfg.page_tokens)
+    budget = _token_budget(n, cfg)
+    if budget >= n:
+        return np.arange(n, dtype=np.int64)
+    must_toks = set(range(min(cfg.sink_tokens, n))) | set(
+        range(max(0, n - cfg.force_recent), n)
+    )
+    keep_pages = _pages_covering_tokens(spans, must_toks)
+    # Floor: never exceed token budget; drop middle pages first (highest page id before recent).
+    def _n_toks(pids: set[int]) -> int:
+        return sum(spans[p][1] - spans[p][0] for p in pids)
+
+    # If sink+recent pages alone exceed budget, still keep them (RoPE guardrail) but log later.
+    if _n_toks(keep_pages) > budget:
+        return _finalize(_expand_pages_to_tokens(spans, keep_pages), n)
+    # Add middle pages from the recent edge leftward until next page would exceed budget.
+    for pi in range(len(spans) - 1, -1, -1):
+        if pi in keep_pages:
+            continue
+        trial = set(keep_pages) | {pi}
+        if _n_toks(trial) <= budget:
+            keep_pages = trial
+    return _finalize(_expand_pages_to_tokens(spans, keep_pages), n)
+
+
+def select_random_pages(n: int, cfg: KeepPolicyConfig) -> np.ndarray:
+    spans = page_bounds(n, cfg.page_tokens)
+    budget = _token_budget(n, cfg)
+    if budget >= n:
+        return np.arange(n, dtype=np.int64)
+    must_toks = set(range(min(cfg.sink_tokens, n))) | set(
+        range(max(0, n - cfg.force_recent), n)
+    )
+    keep_pages = _pages_covering_tokens(spans, must_toks)
+
+    def _n_toks(pids: set[int]) -> int:
+        return sum(spans[p][1] - spans[p][0] for p in pids)
+
+    middle = [pi for pi in range(len(spans)) if pi not in keep_pages]
+    rng = np.random.default_rng(cfg.seed)
+    rng.shuffle(middle)
+    for pi in middle:
+        trial = set(keep_pages) | {pi}
+        if _n_toks(trial) <= budget:
+            keep_pages = trial
+    return _finalize(_expand_pages_to_tokens(spans, keep_pages), n)
+
+
+def select_structure_pages(
+    n: int, roles: Sequence[PageRole], cfg: KeepPolicyConfig
+) -> np.ndarray:
+    spans = page_bounds(n, cfg.page_tokens)
+    budget = _token_budget(n, cfg)
+    if budget >= n:
+        return np.arange(n, dtype=np.int64)
+    must_toks = set(range(min(cfg.sink_tokens, n))) | set(
+        range(max(0, n - cfg.force_recent), n)
+    )
+    keep_pages = _pages_covering_tokens(spans, must_toks)
+    page_roles = [majority_page_role(roles, s, e) for s, e in spans]
+    struct_pages = [
+        pi
+        for pi, r in enumerate(page_roles)
+        if r in PROTECTED_ROLES or r == PageRole.OTHER
+    ]
+
+    def _n_toks(pids: set[int]) -> int:
+        return sum(spans[p][1] - spans[p][0] for p in pids)
+
+    for pi in struct_pages:
+        if pi in keep_pages:
+            continue
+        trial = set(keep_pages) | {pi}
+        if _n_toks(trial) <= budget:
+            keep_pages = trial
+    # Fill remainder from right (near recent) without exceeding budget.
+    for pi in range(len(spans) - 1, -1, -1):
+        if pi in keep_pages:
+            continue
+        trial = set(keep_pages) | {pi}
+        if _n_toks(trial) <= budget:
+            keep_pages = trial
+    return _finalize(_expand_pages_to_tokens(spans, keep_pages), n)
+
+
+def select_keep_indices(
+    n: int,
+    cfg: KeepPolicyConfig,
+    *,
+    policy: str,
+    roles: Sequence[PageRole] | None = None,
+) -> np.ndarray:
+    """Dispatch token- or page-granularity keep selection."""
+    page = cfg.granularity == "page"
+    if policy == "uniform":
+        return select_uniform_pages(n, cfg) if page else select_uniform(n, cfg)
+    if policy == "random":
+        return select_random_pages(n, cfg) if page else select_random(n, cfg)
+    if policy == "structure":
+        if roles is None:
+            raise ValueError("structure policy requires roles")
+        return (
+            select_structure_pages(n, roles, cfg)
+            if page
+            else select_structure(n, roles, cfg)
+        )
+    raise ValueError(f"unknown policy {policy}")
+
 
 
 def apply_keep_indices(ids, indices: np.ndarray):

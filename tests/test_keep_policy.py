@@ -46,3 +46,28 @@ def test_apply_keep_indices():
     ids = torch.arange(100)
     out = apply_keep_indices(ids, np.array([0, 1, 98, 99]))
     assert list(out.tolist()) == [0, 1, 98, 99]
+
+
+def test_page_structure_floors_budget():
+    from prioritykv.baselines.keep_policy import (
+        select_structure_pages,
+        select_uniform_pages,
+    )
+
+    cfg = KeepPolicyConfig(
+        keep_frac=0.25,
+        sink_tokens=16,
+        force_recent=64,
+        page_tokens=16,
+        granularity="page",
+    )
+    n = 1000
+    idx_u = select_uniform_pages(n, cfg)
+    budget = max(16 + 64, int(round(n * 0.25)))
+    assert len(idx_u) <= budget + 16
+    roles = [PageRole.FILLER] * n
+    for i in range(100, 200):
+        roles[i] = PageRole.TOOL
+    idx_s = select_structure_pages(n, roles, cfg)
+    tool_kept = sum(1 for i in idx_s if 100 <= int(i) < 200)
+    assert tool_kept >= 48

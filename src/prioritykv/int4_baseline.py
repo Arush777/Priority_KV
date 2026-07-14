@@ -93,11 +93,13 @@ def run_transformers_int4(
     max_model_len: int = 32768,
     cfg: Optional[Int4KvConfig] = None,
     prefer_quanto: bool = True,
+    allow_fake_fallback: bool = True,
 ) -> list[tuple[str, list[int], dict[str, Any]]]:
     """Greedy decode with uniform INT4 KV.
 
     Prefer ``cache_implementation="quantized"`` (quanto). Fall back to
-    post-prefill fake-quant of the prompt KV (decode tokens stay BF16).
+    post-prefill fake-quant of the prompt KV (decode tokens stay BF16)
+    unless ``allow_fake_fallback=False`` (W3 assert mode — raise instead).
     """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -217,6 +219,16 @@ def run_transformers_int4(
                             meta["quanto_obj_error"] = str(exc)[:240]
 
             if not done:
+                if not allow_fake_fallback:
+                    errs = {
+                        k: meta[k]
+                        for k in ("quanto_impl_error", "quanto_obj_error")
+                        if meta.get(k)
+                    }
+                    raise RuntimeError(
+                        "INT4 quanto path failed and allow_fake_fallback=False "
+                        f"(id={row.id} errors={errs})"
+                    )
                 meta["mode"] = "fake_groupwise_prefill"
                 pre = model(**inputs, use_cache=True, return_dict=True)
                 past = _fake_quant_past(pre.past_key_values, cfg)
