@@ -9,3 +9,8 @@ Append-only. Newest at bottom.
 - **Decided:** H200 is human-operated only: `git pull` + `uv` + GPU runs. No agents on H200.
 - **Decided:** Env manager is `uv` with `pyproject.toml` + lockfile; GPU extras via `uv sync --extra gpu`.
 - **Decided:** Primary model pin remains `Qwen/Qwen3-8B` @ `b968826d9c46dd6066d109eabc6255188de91218`.
+
+## 2026-07-14 — Shared H200 etiquette
+
+- **Decided:** Hard cap of **2 GPUs** on the shared 8× H200 host. Default `CUDA_VISIBLE_DEVICES=6,7` (override only if busy).
+- **Decided:** Operator-facing scripts are bland (`scripts/sync.sh`, `scripts/check.sh`); no project/model slogans in shell banners.
