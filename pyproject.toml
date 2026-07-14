@@ -21,6 +21,11 @@ gpu = [
     "datasets>=3.0",
     "huggingface-hub>=0.26",
     "vllm>=0.8.0",
+    "optimum-quanto>=0.2.0",
+]
+# SnapKV / presses — optional, W2–W3: uv sync --extra gpu --extra kvpress
+kvpress = [
+    "kvpress>=0.2.0",
 ]
 dev = [
     "pytest>=8.0",
