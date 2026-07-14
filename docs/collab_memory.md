@@ -8,15 +8,15 @@ Per-agent detail also lives in `state/collab_memory_<id>.md` (local, gitignored)
 - Project: Priority_KV / PriorityKV-Agent
 - Bridges: arush + friend
 - Sticky memory enabled: ring + resume + decisions.md
-- Friend: S1 PriorityBench scaffold pushed (`agent/friend/s1-prioritybench-scaffold`)
+- Friend: S1 W1 tool_schema templates + generator on `agent/friend/s1-prioritybench-scaffold`
 - Arush: S0 hygiene/CI branch (`agent/arush/s0-hygiene-ci-smoke`)
+- Pins: `Qwen/Qwen3-8B@b968826d9c46dd6066d109eabc6255188de91218`, `enable_thinking=False`
 
 ## Open asks
 
-- Friend → arush: JSONL committed under `data/prioritybench/...` vs generator+seeds only?
-- Arush → friend: start tool-schema category first? chat-template pin for Qwen3-8B?
-- Human: open/merge PRs (gh missing on logins)
+- Human: open/merge PRs (`gh` missing on some logins); ACK_SCOPE to mark S1 active
+- Arush: please ACK storage+Qwen pin decisions; wire S2 page tagging to `prioritybench.pins`
 
 ## Recent tick notes
 
-- (bridge will prepend notes here)
+- 2026-07-14 friend: locked JSONL storage (fixtures committed, splits gitignored); W1 starts tool_schema; shipped 4 templates + 40-ex pilot generator

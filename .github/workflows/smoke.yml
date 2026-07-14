@@ -20,3 +20,7 @@ jobs:
         run: PYTHONPATH=. python scripts/test_protocol.py
       - name: Metrics stub tests
         run: PYTHONPATH=src python scripts/test_metrics.py
+      - name: PriorityBench scorers
+        run: PYTHONPATH=src python scripts/test_prioritybench_scoring.py
+      - name: PriorityBench generator
+        run: PYTHONPATH=src python scripts/test_prioritybench_generate.py
