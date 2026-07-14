@@ -12,10 +12,12 @@ equal bytes. See `docs/IMPLEMENTATION_PLAN.md` §3.3.
 | FullKV (S0) | w2 / w2b 8k+16k | green on **leaky v1** templates |
 | FP8 (S1) | w2b + w2c 16k | delta=0 (v1 too easy) |
 | Uniform INT4 (Q2) | w2c / w2d 16k | soft/broken path → still ~1.0; not decisive |
-| DropKeep ~64× | stress_dropkeep_16k | **HIT:** full=1.0 drop=0.0 all cats — first G2 signal |
-| SnapKV (Q3) | — | scaffold / optional KVPress |
+| DropKeep ~64× | stress_dropkeep_16k | **HIT:** full=1.0 drop=0.0 |
+| Structure @25% | stress_structured_25 | **HIT:** structure=1.0 vs uniform/random=0 · keep_all=1 |
+| Buried adversarial | stress_structured_25_buried | **scoped:** structure=0.43 (tool only); multi/super→0 — no leak |
+| SnapKV (Q3) | — | deferred W3 |
 
-**2026-07-15:** `run_stress.py` → full=1.000 drop=0.000 @ ~63.8×. Agent reliability collapses under aggressive eviction.
+**W2 closed (2026-07-15):** G2 path (b) pilot OK when state is structurally tagged; buried-state scopes the claim. Guardrails still stubbed until pre-G2.
 
 ## How to append rows
 
