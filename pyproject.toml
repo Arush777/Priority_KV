@@ -1,0 +1,47 @@
+[project]
+name = "priority-kv"
+version = "0.1.0"
+description = "PriorityKV-Agent: structure-protected mixed-precision KV cache for long agent traces"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "numpy>=1.26",
+    "jsonschema>=4.22",
+    "pyyaml>=6.0",
+    "tqdm>=4.66",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# Install on H200 GPU nodes only: uv sync --extra gpu
+gpu = [
+    "torch>=2.5.0",
+    "transformers>=4.51.0",
+    "accelerate>=1.0",
+    "datasets>=3.0",
+    "huggingface-hub>=0.26",
+    "vllm>=0.8.0",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/prioritybench", "src/prioritykv"]
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests", "scripts"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
