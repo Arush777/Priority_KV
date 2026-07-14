@@ -69,19 +69,21 @@ def main() -> int:
                 print(f"gold fail {ex.example_id}", file=sys.stderr)
                 return 1
         else:
-            # Supersession: synthesize a passing string from latest constraint.
-            latest = ex.scoring.get("latest_constraint") or ex.scoring.get(
-                "constraint_pattern"
-            )
-            if latest and score_example(ex, f"answer with {latest}") != 1.0:
-                # language_flip forbids nothing; format_flip has forbidden — avoid old.
-                payload = str(latest)
-                forbidden = ex.scoring.get("forbidden_pattern")
-                if forbidden:
-                    payload = f"using {latest} only"
-                if score_example(ex, payload) != 1.0:
-                    print(f"synth fail {ex.example_id}", file=sys.stderr)
-                    return 1
+            # Supersession: synthesize a string that must pass the deterministic scorer.
+            latest = ex.scoring.get("latest_constraint")
+            if latest:
+                payload = f"[[FMT:{latest}]] ok sentence about topic."
+            else:
+                # language_flip: constraint_pattern is the escaped codename
+                payload = ex.scoring.get("constraint_pattern") or "alpha"
+                # pattern may be regex-escaped; prefer a raw token from meta if present
+                for tok in ("alpha", "bravo", "charlie"):
+                    if tok in str(ex.scoring.get("constraint_pattern", "")):
+                        payload = f"Short reply with {tok}."
+                        break
+            if score_example(ex, payload) != 1.0:
+                print(f"synth fail {ex.example_id} payload={payload!r}", file=sys.stderr)
+                return 1
 
     counts = write_split_dirs(args.out_dir, examples)
     manifest = {

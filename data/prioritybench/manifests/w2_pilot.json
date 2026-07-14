@@ -751,7 +751,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 8000,
       "seed": 20270721,
-      "approx_tokens": 7375
+      "approx_tokens": 7402
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c16000__s20270739",
@@ -760,7 +760,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 16000,
       "seed": 20270739,
-      "approx_tokens": 14738
+      "approx_tokens": 14724
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c32000__s20270757",
@@ -769,7 +769,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 32000,
       "seed": 20270757,
-      "approx_tokens": 29497
+      "approx_tokens": 29440
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c8000__s20270775",
@@ -778,7 +778,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 8000,
       "seed": 20270775,
-      "approx_tokens": 7368
+      "approx_tokens": 7380
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c16000__s20270793",
@@ -787,7 +787,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 16000,
       "seed": 20270793,
-      "approx_tokens": 14755
+      "approx_tokens": 14751
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c32000__s20270811",
@@ -796,7 +796,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 32000,
       "seed": 20270811,
-      "approx_tokens": 29492
+      "approx_tokens": 29476
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c8000__s20270829",
@@ -805,7 +805,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 8000,
       "seed": 20270829,
-      "approx_tokens": 7370
+      "approx_tokens": 7395
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c16000__s20270840",
@@ -814,7 +814,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 16000,
       "seed": 20270840,
-      "approx_tokens": 14741
+      "approx_tokens": 14725
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c32000__s20270858",
@@ -823,7 +823,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 32000,
       "seed": 20270858,
-      "approx_tokens": 29468
+      "approx_tokens": 29493
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c8000__s20270876",
@@ -832,7 +832,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 8000,
       "seed": 20270876,
-      "approx_tokens": 7370
+      "approx_tokens": 7382
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c16000__s20270894",
@@ -841,7 +841,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 16000,
       "seed": 20270894,
-      "approx_tokens": 14801
+      "approx_tokens": 14745
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c32000__s20270912",
@@ -850,7 +850,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 32000,
       "seed": 20270912,
-      "approx_tokens": 29444
+      "approx_tokens": 29456
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c8000__s20270930",
@@ -859,7 +859,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 8000,
       "seed": 20270930,
-      "approx_tokens": 7368
+      "approx_tokens": 7395
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c16000__s20270948",
@@ -868,7 +868,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 16000,
       "seed": 20270948,
-      "approx_tokens": 14747
+      "approx_tokens": 14731
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c32000__s20270959",
@@ -877,7 +877,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 32000,
       "seed": 20270959,
-      "approx_tokens": 29495
+      "approx_tokens": 29520
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c8000__s20270977",
@@ -886,7 +886,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 8000,
       "seed": 20270977,
-      "approx_tokens": 7393
+      "approx_tokens": 7405
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c16000__s20270995",
@@ -895,7 +895,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 16000,
       "seed": 20270995,
-      "approx_tokens": 14746
+      "approx_tokens": 14743
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c32000__s20271013",
@@ -904,7 +904,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 32000,
       "seed": 20271013,
-      "approx_tokens": 29499
+      "approx_tokens": 29511
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c8000__s20271031",
@@ -922,7 +922,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 16000,
       "seed": 20271049,
-      "approx_tokens": 14744
+      "approx_tokens": 14728
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c32000__s20271067",
@@ -931,7 +931,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 32000,
       "seed": 20271067,
-      "approx_tokens": 29490
+      "approx_tokens": 29487
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c8000__s20271078",
@@ -940,7 +940,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 8000,
       "seed": 20271078,
-      "approx_tokens": 7368
+      "approx_tokens": 7380
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c16000__s20271096",
@@ -949,7 +949,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 16000,
       "seed": 20271096,
-      "approx_tokens": 14750
+      "approx_tokens": 14774
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c32000__s20271114",
@@ -958,7 +958,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 32000,
       "seed": 20271114,
-      "approx_tokens": 29496
+      "approx_tokens": 29508
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c8000__s20271132",
@@ -967,7 +967,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 8000,
       "seed": 20271132,
-      "approx_tokens": 7369
+      "approx_tokens": 7397
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c16000__s20271150",
@@ -976,7 +976,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 16000,
       "seed": 20271150,
-      "approx_tokens": 14746
+      "approx_tokens": 14731
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c32000__s20271168",
@@ -985,7 +985,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 32000,
       "seed": 20271168,
-      "approx_tokens": 29467
+      "approx_tokens": 29493
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c8000__s20271186",
@@ -994,7 +994,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 8000,
       "seed": 20271186,
-      "approx_tokens": 7373
+      "approx_tokens": 7385
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c16000__s20271197",
@@ -1003,7 +1003,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 16000,
       "seed": 20271197,
-      "approx_tokens": 14721
+      "approx_tokens": 14746
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c32000__s20271215",
@@ -1012,7 +1012,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 32000,
       "seed": 20271215,
-      "approx_tokens": 29499
+      "approx_tokens": 29511
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c8000__s20271233",
@@ -1021,7 +1021,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 8000,
       "seed": 20271233,
-      "approx_tokens": 7374
+      "approx_tokens": 7399
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c16000__s20271251",
@@ -1030,7 +1030,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 16000,
       "seed": 20271251,
-      "approx_tokens": 14738
+      "approx_tokens": 14723
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c32000__s20271269",
@@ -1039,7 +1039,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 32000,
       "seed": 20271269,
-      "approx_tokens": 29498
+      "approx_tokens": 29494
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c8000__s20271287",
@@ -1048,7 +1048,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 8000,
       "seed": 20271287,
-      "approx_tokens": 7392
+      "approx_tokens": 7404
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c16000__s20271305",
@@ -1057,7 +1057,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 16000,
       "seed": 20271305,
-      "approx_tokens": 14795
+      "approx_tokens": 14796
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c32000__s20271316",
@@ -1066,7 +1066,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 32000,
       "seed": 20271316,
-      "approx_tokens": 29495
+      "approx_tokens": 29507
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c8000__s20271334",
@@ -1075,7 +1075,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 8000,
       "seed": 20271334,
-      "approx_tokens": 7416
+      "approx_tokens": 7414
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c16000__s20271352",
@@ -1084,7 +1084,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 16000,
       "seed": 20271352,
-      "approx_tokens": 14721
+      "approx_tokens": 14733
     },
     {
       "example_id": "instruction_supersession.format_flip.v1__c32000__s20271370",
@@ -1093,7 +1093,7 @@
       "template_id": "instruction_supersession.format_flip.v1",
       "context_length": 32000,
       "seed": 20271370,
-      "approx_tokens": 29495
+      "approx_tokens": 29521
     },
     {
       "example_id": "instruction_supersession.language_flip.v1__c8000__s20271388",
@@ -1102,7 +1102,7 @@
       "template_id": "instruction_supersession.language_flip.v1",
       "context_length": 8000,
       "seed": 20271388,
-      "approx_tokens": 7394
+      "approx_tokens": 7406
     }
   ]
 }
