@@ -18,3 +18,8 @@ build/
 *.log
 .cursor/agent-transcripts/
 .cursor/projects/
+
+# PriorityBench generated splits (fixtures/ stay tracked)
+data/prioritybench/calibration/
+data/prioritybench/validation/
+data/prioritybench/test/
