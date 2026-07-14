@@ -3,6 +3,12 @@
 Canon: docs/PRIORITYKV_IMPLEMENTATION_PLAN.md §3.
 """
 
+from prioritybench.generate import generate_tool_schema_pilot
+from prioritybench.pins import (
+    QWEN3_8B_MODEL_ID,
+    QWEN3_8B_REVISION,
+    QWEN3_ENABLE_THINKING,
+)
 from prioritybench.schema import (
     Category,
     PriorityExample,
@@ -15,6 +21,10 @@ __all__ = [
     "CATEGORIES",
     "Category",
     "PriorityExample",
+    "QWEN3_8B_MODEL_ID",
+    "QWEN3_8B_REVISION",
+    "QWEN3_ENABLE_THINKING",
     "Split",
+    "generate_tool_schema_pilot",
     "score_example",
 ]
