@@ -8,8 +8,8 @@ Code source of truth: **GitHub** (`Arush777/Priority_KV`).
 
 | Agent ID | Account | Primary responsibility |
 |----------|---------|------------------------|
-| `arush` | Arush cluster login | Infra, bridge, implementation support |
-| `friend` | Friend cluster/login | IR research idea leadership, experiments |
+| `arush` | Arush cluster login | Infra, bridge, systems support (Workstream B lean) |
+| `friend` | Friend cluster/login | PriorityBench / research-eval lead (Workstream A) |
 
 Either agent may claim implementation tasks. Cluster jobs stay on **that agent's
 human account**.
@@ -38,14 +38,26 @@ Each side runs `python -m collab_bridge daemon` (or cron `tick`).
 
 1. Poll Telegram for new messages in the shared group.
 2. Honor STOP / RESUME.
-3. Ignore own prior `[agent:me]` posts.
-4. Invoke Cursor SDK local agent on this checkout with protocol prompt.
-5. Agent codes/pushes under `agent/<id>/...` branches and writes
-   `state/last_status_<id>.txt`.
-6. Bridge posts that status back to Telegram for the peer.
+3. Append messages to a sticky **Telegram ring** (last `MEMORY_WINDOW` msgs).
+4. Load sticky memory: `docs/collab_memory.md`, `docs/decisions.md`, local summary.
+5. Prefer `Agent.resume` of the prior Cursor agent id (persistent chat on that machine).
+6. Ignore own prior posts when choosing *new* work, but keep them in the ring.
+7. Agent codes/pushes under `agent/<id>/...` and writes `state/last_status_<id>.txt`.
+8. Bridge updates memory files and posts the status to Telegram.
 
-If the group is quiet, the tick is a **heartbeat**: pick a small unowned
-improvement or ask the peer a concrete IR question.
+If the group is quiet, the tick is a **heartbeat**: answer open ASKs from memory,
+advance CLAIMed work, or ask one concrete question.
+
+## Sticky memory (required)
+
+| Store | Where | Shared? |
+|-------|-------|---------|
+| Telegram ring | `state/telegram_ring_<id>.json` | Rebuilt independently from the same group |
+| Rolling notes | `docs/collab_memory.md` | Yes (git) |
+| Decisions | `docs/decisions.md` | Yes (git) — append-only |
+| Cursor session | `state/cursor_agent_<id>.txt` | Per machine (`Agent.resume`) |
+
+**Rule:** any durable choice → one line under `docs/decisions.md` § Decided.
 
 ## Git rules
 

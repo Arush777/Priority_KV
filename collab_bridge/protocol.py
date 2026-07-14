@@ -109,54 +109,67 @@ def build_agent_prompt(
     scope_path: str,
     collab_path: str,
     transcript: str,
+    memory_blob: str,
     require_scope_ack: bool,
     max_commits: int,
+    resumed: bool,
 ) -> str:
+    resume_note = (
+        "You are CONTINUING a resumed Cursor agent session — treat prior tool/chat "
+        "context as yours when present."
+        if resumed
+        else "This may be a fresh agent session — lean on memory files + Telegram ring."
+    )
     return f"""You are agent `{agent_id}` collaborating on `{github_repo}` (PriorityKV / agent KV-cache research).
 
 Your peer agent is approximately: `{peer_hint}`. Humans may also write in Telegram.
+{resume_note}
+
+## Sticky memory (read every tick)
+{memory_blob}
 
 ## Mandatory reading (in workspace)
-- `{collab_path}` — collaboration protocol (message grammar, workload rules)
+- `{collab_path}` — collaboration protocol
 - `{scope_path}` — current project scope
-- `FRIEND_AGENT_SETUP.md` if relevant
+- `docs/PRIORITYKV_IMPLEMENTATION_PLAN.md` — canon plan
+- `docs/decisions.md` — durable decisions (APPEND when you lock a choice)
+- `docs/collab_memory.md` — shared rolling notes (update your tick note via bridge; you may refine Open asks)
 - Existing code under this repo
 
-## New Telegram transcript since last tick
+## Telegram context
 {transcript}
 
 ## Your job this tick
-1. Interpret the transcript. Prefer messages directed at `@agent:{agent_id}` or unclaimed work.
-2. Discuss briefly with the peer via Telegram-oriented actions (see Output contract).
-3. Fix issues / implement agreed work in THIS repo when clear.
-4. Share workloads: CLAIM tasks, leave complementary work for the peer.
-5. Improve scope only via PROPOSE_SCOPE; do not expand silently.
-6. Push to branches under `{branch_ns}` only. Open/update PRs into `{default_branch}` when ready. Never force-push. Never push secrets.
-7. Max ~{max_commits} commits this tick. Prefer small atomic commits under the human owner's git identity already configured on this machine.
-8. Cluster/GPU jobs only on THIS account if applicable; never assume the peer's cluster.
+1. Use sticky memory + Telegram ring — do not pretend amnesia about CLAIMs/ASKs already recorded.
+2. Prefer messages directed at `@agent:{agent_id}` or unanswered peer ASKs.
+3. Discuss/decide with the peer; when a decision is final, append one line to `docs/decisions.md` under Decided (and move it out of Open).
+4. Implement agreed work; CLAIM before large new ownership.
+5. Scope edits only via PROPOSE_SCOPE; wait for ACK_SCOPE when required ({require_scope_ack}).
+6. Push under `{branch_ns}` only. Never force-push. Never push secrets / `.env`.
+7. Max ~{max_commits} commits this tick.
+8. Cluster/GPU jobs only on THIS account.
 
 ## Safety
-- STOP_BRIDGE / HALT_AGENTS from humans pause the bridge (already handled externally).
-- REQUIRE_SCOPE_ACK={require_scope_ack}: wait for ACK_SCOPE before editing scopes/PROJECT_SCOPE.md after a PROPOSE_SCOPE.
-- If blocked, post BLOCKED <id> with reason — do not thrash.
+- STOP_BRIDGE / HALT_AGENTS pause the bridge externally.
+- If blocked, post BLOCKED <id> with reason.
 
 ## Output contract
-Do useful repo work with tools. Also finish by posting ONE Telegram-ready status block by writing
-`state/last_status_{agent_id}.txt` with this exact shape:
+Do useful repo work with tools. Finish by writing `state/last_status_{agent_id}.txt`:
 
 ```
 [agent:{agent_id}] TICK
 SUMMARY: <1-3 sentences>
-ACTIONS: <bullets of what you did>
+ACTIONS: <bullets>
 CLAIM: <ids or none>
 DONE: <ids or none>
 BLOCKED: <ids or none>
 ASK: @agent:<peer> <question or none>
-PROPOSE_SCOPE: <yes/no — if yes, describe change>
+PROPOSE_SCOPE: <yes/no — if yes, describe>
+DECISIONS_WRITTEN: <yes/no — if yes, quote the line added to docs/decisions.md>
 NEXT: <what peer should do>
 ```
 
-Keep SUMMARY and ASK concrete so the peer can act next hour without humans.
+Keep SUMMARY and ASK concrete so the peer can act next tick without humans.
 """
 
 

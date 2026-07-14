@@ -31,6 +31,8 @@ class Settings:
     branch_prefix: str = ""
     state_dir: Path = field(default_factory=lambda: _repo_root_default() / "state")
     telegram_bootstrap_offset: int | None = None
+    memory_window: int = 50
+    use_agent_resume: bool = True
 
     @property
     def branch_ns(self) -> str:
@@ -88,6 +90,9 @@ class Settings:
             branch_prefix=branch_prefix,
             state_dir=(repo_root / "state").resolve(),
             telegram_bootstrap_offset=int(bootstrap) if bootstrap else None,
+            memory_window=int(os.getenv("MEMORY_WINDOW") or "50"),
+            use_agent_resume=(os.getenv("USE_AGENT_RESUME") or "1").strip()
+            in {"1", "true", "True", "yes"},
         )
 
     def validate_for_telegram(self) -> list[str]:
