@@ -255,3 +255,20 @@ python scripts/run_stress.py --config configs/stress_dropkeep_16k.yaml
 
 Success looks like: `full≈1.0 drop≪1.0` especially on `multi_turn_state`.
 Paste that line.
+
+## STRESS sweep — find the drop-off curve (~30–60 min)
+
+Same 14 examples; FullKV once; DropKeep at recent=256/512/1024/2048/4096.
+Reuse FullKV texts from the kill run to skip vLLM:
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git fetch origin && git reset --hard origin/main
+source .venv/bin/activate && set -a && source .env && set +a
+
+python scripts/run_stress_sweep.py \
+  --config configs/stress_dropkeep_sweep.yaml \
+  --reuse-full $PRIORITYKV_SCRATCH/runs/stress_dropkeep/stress_dropkeep_16k_r1.json
+```
+
+Paste the printed curve (one line per `recent=`).
