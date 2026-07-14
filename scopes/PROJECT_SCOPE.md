@@ -1,44 +1,45 @@
-# Project scope — Information Retrieval
+# Project scope — Priority_KV
 
-Living scope for **Priority_KV**. Agents may propose changes; they must
-not silently expand scope unless a human posts `ACK_SCOPE` in Telegram (see
-`COLLAB.md`).
+Living scope for **Priority_KV** (PriorityKV-Agent). Agents may propose
+changes; they must not silently expand scope unless a human posts `ACK_SCOPE`
+in Telegram (see `COLLAB.md`).
+
+**Repo:** https://github.com/Arush777/Priority_KV
 
 ## Goal
 
-Build a research / prototype project in **Information Retrieval (IR)** — the
-classic LLM topic: retrieve relevant documents/passages for a query, optionally
-augment generation (RAG), and measure quality.
+Build the PriorityKV-Agent artifact described in
+`docs/PRIORITYKV_IMPLEMENTATION_PLAN.md`: mixed-precision paged KV cache
+(BF16/INT4) that protects structurally critical pages so long multi-turn agent
+traces do not silently lose tool schemas / instruction hierarchy under
+compression.
 
-Friend's agent proposes the concrete idea direction; Arush's agent collaborates
-on implementation, experiments, and infra.
+Friend's agent leads the concrete research/eval angle (Workstream A /
+PriorityBench). Arush's agent collaborates on systems/infra/collab bridge and
+shared scaffolding.
 
-## In scope (v0)
+## In scope (v0 bootstrap)
 
-- Problem statement + literature notes (sparse + dense retrieval)
-- Dataset selection (public IR benchmarks or a small custom corpus)
-- Baseline retriever (BM25 and/or dense embeddings)
-- Evaluation harness (Recall@k, nDCG@k, MRR)
-- Minimal RAG demo path (retrieve → optional LLM generate)
-- Reproducible scripts / configs
-- Collaboration via `collab_bridge` (Telegram + hourly ticks)
+- Collaboration bridge (`collab_bridge`) + Telegram protocol
+- Track the locked plan in `docs/PRIORITYKV_IMPLEMENTATION_PLAN.md`
+- Scaffold repo layout for Workstream A (eval) and B (systems) as tasks land
+- Small neutral utilities only when they unblock S1
 
 ## Out of scope (v0)
 
-- Production serving / multi-tenant product
-- Training giant foundation models from scratch
-- Paying external APIs without explicit human approval in Telegram
-- Auto-merging to `main` without a PR review signal
-- Cluster GPU jobs on the partner's account
+- Expanding beyond plan without ACK_SCOPE
+- Auto-merge to `main` without PR
+- Jobs on the partner's cluster account
+- Paid APIs without human OK in Telegram
 
 ## Current workstreams
 
 | ID | Owner | Status | Notes |
 |----|-------|--------|-------|
-| S0 | both | active | Bootstrap bridge + repo hygiene |
-| S1 | friend | proposed | Concrete IR idea / research angle (friend agent leads) |
-| S2 | arush | pending | Implementation scaffolding once S1 lands |
+| S0 | arush | active | Collab bridge + repo hygiene |
+| S1 | friend | proposed | Lead PriorityBench / research angle from plan |
+| S2 | arush | pending | Systems scaffolding once S1 choices land |
 
 ## Change log
 
-- 2026-07-14: Initial scope seeded for collab-bridge bootstrap.
+- 2026-07-14: Retargeted to Priority_KV; ingested friend implementation plan v2.

@@ -1,12 +1,12 @@
 # Priority_KV
 
-Collaboration repo with Telegram↔Cursor collab bridge (local folder may still be named Information_Retrieval).
-
-Autonomous two-agent collaboration project for **Information Retrieval**
-(classic LLM / IR topic). Agents coordinate in Telegram and push code to this
-repo; humans bootstrap once, then step back except for stops / spend / scope ACK.
-
 GitHub: https://github.com/Arush777/Priority_KV
+
+**Research plan (canon):** [`docs/PRIORITYKV_IMPLEMENTATION_PLAN.md`](docs/PRIORITYKV_IMPLEMENTATION_PLAN.md)  
+**Agent collab protocol:** [`COLLAB.md`](COLLAB.md)  
+**Friend onboarding:** [`FRIEND_AGENT_SETUP.md`](FRIEND_AGENT_SETUP.md)
+
+Telegram group: `Information_Retrieval agents` (shared bridge; project is Priority_KV).
 
 ## What’s included
 
