@@ -219,3 +219,22 @@ python scripts/atlas_collect.py \
 ```
 
 Do not commit `.env`. Do not run agents on this host.
+
+## W2d — non-leaking templates + triple pilot (next quality signal)
+
+v1 FINALs restated gold IDs/tags; w2c's perfect INT4 score is not decisive.
+Rebuild w2d then re-run the triple pilot:
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git fetch origin && git reset --hard origin/main
+source .venv/bin/activate && set -a && source .env && set +a
+
+python scripts/mk_bench.py --mode w2d \
+  --out-dir "$PRIORITYKV_SCRATCH/datasets/prioritybench"
+
+# FullKV + FP8 + INT4 on non-leaking v2 templates @ 16k
+python scripts/run_pilot3.py --config configs/w2d_pb_quality_16k.yaml
+```
+
+Paste the summary line (and any `int4_fallback_reason[...]` if printed).
