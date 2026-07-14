@@ -94,3 +94,19 @@ Append-only. Newest at bottom.
   1. **Physics:** sink+recent never keeps early IDs until `recent ≳ seq_len − id_pos` (~7–15k here). 256–4096 still deletes the hold ID on 8k/16k.
   2. **Implementation bug:** KV-cache slicing without RoPE/position fix → decode garbage at every budget (would also zero a true keep_all if we had included one).
 - **Fix:** prompt-level sink+recent concat + normal `generate` (RoPE-safe). Sweep r2 adds `recent=999999` keep_all control (must ≈ FullKV) and larger windows (7k/12k) to see the middle of the curve.
+
+## 2026-07-15 — G1 freeze (W2 close)
+
+Fable (senior RE review) confirmed this freeze with two job-4 corrections (fractional budget + random arm).
+
+**Frozen baselines**
+- **S0 FullKV** — vLLM BF16; pilots green.
+- **S1 FP8** — delta=0 vs FullKV on PriorityBench ≤16k (w2 / w2b / w2c); cite those runs.
+- **Q_dropkeep** — prompt-level sink+recent as **interim eviction baseline** (StreamingLLM-style stand-in). Kill ~64×; RoPE-safe sweep keep_all=1.0 control.
+
+**Deferred (must be written, not silent)**
+- **Q2 uniform INT4** — deferred to W3 kernels / working quanto path. **Blocking for G2 path (a).**
+- **Q3 SnapKV** — scaffold only; ≤4-day attempt in W3 else keep StreamingLLM/DropKeep substitution per plan §9.
+- **Guardrails** — `scripts/run_guardrails.py` stubs SKIPPED this week; **must run for real before W4 G2** (guardrail move <1pt).
+
+**W2-close H200 job (G2 path b pilot):** `scripts/run_stress_structured.py` — FullKV vs {uniform, structure, random, keep_all} at **matched keep_frac=0.25** on the 14-ex stress set; per-length breakdown required.
