@@ -1,0 +1,5 @@
+id: diag_cuda_toolkit
+command: python scripts/diag_cuda_toolkit.py
+gpus: "6,7"
+sync_cuda: false
+timeout_sec: 300
