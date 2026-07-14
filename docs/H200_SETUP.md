@@ -238,3 +238,20 @@ python scripts/run_pilot3.py --config configs/w2d_pb_quality_16k.yaml
 ```
 
 Paste the summary line (and any `int4_fallback_reason[...]` if printed).
+
+## STRESS — FullKV vs ~60× DropKeep (run this next)
+
+Gentle FP8/INT4 stayed at 1.0. This job deletes early KV on purpose
+(StreamingLLM-style sink+recent, ~272 tokens kept ≈ **60×** at 16k).
+Expect multi_turn scores to crater. ~15–30 min.
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git fetch origin && git reset --hard origin/main
+source .venv/bin/activate && set -a && source .env && set +a
+
+python scripts/run_stress.py --config configs/stress_dropkeep_16k.yaml
+```
+
+Success looks like: `full≈1.0 drop≪1.0` especially on `multi_turn_state`.
+Paste that line.

@@ -136,7 +136,7 @@ def run_transformers_int4(
     cache_cfg = {
         "backend": "quanto",
         "nbits": int(cfg.nbits),
-        "group_size": int(cfg.group_size),
+        "q_group_size": int(cfg.group_size),  # NOT group_size — HF QuantizedCache kw
     }
 
     try:

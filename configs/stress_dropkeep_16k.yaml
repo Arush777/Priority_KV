@@ -1,0 +1,25 @@
+# Decisive stress: FullKV vs StreamingLLM-style DropKeep (~60× at 16k).
+# Pools cal+val across 8k/16k; multi_turn-heavy (non-leaking v2).
+manifest_id: stress_dropkeep_16k
+rev: 1
+bench_manifest: data/prioritybench/manifests/w2d_pilot.json
+selection:
+  splits: [calibration, validation]
+  context_lengths: [16000, 8000]
+  n_tool_schema: 2
+  n_instruction_supersession: 4
+  n_multi_turn_state: 8
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 32768
+dropkeep:
+  sink_tokens: 16
+  recent_tokens: 256   # keep ≈272 / ~16k → ~60× compression
