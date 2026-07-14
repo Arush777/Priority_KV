@@ -150,3 +150,10 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 ## 2026-07-15 — Implementation plan → v2.1 execution overlay
 
 - Rewrote `docs/IMPLEMENTATION_PLAN.md` with status snapshot, G1 deferrals, D1/W3 done-vs-cut, baseline table as lived, and week overlay (✅/🚧/⏸).
+
+## 2026-07-15 — H200 remote job pipeline
+
+- **Decided:** Keep “no coding agents on H200”; automate only pull/run via `scripts/remote_worker.sh` + in-repo `jobs/pending|done|failed` queue.
+- **Decided:** Commands must be allowlisted (`python scripts/*.py` or `uv run python scripts/*.py`); single job at a time; still 2-GPU cap.
+- **Decided:** Full run JSON stays on scratch (`$PRIORITYKV_SCRATCH/runs/`); agent pulls via `scripts/fetch_results.sh` (rsync) into gitignored `scratch_mirror/`. Optional thin `jobs/status/*.json` push from worker — not a substitute for rsync.
+- **Decided:** Idempotency via `$PRIORITYKV_SCRATCH/logs/<id>.status` so a reappearing pending file does not re-run.

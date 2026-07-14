@@ -1,6 +1,6 @@
-# H200 setup (human-operated box)
+# H200 setup (GPU box — no coding agents)
 
-Develop + push from the agent machine. On this host: pull, sync, run.
+Develop + enqueue jobs from the agent machine. On this host: sync env once, run the job worker (or manual pull/run).
 
 ## Two-GPU rule
 
@@ -12,7 +12,37 @@ CUDA_VISIBLE_DEVICES=6,7
 
 Change only if 6/7 are busy. All run scripts load this via `scripts/_env.sh`.
 
-## Commands to run here (keep them bland)
+## Remote job worker (preferred)
+
+Agent pushes `jobs/pending/<id>.yaml` → this host polls git → runs allowlisted `python scripts/….py` → tees logs under `$PRIORITYKV_SCRATCH/logs/`. Full queue docs: [`jobs/README.md`](../jobs/README.md).
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git pull origin main
+./scripts/sync.sh --cuda
+mkdir -p "$PRIORITYKV_SCRATCH/logs"
+
+# Leave running (one job at a time)
+tmux new -s pkworker './scripts/remote_worker.sh'
+# reattach later: tmux attach -t pkworker
+```
+
+Worker knobs (optional in `.env`):
+
+```bash
+REMOTE_WORKER_POLL_SEC=45
+REMOTE_WORKER_BRANCH=main
+REMOTE_WORKER_PUSH_STATUS=1   # commit jobs/status + move to done/failed
+```
+
+Agent machine then pulls artifacts (not via git):
+
+```bash
+./scripts/fetch_results.sh
+# → scratch_mirror/runs/ and scratch_mirror/logs/
+```
+
+## Commands to run here (manual / keep them bland)
 
 ```bash
 cd /data/anupam/scratch/Priority_KV   # your checkout
@@ -27,7 +57,6 @@ git pull origin main
 # Re-check units anytime
 ./scripts/check.sh
 ```
-
 Verify devices (shows only the two you exported):
 
 ```bash
@@ -49,9 +78,8 @@ CUDA_VISIBLE_DEVICES=6,7
 ```
 
 ```bash
-mkdir -p /data/anupam/scratch/prioritykv/{models,datasets,runs,hf_cache}
+mkdir -p /data/anupam/scratch/prioritykv/{models,datasets,runs,logs,hf_cache}
 ```
-
 ## Later updates
 
 ```bash
