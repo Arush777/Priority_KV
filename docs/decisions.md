@@ -31,3 +31,8 @@ Append-only. Newest at bottom.
 
 - **W1 FP8 smoke:** `cmp_fp8.py` → exact=0.850 tok=0.926 pass=1 (S1 runnable on H200). Defer `prep_fp8.py`/llmcompressor to S1 freeze.
 - **W2 start:** page manager + structural tagging + protected invariants (CPU reference). Grow PriorityBench with instruction_supersession templates.
+
+## 2026-07-14 — W2 H200 confirm
+
+- **Page smoke (H200):** `check_pages.py` → seq_len=25282, pages=1581, bf16=274 / int4=25008, within_budget=true, invariants_ok=true.
+- **W2 pilot:** `mk_bench.py --mode w2` → n=120 (cal 56 / val 27 / test 37); manifest `data/prioritybench/manifests/w2_pilot.json`.
