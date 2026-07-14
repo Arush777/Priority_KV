@@ -135,4 +135,24 @@ python scripts/check_pages.py
 
 Expect `check_pages` JSON with `"invariants_ok":true`.
 
+## W2 — PriorityBench quality pilot (GPU)
+
+FullKV vs FP8 on 15× cal/8k PriorityBench examples (10 tool_schema + 5 supersession).
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git pull origin main
+source .venv/bin/activate
+set -a && source .env && set +a
+
+python scripts/run_pilot.py
+```
+
+Expect ~20–60 min. One-line summary like:
+```text
+n=15 full=0.xxx fp8=0.xxx delta=±0.xxx cats[...] out=.../runs/w2_pb_quality/...
+```
+
+Paste that line when done.
+
 Do not commit `.env`. Do not run agents on this host.

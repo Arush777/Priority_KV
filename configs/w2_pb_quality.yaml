@@ -1,0 +1,23 @@
+# W2 PriorityBench quality pilot: FullKV vs FP8 on cal/8k subset.
+manifest_id: w2_pb_quality
+rev: 1
+bench_manifest: data/prioritybench/manifests/w2_pilot.json
+selection:
+  split: calibration
+  context_length: 8000
+  n_tool_schema: 10
+  n_instruction_supersession: 5
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 96
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.55
+  max_model_len: 12288
+fp8:
+  kv_cache_dtype: fp8
+  calculate_kv_scales: true
