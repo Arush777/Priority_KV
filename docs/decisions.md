@@ -40,3 +40,9 @@ Append-only. Newest at bottom.
 ## 2026-07-14 — W2 quality pilot harness
 
 - **Decided:** First agent-reliability compare is `scripts/run_pilot.py` (15× cal/8k: 10 tool + 5 supersession; FullKV vs FP8; deterministic scorers).
+
+## 2026-07-14 — W2 pilot result + supersession fix
+
+- **8k pilot (r1):** full=0.800 fp8=0.800 delta=0; tool_schema 1.0/1.0; supersession 0.40/0.40. Failures were format_flip scorer (looked for format *names* in prose), not FP8.
+- **Fix:** format_flip now requires explicit `[[FMT:...]]` tags (rev 2). Re-run 8k then 16k pilots.
+- **SnapKV:** scaffold only (`scripts/snap_status.py`); not runnable yet.
