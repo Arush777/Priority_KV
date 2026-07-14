@@ -29,7 +29,7 @@ runs/
 *.ckpt
 *.gguf
 
-# PriorityBench generated splits (fixtures stay tracked)
+# PriorityBench generated splits (fixtures + manifests stay tracked)
 data/prioritybench/calibration/
 data/prioritybench/validation/
 data/prioritybench/test/

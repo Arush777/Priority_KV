@@ -1,0 +1,10 @@
+[
+  {"seq_len": 8192, "budget_frac": 0.5, "fullkv_gib": 1.125, "budget_gib": 0.5625, "max_bf16_tokens": 2365, "max_bf16_frac": 0.2887, "all_int4_frac": 0.2969, "feasible": true},
+  {"seq_len": 8192, "budget_frac": 0.3, "fullkv_gib": 1.125, "budget_gib": 0.3375, "max_bf16_tokens": 36, "max_bf16_frac": 0.0044, "all_int4_frac": 0.2969, "feasible": true},
+  {"seq_len": 16384, "budget_frac": 0.5, "fullkv_gib": 2.25, "budget_gib": 1.125, "max_bf16_tokens": 4732, "max_bf16_frac": 0.2888, "all_int4_frac": 0.2969, "feasible": true},
+  {"seq_len": 16384, "budget_frac": 0.3, "fullkv_gib": 2.25, "budget_gib": 0.675, "max_bf16_tokens": 72, "max_bf16_frac": 0.0044, "all_int4_frac": 0.2969, "feasible": true},
+  {"seq_len": 32768, "budget_frac": 0.5, "fullkv_gib": 4.5, "budget_gib": 2.25, "max_bf16_tokens": 9465, "max_bf16_frac": 0.2888, "all_int4_frac": 0.2969, "feasible": true},
+  {"seq_len": 32768, "budget_frac": 0.3, "fullkv_gib": 4.5, "budget_gib": 1.35, "max_bf16_tokens": 144, "max_bf16_frac": 0.0044, "all_int4_frac": 0.2969, "feasible": true},
+  {"seq_len": 65536, "budget_frac": 0.5, "fullkv_gib": 9.0, "budget_gib": 4.5, "max_bf16_tokens": 18931, "max_bf16_frac": 0.2889, "all_int4_frac": 0.2969, "feasible": true},
+  {"seq_len": 65536, "budget_frac": 0.3, "fullkv_gib": 9.0, "budget_gib": 2.7, "max_bf16_tokens": 290, "max_bf16_frac": 0.0044, "all_int4_frac": 0.2969, "feasible": true}
+]

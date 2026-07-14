@@ -364,9 +364,316 @@ def _build_http_get(
     return messages, scoring
 
 
+def _build_create_ticket(
+    rng: random.Random, target_tokens: int
+) -> Tuple[List[Dict[str, str]], Mapping[str, Any]]:
+    sev = rng.choice(["low", "medium", "high", "critical"])
+    title = rng.choice(
+        [
+            "kv page demotion spike",
+            "tool schema mismatch",
+            "agent loop timeout",
+            "cache byte overrun",
+        ]
+    )
+    tools = [
+        {
+            "name": "create_ticket",
+            "description": "Open an incident ticket",
+            "parameters": {
+                "type": "object",
+                "required": ["title", "severity"],
+                "properties": {
+                    "title": {"type": "string"},
+                    "severity": {
+                        "type": "string",
+                        "enum": ["low", "medium", "high", "critical"],
+                    },
+                    "assignee": {"type": "string"},
+                },
+            },
+        },
+        {
+            "name": "close_ticket",
+            "description": "Close a ticket (decoy)",
+            "parameters": {
+                "type": "object",
+                "required": ["ticket_id"],
+                "properties": {"ticket_id": {"type": "string"}},
+            },
+        },
+        {
+            "name": "echo_debug",
+            "description": "Debug echo",
+            "parameters": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {"text": {"type": "string"}},
+            },
+        },
+    ]
+    messages: List[Dict[str, str]] = [
+        {"role": "system", "content": _tools_block(tools)},
+        {
+            "role": "user",
+            "content": f"If severity rises, open tickets with severity={sev}.",
+        },
+        {
+            "role": "assistant",
+            "content": f"Will use severity {sev} for create_ticket.",
+        },
+        {
+            "role": "user",
+            "content": (
+                f"FINAL: create_ticket titled '{title}' with severity {sev}. "
+                "Do not set assignee."
+            ),
+        },
+    ]
+    messages = pad_with_filler_turns(messages, rng, target_tokens)
+    scoring = {
+        "allowed_tool_names": ["create_ticket"],
+        "path": "arguments",
+        "expected_schema": {
+            "type": "object",
+            "required": ["title", "severity"],
+            "properties": {
+                "title": {"type": "string", "const": title},
+                "severity": {"type": "string", "const": sev},
+            },
+        },
+    }
+    return messages, scoring
+
+
+def _build_set_config(
+    rng: random.Random, target_tokens: int
+) -> Tuple[List[Dict[str, str]], Mapping[str, Any]]:
+    key = rng.choice(["kv.budget_frac", "page.alloc_unit", "decode.max_batch"])
+    value = rng.choice(["0.30", "0.50", "128", "16"])
+    tools = [
+        {
+            "name": "set_config",
+            "description": "Set a runtime config key",
+            "parameters": {
+                "type": "object",
+                "required": ["key", "value"],
+                "properties": {
+                    "key": {"type": "string"},
+                    "value": {"type": "string"},
+                },
+            },
+        },
+        {
+            "name": "get_config",
+            "description": "Read a config key (decoy)",
+            "parameters": {
+                "type": "object",
+                "required": ["key"],
+                "properties": {"key": {"type": "string"}},
+            },
+        },
+        {
+            "name": "list_files",
+            "description": "List files",
+            "parameters": {
+                "type": "object",
+                "required": ["path"],
+                "properties": {"path": {"type": "string"}},
+            },
+        },
+    ]
+    messages: List[Dict[str, str]] = [
+        {"role": "system", "content": _tools_block(tools)},
+        {
+            "role": "user",
+            "content": f"Config key of interest this session: {key}.",
+        },
+        {
+            "role": "assistant",
+            "content": f"Tracking config key {key}.",
+        },
+        {
+            "role": "user",
+            "content": f"FINAL: set_config {key} to string value {value}.",
+        },
+    ]
+    messages = pad_with_filler_turns(messages, rng, target_tokens)
+    scoring = {
+        "allowed_tool_names": ["set_config"],
+        "path": "arguments",
+        "expected_schema": {
+            "type": "object",
+            "required": ["key", "value"],
+            "properties": {
+                "key": {"type": "string", "const": key},
+                "value": {"type": "string", "const": value},
+            },
+        },
+    }
+    return messages, scoring
+
+
+def _build_schedule_job(
+    rng: random.Random, target_tokens: int
+) -> Tuple[List[Dict[str, str]], Mapping[str, Any]]:
+    queue = rng.choice(["gpu_short", "gpu_long", "cpu_batch"])
+    hours = rng.choice([1, 2, 6, 12])
+    tools = [
+        {
+            "name": "schedule_job",
+            "description": "Schedule a batch job",
+            "parameters": {
+                "type": "object",
+                "required": ["queue", "wall_hours"],
+                "properties": {
+                    "queue": {
+                        "type": "string",
+                        "enum": ["gpu_short", "gpu_long", "cpu_batch"],
+                    },
+                    "wall_hours": {"type": "integer"},
+                    "name": {"type": "string"},
+                },
+            },
+        },
+        {
+            "name": "cancel_job",
+            "description": "Cancel a job (decoy)",
+            "parameters": {
+                "type": "object",
+                "required": ["job_id"],
+                "properties": {"job_id": {"type": "string"}},
+            },
+        },
+        {
+            "name": "echo_debug",
+            "description": "Debug echo",
+            "parameters": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {"text": {"type": "string"}},
+            },
+        },
+    ]
+    job_name = f"eval_{rng.randint(100, 999)}"
+    messages: List[Dict[str, str]] = [
+        {"role": "system", "content": _tools_block(tools)},
+        {
+            "role": "user",
+            "content": f"Default queue for tonight is {queue}.",
+        },
+        {
+            "role": "assistant",
+            "content": f"Using queue {queue}.",
+        },
+        {
+            "role": "user",
+            "content": (
+                f"FINAL: schedule_job on queue {queue} for {hours} wall hours "
+                f"named {job_name}."
+            ),
+        },
+    ]
+    messages = pad_with_filler_turns(messages, rng, target_tokens)
+    scoring = {
+        "allowed_tool_names": ["schedule_job"],
+        "path": "arguments",
+        "expected_schema": {
+            "type": "object",
+            "required": ["queue", "wall_hours", "name"],
+            "properties": {
+                "queue": {"type": "string", "const": queue},
+                "wall_hours": {"type": "integer", "const": hours},
+                "name": {"type": "string", "const": job_name},
+            },
+        },
+    }
+    return messages, scoring
+
+
+def _build_send_email(
+    rng: random.Random, target_tokens: int
+) -> Tuple[List[Dict[str, str]], Mapping[str, Any]]:
+    to_addr = rng.choice(
+        ["ops@lab.local", "oncall@lab.local", "eval@lab.local"]
+    )
+    subject = rng.choice(
+        ["nightly eval failed", "byte budget warning", "schema audit ready"]
+    )
+    tools = [
+        {
+            "name": "send_email",
+            "description": "Send an email",
+            "parameters": {
+                "type": "object",
+                "required": ["to", "subject"],
+                "properties": {
+                    "to": {"type": "string"},
+                    "subject": {"type": "string"},
+                    "body": {"type": "string"},
+                },
+            },
+        },
+        {
+            "name": "list_inbox",
+            "description": "List inbox (decoy)",
+            "parameters": {
+                "type": "object",
+                "required": ["mailbox"],
+                "properties": {"mailbox": {"type": "string"}},
+            },
+        },
+        {
+            "name": "echo_debug",
+            "description": "Debug echo",
+            "parameters": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {"text": {"type": "string"}},
+            },
+        },
+    ]
+    messages: List[Dict[str, str]] = [
+        {"role": "system", "content": _tools_block(tools)},
+        {
+            "role": "user",
+            "content": f"Notify {to_addr} for eval alerts.",
+        },
+        {
+            "role": "assistant",
+            "content": f"Alert recipient set to {to_addr}.",
+        },
+        {
+            "role": "user",
+            "content": (
+                f"FINAL: send_email to {to_addr} with subject '{subject}'. "
+                "Omit body."
+            ),
+        },
+    ]
+    messages = pad_with_filler_turns(messages, rng, target_tokens)
+    scoring = {
+        "allowed_tool_names": ["send_email"],
+        "path": "arguments",
+        "expected_schema": {
+            "type": "object",
+            "required": ["to", "subject"],
+            "properties": {
+                "to": {"type": "string", "const": to_addr},
+                "subject": {"type": "string", "const": subject},
+            },
+        },
+    }
+    return messages, scoring
+
+
 TOOL_SCHEMA_TEMPLATES: tuple[TemplateSpec, ...] = (
     TemplateSpec("tool_schema.search_docs.v1", Category.TOOL_SCHEMA, _build_search_docs),
     TemplateSpec("tool_schema.read_file.v1", Category.TOOL_SCHEMA, _build_read_file),
     TemplateSpec("tool_schema.sql_query.v1", Category.TOOL_SCHEMA, _build_sql_query),
     TemplateSpec("tool_schema.http_get.v1", Category.TOOL_SCHEMA, _build_http_get),
+    TemplateSpec("tool_schema.create_ticket.v1", Category.TOOL_SCHEMA, _build_create_ticket),
+    TemplateSpec("tool_schema.set_config.v1", Category.TOOL_SCHEMA, _build_set_config),
+    TemplateSpec("tool_schema.schedule_job.v1", Category.TOOL_SCHEMA, _build_schedule_job),
+    TemplateSpec("tool_schema.send_email.v1", Category.TOOL_SCHEMA, _build_send_email),
 )

@@ -82,4 +82,21 @@ n=20 exact=0.xxx tok=0.xxx pass=1 out=/data/anupam/scratch/prioritykv/runs/w1_fu
 
 `pass=1` means gate G0 green. `pass=0` → paste the json path here.
 
+## W1 — byte table + PriorityBench pilot (CPU OK)
+
+These are CPU-only (safe on the H200 login shell; no big GPU use):
+
+```bash
+cd /data/anupam/scratch/Priority_KV
+git pull origin main   # or fetch + reset --hard if needed
+source .venv/bin/activate
+
+python scripts/bytes_report.py
+python scripts/mk_bench.py --n 40 \
+  --out-dir "$PRIORITYKV_SCRATCH/datasets/prioritybench"
+```
+
+Expect `bytes_report` to show all-INT4 floor ≈0.297 and 30% budget with tiny `maxBF16`.
+Expect `mk_bench` → `n=40 ... manifest=.../w1_pilot.json`.
+
 Do not commit `.env`. Do not run agents on this host.
