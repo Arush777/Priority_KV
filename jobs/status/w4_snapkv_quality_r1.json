@@ -1,0 +1,7 @@
+{
+  "job_id": "w4_snapkv_quality_r1",
+  "exit": 0,
+  "finished_at": "2026-07-15T10:35:50Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/w4_snapkv_quality_r1.log",
+  "job_yaml": "jobs/done/w4_snapkv_quality_r1.yaml"
+}
