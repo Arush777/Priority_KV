@@ -7,7 +7,13 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
-**Status (2026-07-15 evening):** W0–W5 pilots largely run · G2b closed · P2=1.000 (incl. buried) · **FixedHot also 1.000 buried** (discriminator weak) · FlashInfer import OK / **LSE JIT FAIL** · **missing: mixed serve, systems D4, paper/PR** · agents never on H200
+**Status (2026-07-16):** G2b closed · mid-context discriminator: structure/P2
+**0.688** vs FixedHot **0.125** · FlashInfer native-head LSE multicall
+**PARITY_PASS** (max abs 4.88e-4) · corrected mixed forward works, but uniform
+INT4 and 2-bit remain **1.000** at 75% quantized positions (no quality advantage
+to claim); zero stress separates structure **0.688** vs uniform **0.312** ·
+**missing: true packed mixed cache + D4 systems measurements + paper/PR** ·
+agents never on H200
 
 
 ---
@@ -148,8 +154,9 @@ Claude protocol on this project: **Fable** = research/gates · **Opus** = code r
 - [x] W5 Q6 FixedHot ablation (`w5_q6_fixedhot_r1`) — fixed_hot=1.000 (ties P2 unburied)
 - [x] W6 FlashInfer probe (`w6_flashinfer_probe_r1`) — IMPORT_OK_CUDA_TOUCH v0.6.13
 - [x] W5 buried FixedHot vs P2 (`w5_p2_buried_r1`) — FixedHot=P2=1.000; Q7=0.429
-- [x] W6 FlashInfer LSE tiny parity (`w6_flashinfer_lse_parity_r1`) — FAIL (JIT head_dim=32)
-- [ ] Harder FixedHot vs P2 discriminator (lock-test / mid-only / stronger bury)
-- [ ] Mixed BF16/INT4 serving path (not prompt-keep ablation)
-- [ ] FlashInfer multicall @ native head_dim + H200 D4 latency
+- [x] W6 FlashInfer LSE parity — r1 illegal head_dim=32; **r3 native merge PASS @128**
+- [x] Harder FixedHot discriminator — mid-context FixedHot 0.125 vs structure/P2 0.688
+- [x] Mixed BF16/INT4 quality-forward scaffold (split-prefill corrected; fake quant)
+- [ ] True packed mixed BF16/INT4 storage path (quality-forward does not save bytes)
+- [ ] H200 D4 TTFT/TPOT/throughput/Nsight
 - [ ] Paper / PR / Gemma / outreach (D5–D9)
