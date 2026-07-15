@@ -217,3 +217,17 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Landed:** `load_linear_risk_config` · `structure_risk` keep policy (page+token) ranks residual budget by `score_page` · `PageManager.enforce_budget` demotes lowest risk first within a role · config `configs/w5_p2_structure_risk.yaml` · job `w5_p2_structure_risk_r1`.
 - **Claim scope:** matched-keep prompt ablation (Q7 `structure` vs P2 `structure_risk` vs uniform) — **not** end-to-end mixed BF16/INT4 serving yet.
 - **Next:** H200 P2 pilot numbers · FlashInfer CUDA (still deferred) · G3 allocator ablations.
+
+## 2026-07-15 — P2 structure_risk HIT on H200
+
+- **Run:** `w5_p2_structure_risk_r1` · n=14 · page · keep_frac=0.25
+- **Means:** uniform **0.000** · structure (Q7) **0.643** · **structure_risk (P2) 1.000** · keep_all 1.000
+- **Category:** P2 lifts multi_turn 0.375→**1.000**; tool/supersession stay 1.0
+- **Read:** linear-risk ties are not Q7-equivalent on this set (falsifies “Q7 == P2” worry for this pilot). Still a **prompt-level keep ablation**, not mixed BF16/INT4 serving.
+- **Out:** `$PRIORITYKV_SCRATCH/runs/stress_structured/w5_p2_structure_risk_r1.json`
+
+## 2026-07-15 — W5/W6 continue (Q6 FixedHot + FlashInfer probe)
+
+- **Ops hygiene:** Coding agents (Cursor/Claude) **never** on H200 — only laptop/agent box writes code + pushes `jobs/pending`; H200 runs `pkworker` + allowlisted `python scripts/*.py`. Status checks may use SSH as the human collaborator; do not install or launch IDEs/agents on `dgre2`.
+- **Q6 FixedHot:** `fixed_hot` / `fixed_hot_pages` policy (prefix-hot after sink+recent) · config `configs/w5_q6_fixedhot.yaml` · job `w5_q6_fixedhot_r1`.
+- **W6 FlashInfer:** `scripts/run_flashinfer_probe.py` + `flashinfer_multicall.probe()` · job `w6_flashinfer_probe_r1` (loud SKIP/IMPORT_OK; multicall kernel still not wired).
