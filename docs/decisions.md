@@ -311,3 +311,25 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   2. `w6c_mixed_serve_nbits2_r1` — nbits=2 @ 0.75: harsher groupwise error.
   3. `w6d_mixed_serve_hard_r1` — nbits=4 @ int4_frac=0.92.
 - **Code:** `mixed_kv_run` supports `degrade: int4|zero`; configs under `configs/w6_mixed_serve_{hard,nbits2,zero}.yaml`.
+
+## 2026-07-15 — W6 blocker root causes after hard runs
+
+- **Hard-run negatives (all exit=0):** nbits=2 @0.75 and INT4 @0.92 both stayed
+  full=uniform=structure **1.000**. Zero @0.75 separated structure **0.688** vs
+  uniform **0.312**, proving the role mask changes the real cache.
+- **Mixed harness correctness bug:** it degraded `past_key_values` after a full
+  prompt prefill, but selected the first generated token from the original,
+  undegraded prefill logits. Since exact-format tasks are strongly first-token
+  driven, this could hide quantization damage. Fix: split prefill at `n-1`,
+  degrade that cache, replay the final prompt token, and derive the first output
+  token from the degraded cache. New metadata asserts
+  `first_token_from_degraded_cache=true`.
+- **FlashInfer merge bug:** r2 compiled and ran at native head_dim=128, but we
+  fed FlashInfer LSE into the NumPy natural-log merge. FlashInfer 0.6.13
+  historically uses a base-2 LSE contract. Fix: merge CUDA states with the
+  library-native `flashinfer.merge_state`; keep NumPy `lse_merge_pair` only for
+  the natural-log CPU oracle.
+- **Research read:** do not tune thresholds or manufacture a win. Re-run the
+  corrected harness. If uniform INT4 remains perfect at the target byte budget,
+  the quality-advantage half is falsified for this set and the systems claim must
+  pivot to throughput/lower budgets rather than implying a reliability drop.

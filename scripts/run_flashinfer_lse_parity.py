@@ -2,7 +2,8 @@
 """W6 FlashInfer LSE multi-call parity vs CPU oracle.
 
 Uses flashinfer.single_prefill_with_kv_cache(..., return_lse=True) on page chunks,
-merges with prioritykv.lse_merge_pair, and checks vs dense prefill + CPU multicall.
+merges with flashinfer.merge_state (the native LSE contract), and checks vs dense
+prefill + the natural-log CPU oracle.
 
 SM90 Hopper kernels only support head_dim ∈ {64, 128, 256} — default 128 (Qwen3).
 Coding agents stay off H200 — enqueue via jobs/pending only.
@@ -53,7 +54,6 @@ def main() -> int:
     from prioritykv.flashinfer_multicall import try_import_flashinfer
     from prioritykv.mixed_cache_reference import (
         attention_reference,
-        lse_merge_pair,
         mixed_attend_kv_multicall,
         pages_from_sequence,
     )
@@ -94,8 +94,7 @@ def main() -> int:
     q = torch.as_tensor(q_np, device=device, dtype=torch.float16)
     # FlashInfer expects q: (qo_len, num_heads, head_dim); use 1 head.
     q_fi = q.view(tq, 1, d)
-    outs = []
-    lses = []
+    states = []
     for p in pages:
         chunk = p.materialize().astype(np.float32)
         k = torch.as_tensor(chunk, device=device, dtype=torch.float16).view(-1, 1, d)
@@ -103,14 +102,14 @@ def main() -> int:
         o, lse = fi.single_prefill_with_kv_cache(
             q_fi, k, v, causal=False, return_lse=True
         )
-        o_np = o.detach().float().cpu().numpy().reshape(tq, d)
-        lse_np = lse.detach().float().cpu().numpy().reshape(tq)
-        outs.append(o_np)
-        lses.append(lse_np)
+        # FlashInfer historically returns base-2 LSE. Never feed it to the
+        # natural-log NumPy oracle merge; use FlashInfer's state merge contract.
+        states.append((o, lse.float()))
 
-    fi_out, fi_lse = outs[0], lses[0]
-    for ob, lb in zip(outs[1:], lses[1:]):
-        fi_out, fi_lse = lse_merge_pair(fi_out, fi_lse, ob, lb)
+    fi_out_t, fi_lse_t = states[0]
+    for ob, lb in states[1:]:
+        fi_out_t, fi_lse_t = fi.merge_state(fi_out_t, fi_lse_t, ob, lb)
+    fi_out = fi_out_t.detach().float().cpu().numpy().reshape(tq, d)
 
     k_all = torch.as_tensor(kv_np, device=device, dtype=torch.float16).view(tk, 1, d)
     o_dense, _ = fi.single_prefill_with_kv_cache(
@@ -125,6 +124,8 @@ def main() -> int:
         {
             "device": torch.cuda.get_device_name(0),
             "flashinfer_version": getattr(fi, "__version__", None),
+            "merge_impl": "flashinfer.merge_state",
+            "lse_contract": "flashinfer-native (historically base-2)",
             "fi_multicall_vs_cpu_dense_max_abs": err_vs_cpu,
             "fi_multicall_vs_fi_dense_max_abs": err_vs_fi_dense,
             "fi_dense_vs_cpu_dense_max_abs": err_fi_dense_vs_cpu,
