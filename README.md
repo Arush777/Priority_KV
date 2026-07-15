@@ -7,7 +7,7 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
-**Status (2026-07-15):** **W3 CLOSED** · **W4 in progress** (guardrails + denser structure → G2) · Q2 INT4 GREEN · dual audit PASS
+**Status (2026-07-15):** **W3 CLOSED** · **W4 G2 CLOSED (path b)** · Q2 INT4 GREEN · guardrails gate Δ=0 · SnapKV import OK (matched-byte pilot open)
 
 
 ---
@@ -137,4 +137,5 @@ Claude protocol on this project: **Fable** = research/gates · **Opus** = code r
 - [x] Q2 real quanto INT4 (`w3_int4_assert`) — GREEN on H200 (`hf_cache_implementation_quantized`)
 - [x] Q3 SnapKV ≤4-day attempt or keep DropKeep (loud) — attempt scripted; lock DropKeep if import fails
 - [x] W3 15% dual audit (`docs/audit_w3_dual.md`)
-- [ ] W4 guardrails H200 numbers + denser structure → G2 formal close
+- [x] W4 guardrails H200 + G2 formal close (path b)
+- [ ] W4 confirmatory denser structure sweeps + SnapKV matched-byte pilot
