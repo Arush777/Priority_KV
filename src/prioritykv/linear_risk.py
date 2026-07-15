@@ -6,8 +6,9 @@ among unprotected pages. Fit expects atlas / page-perturb score_delta labels.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from typing import Any, Mapping, Optional, Sequence
+from dataclasses import asdict, dataclass, fields
+from pathlib import Path
+from typing import Any, Mapping, Optional, Sequence, Union
 
 import numpy as np
 
@@ -99,10 +100,21 @@ def fit_ridge(
     )
 
 
+def load_linear_risk_config(path: Union[str, Path]) -> LinearRiskConfig:
+    """Load a frozen fit JSON (e.g. ``configs/linear_risk_fit.json``)."""
+    import json
+
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    allowed = {f.name for f in fields(LinearRiskConfig)}
+    kwargs = {k: float(v) for k, v in raw.items() if k in allowed}
+    return LinearRiskConfig(**kwargs)
+
+
 def status(cfg: Optional[LinearRiskConfig] = None) -> dict[str, Any]:
     cfg = cfg or LinearRiskConfig()
     return {
         "name": "linear_page_risk",
         "config": asdict(cfg),
         "role": "tie-break among unprotected pages after structural rules",
+        "wired_into": "keep_policy.structure_risk / page_manager.enforce_budget",
     }

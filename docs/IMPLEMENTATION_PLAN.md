@@ -182,11 +182,11 @@ Unchanged as *target*. Not yet run. Agent-trace replay should use W3-lock sessio
 | S1 | Calibrated vLLM FP8 | Deployment baseline | **🟢 Frozen** (δ≈0 on PB ≤16k — cite, don't overclaim stress) |
 | **Q_dropkeep** | Prompt-level sink+recent | Interim eviction (plan Q3 stand-in) | **🟢 In use** for stress / RoPE-safe |
 | Q2 | Uniform INT4 (quanto / KIVI-style) | Low-bit quality ref | **🔴 Blocking** — assert-no-fake; `quanto_cuda` JIT fail on H200 |
-| Q3 | SnapKV @ matched bytes | Eviction baseline | **🟡** import OK · matched-byte quality job queued (`w4_snapkv_quality_r1`) |
+| Q3 | SnapKV @ matched bytes | Eviction baseline | **LOCK_Q_DROPKEEP** — generate failed (`cache_position`); DropKeep permanent interim |
 | Q6 | FixedHot | Static hot/cold | **⬜** |
-| Q7 | ProtectedRole (no risk score) | Critical ablation | **🟡 Early** via structure keep policies (not yet full P2 stack) |
+| Q7 | ProtectedRole (no risk score) | Critical ablation | **🟡** `structure` keep policy |
 | Q8 | Random @ matched bytes | Sanity | **🟢** in structure stress |
-| P2 | PriorityKV (structure + linear risk) | Proposed | **⬜** risk not fitted |
+| P2 | PriorityKV (structure + linear risk) | Proposed | **🟡 W5** — `structure_risk` + page_manager risk demotion; H200 pilot queued |
 
 Primary comparisons at paper time still: P2 vs S1, P2 vs Q3 (or DropKeep), P2 vs Q7 on locked test.
 
@@ -208,9 +208,9 @@ Legend: ✅ done · 🚧 in progress / partial · ⏸ deferred with note · ⬜ 
 ⏸ FlashInfer CUDA (CPU LSE parity ✅).  
 ✅ SnapKV day-count attempt scripted (`run_snapkv_attempt.py`) → DropKeep lock if import fails.
 
-**W4.** ✅ Denser atlas 0.15+0.35 · page-perturb + linear risk fit · guardrails PASS · CPU LSE multicall · **G2 CLOSED path (b)** · FlashInfer CUDA deferred · SnapKV quality job queued. Interview-prep track = process (non-code).
+**W4.** ✅ Denser atlas 0.15+0.35 · page-perturb + linear risk fit · guardrails PASS · CPU LSE multicall · **G2 CLOSED path (b)** · FlashInfer CUDA deferred · SnapKV → LOCK_Q_DROPKEEP.
 
-**W5–W6.** As original (allocators Q6/Q7/Q8/P2, ablations, fused go/no-go) — **G3**.
+**W5.** 🚧 P2 `structure_risk` wired (keep + page_manager demotion) · H200 Q7 vs P2 pilot queued · FlashInfer CUDA still deferred · FixedHot (Q6) not started.
 
 **W7.** Pilot 15% IDs · `FINAL_RUN_MANIFEST.yaml` · **G4**.
 
@@ -284,8 +284,8 @@ Storage paths on H200: `$PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv` · 
 
 ## 11. Immediate next actions (execution queue)
 
-1. **H200:** finish Q2 per [`HANDOFF_W3_INT4.md`](HANDOFF_W3_INT4.md) §B (uv sync, CUDA major gate, tee'd `w3_int4_assert`).  
-2. Log INT4 outcome in `docs/decisions.md` (green modes or platform blocker).  
-3. Real guardrails stub → runnable before treating G2 as closed.  
-4. W4: denser atlas + page-perturb pilot + linear risk inputs; begin LSE/multi-call only after Q2 story is honest.  
-5. Pick D6 CFP; note Gemma license in decisions.
+1. ~~H200 Q2 INT4 assert~~ **DONE** (`w3_int4_assert_r4`).
+2. ~~Guardrails + G2 denser sweeps~~ **DONE**.
+3. **H200:** `w5_p2_structure_risk_r1` — Q7 vs P2 vs uniform at keep_frac=0.25.
+4. Wire fuller P2 mixed BF16/INT4 serving path once keep ablation reads positive (or document negative).
+5. FlashInfer CUDA (W5–6) · pick D6 CFP · Gemma license note.
