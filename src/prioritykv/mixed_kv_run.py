@@ -177,30 +177,53 @@ def run_transformers_mixed_kv(
             tail = ids[-(budget - int(head.numel())) :]
             ids = torch.cat([head, tail])
         n = int(ids.numel())
-        inputs = {
-            "input_ids": ids.unsqueeze(0).to(model.device),
-            "attention_mask": torch.ones(1, n, dtype=torch.long, device=model.device),
+        if n < 2:
+            raise RuntimeError(f"prompt too short for split prefill: n={n} id={row.id}")
+        ids = ids.to(model.device)
+        # Correctness-critical split prefill:
+        # 1) prefill all but the final prompt token,
+        # 2) degrade that cache,
+        # 3) replay the final prompt token against the degraded cache.
+        # The old harness took the first generated token from full-prompt,
+        # undegraded prefill logits, leaking an undegraded decision into every arm.
+        cache_n = n - 1
+        prefill_inputs = {
+            "input_ids": ids[:cache_n].unsqueeze(0),
+            "attention_mask": torch.ones(
+                1, cache_n, dtype=torch.long, device=model.device
+            ),
         }
 
         int4_realized = 0
         with torch.no_grad():
-            pre = model(**inputs, use_cache=True, return_dict=True)
+            pre = model(**prefill_inputs, use_cache=True, return_dict=True)
             past = pre.past_key_values
             if policy != "full":
                 roles = assign_token_roles(tok, row.messages, chat_kwargs=chat_kwargs)
-                if len(roles) != n:
-                    # Align to actual prompt length (no-trim case should match).
-                    if len(roles) > n:
-                        roles = roles[:n]
+                if len(roles) != cache_n:
+                    # Align to cached prompt positions (no-trim case is full-1).
+                    if len(roles) > cache_n:
+                        roles = roles[:cache_n]
                     else:
-                        roles = list(roles) + [PageRole.RECENT] * (n - len(roles))
+                        roles = list(roles) + [PageRole.RECENT] * (
+                            cache_n - len(roles)
+                        )
                 mask = plan_int4_mask(roles, plan_cfg, policy=policy, risk_cfg=risk_cfg)
                 int4_realized = int(mask.sum())
                 past = _degrade_positions(past, mask, int4_cfg, degrade=degrade)
 
-            next_id = int(torch.argmax(pre.logits[:, -1, :], dim=-1).item())
+            # Recompute the first output-token logits from the degraded cache.
+            attn = torch.ones(1, n, dtype=torch.long, device=model.device)
+            replay = model(
+                input_ids=ids[-1:].view(1, 1),
+                attention_mask=attn,
+                past_key_values=past,
+                use_cache=True,
+                return_dict=True,
+            )
+            past = replay.past_key_values
+            next_id = int(torch.argmax(replay.logits[:, -1, :], dim=-1).item())
             gen_ids = [next_id]
-            attn = inputs["attention_mask"]
             cur = torch.tensor([[next_id]], device=model.device)
             for _ in range(max_new_tokens - 1):
                 attn = torch.cat(
@@ -227,8 +250,10 @@ def run_transformers_mixed_kv(
             "degrade": degrade if policy != "full" else "none",
             "nbits": int(int4_cfg.nbits) if policy != "full" and degrade == "int4" else None,
             "prompt_tokens": n,
+            "cache_tokens_degraded": cache_n,
             "int4_tokens": int4_realized,
-            "int4_frac_realized": (int4_realized / n) if n else 0.0,
+            "int4_frac_realized": (int4_realized / cache_n) if cache_n else 0.0,
+            "first_token_from_degraded_cache": True,
             "preview": new_text[:120],
             "seconds": time.time() - t0,
         }

@@ -110,6 +110,25 @@ def test_nbits2_has_higher_roundtrip_error_than_nbits4():
     assert e2 > e4 * 2.0
 
 
+def test_zero_degrade_changes_only_selected_sequence_positions():
+    import pytest
+
+    torch = pytest.importorskip("torch")
+
+    from prioritykv.int4_kv import Int4KvConfig
+    from prioritykv.mixed_kv_run import _degrade_positions_tensor
+
+    x = torch.arange(1 * 2 * 6 * 4, dtype=torch.float32).reshape(1, 2, 6, 4)
+    idx = torch.tensor([1, 4], dtype=torch.long)
+    y = _degrade_positions_tensor(
+        x, idx, Int4KvConfig(), degrade="zero"
+    )
+    assert torch.count_nonzero(y[:, :, idx, :]) == 0
+    keep = torch.tensor([0, 2, 3, 5], dtype=torch.long)
+    assert torch.equal(y[:, :, keep, :], x[:, :, keep, :])
+    assert torch.count_nonzero(x[:, :, idx, :]) > 0
+
+
 def test_flashinfer_script_rejects_illegal_head_dim():
     import subprocess
     import sys
