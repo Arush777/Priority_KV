@@ -19,7 +19,7 @@
 | **G0** | Env + FullKV stable | **Met** |
 | **G1** (end W2) | Freeze baselines | **Met** (SnapKV→DropKeep) |
 | **G2** (end W4) | structure≥3pt or INT4 drop | **CLOSED path (b)** |
-| **G3** (end W6) | Q6/Q7/Q8/P2 ablations | **PARTIAL** — P2>Q7; FixedHot≡P2 even buried; mixed serve missing |
+| **G3** (end W6) | Q6/Q7/Q8/P2 ablations | **NEAR-CLOSE** — mid-context: FixedHot **0.125** vs structure/P2 **0.688** (position heuristic separated); P2==Q7 (honest); mixed serve still missing |
 | **D1 / D2** | Bench + atlas | **🟢** |
 | **D3** | Mixed paged backend | **🟡** keep pilots + INT4 path; FlashInfer multicall **not shipping** (import OK, LSE JIT fail @ head_dim=32) |
 | **D4–D10** | Systems + publish | **⬜** |

@@ -265,3 +265,12 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   `structure`/`structure_risk` still retrieve state by role → clean FixedHot ≠ P2.
   Tool-schema gold sits in the system message (stays prefix/SYSTEM-protected) so tool
   ties are expected; discriminator lives in supersession + multi_turn. Job `w5_p2_middle_r1`.
+
+## 2026-07-15 — Mid-context discriminator RESULT (FixedHot separated)
+
+- **`w5_p2_middle_r1` (n=16, page, keep_frac=0.25, relocate_middle=0.5, exit=0):**
+  - uniform **0.000** · **fixed_hot 0.125** · structure (Q7) **0.688** · structure_risk (P2) **0.688** · keep_all 1.000
+  - By category: fixed_hot super **0.00** / multi **0.00** / tool **1.00**; structure & P2 super **1.00** / multi **0.38** / tool **1.00**.
+- **Read (primary goal MET):** with gold at mid-context, **FixedHot collapses 1.000→0.125** while structure/P2 hold at 0.688 — a clean position-heuristic vs structure separation. FixedHot's residual is entirely tool_schema (system-message gold, stays prefix/SYSTEM-protected, as predicted). Novelty claim is now demonstrated honestly: *structure-aware keep ≫ uniform AND prefix (FixedHot) when critical state is not at the edges.*
+- **Honest nuance:** P2 **==** Q7 here (both 0.688). The earlier P2>Q7 gap was partly a prefix artifact; with position controlled the linear-risk tie-break adds nothing on this set, and both leave `multi_turn` at 0.38. Defensible claim = "structure-aware ≫ position heuristics," not "P2 ≫ Q7".
+- **Next:** (1) close G3 on the FixedHot≠structure discriminator; (2) chase `multi_turn` 0.38 (why role-aware keep still misses it — likely OTHER-role short-turn budget contention); (3) a P2≠Q7 test only if the linear-risk refinement is to be claimed separately.
