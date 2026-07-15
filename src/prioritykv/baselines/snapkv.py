@@ -12,12 +12,15 @@ from typing import Any, Optional
 
 @dataclass(frozen=True)
 class SnapKVConfig:
-    """Matched-byte SnapKV settings (lock after first green repro)."""
+    """Matched-byte SnapKV settings (lock after first green repro).
 
-    budget_frac: float = 0.50
-    # SnapKVPress uses compression_ratio = 1 - keep_ratio roughly.
-    compression_ratio: float = 0.50
-    window_size: int = 32
+    kvpress ``compression_ratio`` = fraction of KV pairs *removed*.
+    For keep_frac=0.25 use compression_ratio=0.75.
+    """
+
+    budget_frac: float = 0.25
+    compression_ratio: float = 0.75
+    window_size: int = 64
     max_capacity_prompt: int = 256
     kernel_size: int = 5
     pooling: str = "avgpool"
@@ -54,7 +57,7 @@ def status() -> dict[str, Any]:
         "config": asdict(SnapKVConfig()),
         "kvpress_snapkv": press is not None,
         "next": (
-            "run SnapKVPress on Qwen3-8B via kv-press pipeline; match byte budget"
+            "scripts/run_snapkv_quality.py --config configs/w4_snapkv_matched.yaml"
             if press is not None
             else "uv sync --extra kvpress (H200); or LOCK_Q_DROPKEEP via run_snapkv_attempt.py"
         ),

@@ -188,3 +188,20 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   - Guardrails gate max|Δ|=**0.0** on VT/choice (`guardrails_w4_r2`).
 - **Not claimed:** path (a) ≥5pt PriorityBench drop from uniform INT4 (still soft @8k n=6 with int4=1.000). Measurement/serving story proceeds on **path (b)**.
 - **Follow-ups (non-blocking):** denser keep_frac 0.15/0.35 confirmatory sweeps · SnapKV matched-byte pilot · FlashInfer CUDA wiring.
+
+## 2026-07-15 — denser keep_frac structure sweeps GREEN
+
+- **Runs:** `w4_structured_paged_015_r2` → `w4_structured_paged_015_r1.json` · `w4_structured_paged_035_r5` → `w4_structured_paged_035_r1.json` (page, n=14, Qwen3-8B).
+- **Means (uniform / structure / random / keep_all):**
+  - `keep_frac=0.15`: **0.000 / 0.643 / 0.071 / 1.000**
+  - `keep_frac=0.25` (ref `w3_structured_paged_r1`): **0.000 / 0.643 / 0.286 / 1.000**
+  - `keep_frac=0.35`: **0.000 / 0.643 / 0.429 / 1.000**
+- **Read:** structure mean flat at 0.643 across denser budgets on this set (still tool=1.0, supersession=1.0, multi_turn=0.375); uniform stays dead; random rises with budget (lottery). Confirms G2 path (b) is not a single-operating-point artifact.
+- **Ops:** shared H200 contention → `scripts/wait_gpu_and_run.py` picks any 2 GPUs with ≥95 GiB free.
+
+## 2026-07-15 — W4 missing links closed (docs + pilots)
+
+- **FlashInfer CUDA:** **DEFERRED_W5_W6** — `flashinfer_multicall.status()` loud-skip; CPU `lse_merge_pair` / `mixed_attend_kv_multicall` remain correctness oracle (`tests/test_lse_and_risk.py`).
+- **Atlas fold:** `scripts/run_atlas_fold_w4.py` → `docs/atlas_w4_structure_rows.jsonl` (0.15/0.25/0.35 arm means + rows when present); `docs/failure_atlas.md` updated.
+- **Page-perturb / linear risk:** already landed (`label_page_perturb.py`, `configs/linear_risk_fit.json`) — seed fit only; not yet wired into `keep_policy` (honest scope).
+- **SnapKV matched-byte pilot:** wired `scripts/run_snapkv_quality.py` + `configs/w4_snapkv_matched.yaml` (FullKV vs DropKeep@~4k keep vs SnapKVPress `compression_ratio=0.75`); H200 job `w4_snapkv_quality_r1`. Until results land, DropKeep remains eviction interim; decision auto-written into run JSON (`Q3_PARTIAL` or `LOCK_Q_DROPKEEP`).

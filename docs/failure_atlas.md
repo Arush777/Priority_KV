@@ -16,11 +16,12 @@ equal bytes. See `docs/IMPLEMENTATION_PLAN.md` §3.3.
 | Structure @25% token | stress_structured_25 | **HIT:** structure=1.0 vs uniform/random=0 |
 | Structure @25% page | w3_structured_paged_r1 | **HIT:** structure=0.643 vs uniform=0.000 |
 | Buried adversarial | stress_structured_25_buried | **scoped:** structure=0.43 |
-| Structure denser | w4 keep_frac 0.15 / 0.35 | queued / pending |
-| SnapKV (Q3) | snapkv_attempt | attempt → DropKeep lock if import fails |
-| Guardrails | guardrails_w4 | real harness (local RULER/SCBench-style) |
+| Structure denser | w4 `0.15` / `0.35` page | **GREEN:** structure=0.643 vs uniform=0.000 at both (random 0.071→0.429) |
+| SnapKV (Q3) | `w4_snapkv_quality_r1` | import OK; matched-byte quality job enqueued |
+| Guardrails | guardrails_w4_r2 | **PASS** gate Δ=0 (`ruler_vt`+`scbench_choice`) |
+| FlashInfer CUDA | flashinfer_multicall | **DEFERRED** W5–6 (CPU LSE parity ✅) |
 
-**W3 closed (2026-07-15):** Q2 real INT4 + lock + dual audit + page structure. **W4:** denser keep curves + guardrails numbers + formal G2.
+**W3 closed · W4 G2 path (b) closed (2026-07-15):** denser keep curves + guardrails + formal G2. Atlas rows: `docs/atlas_w4_structure_rows.jsonl`.
 
 ## How to append rows
 
