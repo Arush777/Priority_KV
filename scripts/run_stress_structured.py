@@ -20,6 +20,7 @@ if _dotenv.exists():
         k, _, v = line.partition("=")
         os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "6,7")
+os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")
 
 from prioritykv.structured_stress import run_structured_stress  # noqa: E402
 

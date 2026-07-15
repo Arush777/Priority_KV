@@ -178,6 +178,8 @@ run_one_job() {
   export CUDA_HOME="${CUDA_HOME:-/usr/local/cuda}"
   export PATH="${CUDA_HOME}/bin:${PATH}"
   export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-9.0}"
+  # vLLM V1 engine + prior torch CUDA init in same process → need spawn
+  export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 
   local log_path="$LOG_DIR/${job_id}.log"
   log "START ${job_id}: ${command} (gpus=${gpus} timeout=${timeout_sec})"
