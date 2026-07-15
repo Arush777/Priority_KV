@@ -11,7 +11,10 @@ from typing import Any
 import yaml
 
 from prioritybench.scoring import score_example
-from prioritykv.baselines.buried_state import bury_short_state_turns
+from prioritykv.baselines.buried_state import (
+    bury_short_state_turns,
+    relocate_state_to_middle,
+)
 from prioritykv.baselines.keep_policy import KeepPolicyConfig
 from prioritykv.baselines.keep_policy_run import run_transformers_keep_policy
 from prioritykv.bench_pilot import _mean, materialize_examples
@@ -26,6 +29,7 @@ def run_structured_stress(
     *,
     reuse_full_path: Path | None = None,
     buried: bool | None = None,
+    relocate_middle: bool | None = None,
 ) -> dict[str, Any]:
     root = config_path.resolve().parents[1]
     cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
@@ -33,11 +37,20 @@ def run_structured_stress(
     rows = select_stress_rows(bench, cfg["selection"])
     examples = materialize_examples(rows, data_root=root / "data" / "prioritybench")
     use_buried = bool(cfg.get("buried_state", False)) if buried is None else buried
+    use_middle = (
+        bool(cfg.get("relocate_middle", False))
+        if relocate_middle is None
+        else relocate_middle
+    )
+    middle_pos = float(cfg.get("relocate_position", 0.5))
     prompts = []
     for ex in examples:
         msgs = list(ex.messages)
+        seed = hash(ex.example_id) % 10_000
         if use_buried:
-            msgs = bury_short_state_turns(msgs, seed=hash(ex.example_id) % 10_000)
+            msgs = bury_short_state_turns(msgs, seed=seed)
+        if use_middle:
+            msgs = relocate_state_to_middle(msgs, position=middle_pos, seed=seed)
         prompts.append(PromptRow(id=ex.example_id, messages=msgs))
     # Scoring still uses original example gold (unchanged).
 
@@ -64,8 +77,8 @@ def run_structured_stress(
 
     full_texts: dict[str, str] = {}
     t_full = 0.0
-    # Buried prompts change the input — never reuse FullKV from the unburied kill run.
-    if reuse_full_path is not None and not use_buried:
+    # Buried / relocated prompts change the input — never reuse FullKV from the plain run.
+    if reuse_full_path is not None and not use_buried and not use_middle:
         prior = json.loads(Path(reuse_full_path).read_text(encoding="utf-8"))
         for r in prior.get("rows", []):
             if r.get("fullkv_text"):
@@ -80,9 +93,9 @@ def run_structured_stress(
                     full_texts[r["example_id"]] = r["fullkv_text"]
         if any(ex.example_id not in full_texts for ex in examples):
             full_texts.clear()
-    elif use_buried and reuse_full_path is not None:
+    elif (use_buried or use_middle) and reuse_full_path is not None:
         print(
-            "[structured] buried_state=1 → ignoring --reuse-full (must regen FullKV)",
+            "[structured] buried/relocate on → ignoring --reuse-full (must regen FullKV)",
             flush=True,
         )
 
@@ -171,6 +184,8 @@ def run_structured_stress(
         "model_path": model_path,
         "n": len(examples),
         "buried_state": use_buried,
+        "relocate_middle": use_middle,
+        "relocate_position": middle_pos if use_middle else None,
         "keep": keep_cfg.__dict__,
         "policies": policies,
         "fullkv_mean": _mean(
