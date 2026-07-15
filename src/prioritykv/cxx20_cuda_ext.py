@@ -3,17 +3,26 @@
 torch 2.11 + nvcc host-compiles ATen headers that need C++20 typename rules;
 default extension flags use c++17 and fail on List_inl.h. Import this module
 before anything that may JIT-build quanto_cuda (same process).
+
+Safe on CPU-only / CI: if torch is absent, apply() is a no-op.
 """
 from __future__ import annotations
 
 _PATCHED = False
 
 
-def apply() -> None:
+def apply() -> bool:
+    """Patch ``torch.utils.cpp_extension.load`` if torch is importable.
+
+    Returns True if the patch was applied (or already applied).
+    """
     global _PATCHED
     if _PATCHED:
-        return
-    import torch.utils.cpp_extension as cpp_ext
+        return True
+    try:
+        import torch.utils.cpp_extension as cpp_ext
+    except ModuleNotFoundError:
+        return False
 
     _orig = cpp_ext.load
 
@@ -32,6 +41,7 @@ def apply() -> None:
 
     cpp_ext.load = load  # type: ignore[assignment]
     _PATCHED = True
+    return True
 
 
 apply()
