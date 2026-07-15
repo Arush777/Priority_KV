@@ -175,4 +175,16 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 ## 2026-07-15 — W4 start (systems + G2 evidence)
 
 - **Landed:** `label_page_perturb.py` + `configs/linear_risk_fit.json` · `run_guardrails.py` (real local RULER/SCBench-style probes) · `mixed_attend_kv_multicall` LSE merge == dense · `flashinfer_multicall` loud-skip · denser configs `w4_structured_paged_{015,035}.yaml`.
-- **H200 queue:** snapkv attempt · guardrails · structure 0.15 · structure 0.35 → then formal G2 close on path (b) if structure≥+3pt vs uniform holds and guardrails max|Δ|≤1pt.
+- **SnapKV attempt:** `IMPORT_OK` (`kvpress.SnapKVPress` available) — matched-byte quality pilot still open; DropKeep remains interim until that pilot lands.
+- **Guardrails H200 (`guardrails_w4_r2`):** **PASS** · gate tasks `ruler_vt`+`scbench_choice` max|Δ|=**0.0** @ keep_frac=0.50 · NIAH/MT logged as stress diagnostics (expected DropKeep-sensitive).
+- **H200 ops note:** set `VLLM_WORKER_MULTIPROC_METHOD=spawn` (remote_worker + stress script) after CUDA-fork EngineCore failures following HF loads.
+
+## 2026-07-15 — G2 FORMALLY CLOSED (path b)
+
+- **Criterion (b):** structure-aware keep beats uniform by ≥3 points at matched budget **and** guardrails move ≤1pt.
+- **Evidence:**
+  - Page structure @ `keep_frac=0.25`: structure **0.643** vs uniform **0.000** (`w3_structured_paged_r1`) — margin ≫ 3pt.
+  - Token structure @ 0.25 and buried-scope already documented in W2/W3 decisions.
+  - Guardrails gate max|Δ|=**0.0** on VT/choice (`guardrails_w4_r2`).
+- **Not claimed:** path (a) ≥5pt PriorityBench drop from uniform INT4 (still soft @8k n=6 with int4=1.000). Measurement/serving story proceeds on **path (b)**.
+- **Follow-ups (non-blocking):** denser keep_frac 0.15/0.35 confirmatory sweeps · SnapKV matched-byte pilot · FlashInfer CUDA wiring.

@@ -275,8 +275,8 @@ Storage paths on H200: `$PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv` · 
 - [x] Buried-state scope check  
 - [x] CPU mixed BF16/INT4 attend reference + tests  
 - [x] Real Q2 INT4 on H200 (`int4_modes_seen` ∈ {`hf_cache_implementation_quantized`,`quanto_quantized_cache`})  
-- [ ] Guardrails real (<1pt move) — harness ready; H200 numbers pending  
-- [ ] G2 formally closed in `docs/decisions.md`  
+- [x] Guardrails real (<1pt move) — H200 `guardrails_w4_r2` gate Δ=0.0  
+- [x] G2 formally closed in `docs/decisions.md` (path b)  
 - [x] FlashInfer multi-call == mixed reference (**CPU LSE**; CUDA optional)  
 - [x] Linear risk calibrated (seed fit from page-perturb labels)  
 
