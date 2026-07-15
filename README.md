@@ -7,7 +7,7 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
-**Status (2026-07-15):** **W3–W4 closed** · P2 `structure_risk` **1.000** vs Q7 0.643 @0.25 · SnapKV→DropKeep · **W5 Q6 FixedHot + W6 FlashInfer probe queued** · agents never on H200
+**Status (2026-07-15):** P2=1.000 · **FixedHot also 1.000** (unburied) · FlashInfer 0.6.13 import OK · buried discriminator + LSE parity **queued** · agents never on H200
 
 
 ---
@@ -145,5 +145,7 @@ Claude protocol on this project: **Fable** = research/gates · **Opus** = code r
 - [x] SnapKV matched-byte → LOCK_Q_DROPKEEP (generate incompatible)
 - [ ] W5 P2 structure_risk H200 pilot (`w5_p2_structure_risk_r1`)
 - [x] W5 P2 HIT (structure_risk=1.000 vs structure=0.643)
-- [ ] W5 Q6 FixedHot ablation (`w5_q6_fixedhot_r1`)
-- [ ] W6 FlashInfer probe (`w6_flashinfer_probe_r1`)
+- [x] W5 Q6 FixedHot ablation (`w5_q6_fixedhot_r1`) — fixed_hot=1.000 (ties P2 unburied)
+- [x] W6 FlashInfer probe (`w6_flashinfer_probe_r1`) — IMPORT_OK_CUDA_TOUCH v0.6.13
+- [ ] W5 buried FixedHot vs P2 (`w5_p2_buried_r1`)
+- [ ] W6 FlashInfer LSE tiny parity (`w6_flashinfer_lse_parity_r1`)
