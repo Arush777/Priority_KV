@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Optional
 import time
 
+import prioritykv.cxx20_cuda_ext  # noqa: F401  — before quanto JIT
+
 from prioritykv.fullkv_compare import PromptRow, _apply_chat
 from prioritykv.int4_kv import Int4KvConfig, fake_quant_roundtrip, make_quantized_cache
 
