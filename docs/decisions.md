@@ -157,3 +157,11 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Decided:** Commands must be allowlisted (`python scripts/*.py` or `uv run python scripts/*.py`); single job at a time; still 2-GPU cap.
 - **Decided:** Full run JSON stays on scratch (`$PRIORITYKV_SCRATCH/runs/`); agent pulls via `scripts/fetch_results.sh` (rsync) into gitignored `scratch_mirror/`. Optional thin `jobs/status/*.json` push from worker — not a substitute for rsync.
 - **Decided:** Idempotency via `$PRIORITYKV_SCRATCH/logs/<id>.status` so a reappearing pending file does not re-run.
+
+## 2026-07-15 — Q2 uniform INT4 assert GREEN on H200
+
+- **Blocker was:** `quanto_cuda` Marlin JIT with default `-std=c++17` fails ATen `List_inl.h` on this nvcc/g++ host; toolkit major matched (nvcc 13.x / torch cu130) — not the bug.
+- **Fix:** `prioritykv.cxx20_cuda_ext` forces `-std=c++20` on `torch.utils.cpp_extension.load` in the **same process** as `run_pilot3` / `int4_baseline` (prebuild-alone was insufficient — pilot re-JIT’d without the patch).
+- **Evidence (`w3_int4_assert_r4`, exit=0):** `modes=['hf_cache_implementation_quantized']` · n=6 · int4_mean=1.000 · all six rows that mode · **not** `fake_groupwise_prefill` · `allow_fake_fallback: false` unchanged.
+- **Out:** `$PRIORITYKV_SCRATCH/runs/w2c_pb_quality/w3_int4_assert_r1.json` · log `…/logs/w3_int4_assert_r4.log`
+- **Note:** `full=0/fp8=0` expected under `--modes int4_only` (vLLM arms skipped).

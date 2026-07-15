@@ -7,7 +7,7 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
-**Status (2026-07-15):** W2 closed · W3 bench locked · page-level structure green on H200 · **uniform INT4 (Q2) blocked on `quanto_cuda` JIT** — collaborator handoff: [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md)
+**Status (2026-07-15):** W2 closed · W3 bench locked · page-level structure green on H200 · **uniform INT4 (Q2) assert GREEN** (`hf_cache_implementation_quantized`, n=6, int4=1.000) — see `docs/decisions.md`
 
 ---
 
@@ -69,16 +69,9 @@ Buried run: structure drops (tool_schema still 1.0; supersession/multi_turn → 
 
 ### Open — Q2 uniform INT4
 
-`configs/w3_int4_assert.yaml` with `allow_fake_fallback: false`. Import OK (“quanto READY”); first generate JIT-builds `quanto_cuda` (Marlin) and **fails**. Do **not** “fix” with fake groupwise prefill.
+**CLOSED (H200 `w3_int4_assert_r4`):** real mode `hf_cache_implementation_quantized`, n=6 scored, int4_mean=1.000, `allow_fake_fallback: false`. JIT fix = force `-std=c++20` via `prioritykv.cxx20_cuda_ext` in the pilot process (see `docs/decisions.md`).
 
-**Last failed command on H200:**
-
-```bash
-python scripts/run_pilot3.py --config configs/w3_int4_assert.yaml --modes int4_only
-# → RuntimeError: Error building extension 'quanto_cuda' (nvcc / marlin kernels)
-```
-
-Continue from [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md) §§A–B (commands already run + exact next commands).
+Older handoff detail remains in [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md).
 
 ---
 
@@ -140,6 +133,6 @@ Claude protocol on this project: **Fable** = research/gates · **Opus** = code r
 - [x] W2 closed (FP8 flat; DropKeep kill; structure HIT; buried scope)
 - [x] W3 lock + audit SHA256
 - [x] W3 page-level structure pilot (`structure=0.643`)
-- [ ] Q2 real quanto INT4 (`w3_int4_assert`) — **in progress / handoff**
+- [x] Q2 real quanto INT4 (`w3_int4_assert`) — GREEN on H200 (`hf_cache_implementation_quantized`)
 - [ ] Q3 SnapKV ≤4-day attempt or keep DropKeep (loud)
 - [ ] Guardrails real run before W4 G2
