@@ -1,0 +1,7 @@
+{
+  "job_id": "w6b_mixed_serve_zero_r1",
+  "exit": 0,
+  "finished_at": "2026-07-15T15:39:53Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/w6b_mixed_serve_zero_r1.log",
+  "job_yaml": "jobs/done/w6b_mixed_serve_zero_r1.yaml"
+}
