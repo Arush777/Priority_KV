@@ -1,0 +1,31 @@
+# Q3 matched-byte SnapKV quality vs DropKeep on the W2/W3 stress selection.
+# keep_frac=0.25 → SnapKV compression_ratio=0.75 (fraction removed).
+# DropKeep keep_tokens≈0.25 * ~16k ≈ 4096 (sink 16 + recent ≈ 4080).
+manifest_id: w4_snapkv_matched
+rev: 1
+bench_manifest: data/prioritybench/manifests/w3_lock.json
+selection:
+  splits: [calibration, validation]
+  context_lengths: [16000, 8000]
+  n_tool_schema: 2
+  n_instruction_supersession: 4
+  n_multi_turn_state: 8
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 32768
+keep_frac: 0.25
+sink_tokens: 16
+force_recent: 128
+snapkv_compression_ratio: 0.75
+snapkv_window_size: 64
+snapkv_kernel_size: 5
+dropkeep_keep_tokens: 4096
+dropkeep_recent_tokens: 4080

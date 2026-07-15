@@ -25,10 +25,12 @@ def status() -> dict[str, Any]:
         "available": ok,
         "lse_merge": "prioritykv.mixed_cache_reference.lse_merge_pair",
         "parity_oracle": "mixed_attend_kv_multicall vs mixed_attend_kv",
+        "decision": "DEFERRED_W5_W6",
         "next": (
-            "wire FlashInfer homogeneous paged attention + LSE merge on H200"
+            "optional: wire FlashInfer homogeneous paged attention + LSE merge on H200 "
+            "(CPU lse_merge_pair / mixed_attend_kv_multicall already gate correctness)"
             if ok
-            else "uv add flashinfer (H200 gpu extra) then re-check; CPU LSE ref already gates correctness"
+            else "W4 closed with loud-skip; CPU LSE parity is the correctness oracle until W5–6"
         ),
     }
 

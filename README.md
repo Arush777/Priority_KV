@@ -7,7 +7,7 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
-**Status (2026-07-15):** **W3 CLOSED** · **W4 G2 CLOSED (path b)** · Q2 INT4 GREEN · guardrails gate Δ=0 · SnapKV import OK (matched-byte pilot open)
+**Status (2026-07-15):** **W3 CLOSED** · **W4 G2 CLOSED (path b)** · denser 0.15/0.35 GREEN · Q2 INT4 GREEN · guardrails Δ=0 · SnapKV matched-byte job queued · FlashInfer CUDA deferred (CPU LSE ✅)
 
 
 ---
@@ -55,7 +55,9 @@ Matched `keep_frac=0.25`, prompt-level then page-level. Arms: uniform / structur
 |---|---|---|---|---|---|---|
 | `stress_structured_25_r1` | token | 1.000 | **0.000** | **1.000** | 0.000 | 1.000 |
 | `stress_structured_25_buried_r1` | token + buried gold | 1.000 | 0.000 | **0.429** | 0.000 | 1.000 |
-| `w3_structured_paged_r1` | **page** (16 tok) | 1.000 | **0.000** | **0.643** | 0.286 | 1.000 |
+| `w3_structured_paged_r1` | **page** (16 tok) @0.25 | 1.000 | **0.000** | **0.643** | 0.286 | 1.000 |
+| `w4_structured_paged_015_r1` | page @0.15 | 1.000 | **0.000** | **0.643** | 0.071 | 1.000 |
+| `w4_structured_paged_035_r1` | page @0.35 | 1.000 | **0.000** | **0.643** | 0.429 | 1.000 |
 
 Buried run: structure drops (tool_schema still 1.0; supersession/multi_turn → 0) — scopes the claim to role/length-separable state, not an oracle leak.
 
@@ -138,4 +140,6 @@ Claude protocol on this project: **Fable** = research/gates · **Opus** = code r
 - [x] Q3 SnapKV ≤4-day attempt or keep DropKeep (loud) — attempt scripted; lock DropKeep if import fails
 - [x] W3 15% dual audit (`docs/audit_w3_dual.md`)
 - [x] W4 guardrails H200 + G2 formal close (path b)
-- [ ] W4 confirmatory denser structure sweeps + SnapKV matched-byte pilot
+- [x] W4 confirmatory denser structure sweeps (0.15 / 0.35)
+- [x] FlashInfer CUDA deferred (CPU LSE oracle) · atlas fold for denser sweeps
+- [ ] SnapKV matched-byte quality (`w4_snapkv_quality_r1` queued)

@@ -18,12 +18,12 @@
 |---|---|---|
 | **G0** | Env + FullKV stable | **Met** — vLLM FullKV pilots green |
 | **G1** (end W2) | Freeze baselines; FP8/INT4/SnapKV reproduce | **Met with written deferrals** — FullKV + FP8 frozen; Q2 now **real** on H200; Q3 SnapKV → DropKeep lock attempt |
-| **G2** (end W4) | ≥5pt uniform drop *or* structure≥3pt vs uniform | **Path (b) evidence strong** — page structure 0.643 vs uniform 0.000 @ keep_frac=0.25; denser 0.15/0.35 runs + guardrails required for formal close |
+| **G2** (end W4) | ≥5pt uniform drop *or* structure≥3pt vs uniform | **CLOSED path (b)** — page structure 0.643 vs uniform 0.000 @ 0.15/0.25/0.35; guardrails gate Δ=0 |
 | **D1** PriorityBench-A 240 + audit | End W3 | **Lock+auto-audit+15% dual audit PASS** · SHA256 `fc44b966…` |
 | **W3 page-perturb labels** | Begin W3 | **Moved to W4** — `scripts/label_page_perturb.py` + `configs/linear_risk_fit.json` |
 | **INT4 append/decode ref** | W3–4 | **CPU numpy ref + tests green** · **H200 Q2 GREEN** (`hf_cache_implementation_quantized`, n=6) via C++20 JIT patch |
-| **Multi-call + LSE (FlashInfer)** | Begin W3–4 | **CPU LSE multi-call == dense mixed attend** · FlashInfer CUDA optional loud-skip |
-| **Guardrails RULER/SCBench** | W2 harness | **Real harness** `scripts/run_guardrails.py` (PriorityKV-local probes) — run on H200 for G2 |
+| **Multi-call + LSE (FlashInfer)** | Begin W3–4 | **CPU LSE multi-call == dense mixed attend** · FlashInfer CUDA **DEFERRED_W5_W6** (loud-skip) |
+| **Guardrails RULER/SCBench** | W2 harness | **PASS** on H200 (`guardrails_w4_r2`, gate Δ=0) |
 
 **Do not claim Q2 closed on fake groupwise INT4.** W2 already showed quiet fake-INT4 / quanto-miss can look “perfect.” **Real Q2 path is green (2026-07-15).**
 
@@ -70,7 +70,7 @@ These are **not** scope expansions — they are precision updates so the plan ma
 3. **Page layout:** backend-native **16-token** physical pages; 128-token allocation units (one ablation at 64). **Page-granularity keep** stress implemented (floor page count to token budget).
 4. **Policy (shipping target):** ProtectedRole++ — deterministic structural rules (protect system/tool/constraint/sink/recent-window in BF16, rest INT4) plus a calibrated **linear** risk score only to break ties. No MLP/trees in the shipped system. **Today:** structure keep policies + page manager scaffolding; linear risk **not fitted yet** (needs atlas / labels).
 5. **Budgets:** 50% and 30% of FullKV bytes for final comparisons; **matched `keep_frac=0.25`** used as the early G2 path-(b) operating point on H200.
-6. **Backend:** multi-call homogeneous paged attention (FlashInfer) + exact LSE merge — **not started**. CPU **dequant-then-attend** reference exists (`mixed_cache_reference.py`) as the correctness oracle for later kernels.
+6. **Backend:** multi-call homogeneous paged attention (FlashInfer) + exact LSE merge — **CUDA deferred W5–6**. CPU **dequant-then-attend** + `lse_merge_pair` / `mixed_attend_kv_multicall` are the correctness oracle.
 7. **Serving comparison target:** calibrated vLLM FP8. Beating it at *equal agent quality* at ~30% bytes is the systems win. Reliability-at-parity remains an allowed reframe (G4).
 
 ---
@@ -80,8 +80,8 @@ These are **not** scope expansions — they are precision updates so the plan ma
 | # | Deliverable | Due | Status |
 |---|---|---|---|
 | D1 | PriorityBench-A: 240 scored ex + generator + audit | End W3 | **🟢 Lock+audit+generator** · manual dual audit open · templates v2 non-leaking |
-| D2 | Failure-atlas tech note + headline figures | End W4 | **🟡 Scaffold** (`docs/failure_atlas.md`) · need Q2 + denser curves |
-| D3 | Mixed-precision paged backend + correctness suite | End W6 | **🟡** page manager / tagging / INT4 CPU path · FlashInfer multi-call **not started** · H200 quanto **blocked** |
+| D2 | Failure-atlas tech note + headline figures | End W4 | **🟢** denser 0.15/0.25/0.35 folded (`docs/atlas_w4_structure_rows.jsonl`) · Q2 real INT4 logged |
+| D3 | Mixed-precision paged backend + correctness suite | End W6 | **🟡** page manager / tagging / INT4 CPU+H200 path · FlashInfer CUDA deferred · CPU LSE ✅ |
 | D4 | H200 TTFT/TPOT/throughput + Nsight | End W9 | **⬜** |
 | D5 | Upstream PR | Open W8 | **⬜** |
 | D6 | Workshop paper | Draft W9 | **⬜** (CFP check still due) |
@@ -134,7 +134,7 @@ uv run python scripts/audit_bench.py
 | DropKeep / matched keep_frac structure | **Done** pilots | Primary early atlas signal |
 | Page-level structure | **Done** `w3_structured_paged_r1` (structure **0.643**) | Keep densifying |
 | Real uniform INT4 (Q2) | **Blocking** | `configs/w3_int4_assert.yaml` · see handoff |
-| SnapKV @ matched bytes | ≤4-day W3 attempt else keep DropKeep | Loud-skip today |
+| SnapKV @ matched bytes | ≤4-day W3 attempt else keep DropKeep | Import OK · `run_snapkv_quality.py` enqueued |
 | Page-perturb labels (~score_delta OK; KL later) | **W4** | Fable cut from W3 finish package |
 | Guardrails RULER/SCBench | **Before W4 G2 close** | Stub must become real |
 
@@ -142,7 +142,7 @@ uv run python scripts/audit_bench.py
 
 Proceed with PriorityKV only if **(a)** uniform compression ≥5pt drop in ≥1 category while guardrails move <1pt, **OR (b)** oracle/structure-aware allocation beats uniform by ≥3pt at equal bytes.
 
-- **(b)** already has strong pilot signal (token structure 1.0 vs uniform 0; page 0.643 vs 0). Needs denser + locked-split discipline before declaring G2 closed.  
+- **(b)** **CLOSED** — token structure 1.0 vs uniform 0; page 0.643 vs 0 at keep_frac 0.15/0.25/0.35; guardrails Δ=0.  
 - **(a)** still needs **working Q2**.
 
 Pivot rule unchanged: measurement paper + static hot/cold is still a valid RE artifact.
@@ -158,7 +158,7 @@ Pivot rule unchanged: measurement paper + static hot/cold is still a valid RE ar
 | Byte model & accounting | W1 | **Done early** (`byte_model`, reports) |
 | Page manager + structural tagging | W2–3 | **Substantial** — roles, protected invariants, keep policies (token + page) |
 | INT4 append/decode | W3–4 | **CPU ref + tests** · HF quanto on H200 **JIT-blocked** (`quanto_cuda`) |
-| Multi-call attention + LSE merge | W4–5 | **Not started** — numpy `mixed_attend_kv` is the interim oracle |
+| Multi-call attention + LSE merge | W4–5 | **CPU LSE done** · FlashInfer CUDA → W5–6 |
 | Fused decode kernel | W6–7 cond. | **Not started** |
 
 ### 4.2 Correctness suite
@@ -182,7 +182,7 @@ Unchanged as *target*. Not yet run. Agent-trace replay should use W3-lock sessio
 | S1 | Calibrated vLLM FP8 | Deployment baseline | **🟢 Frozen** (δ≈0 on PB ≤16k — cite, don't overclaim stress) |
 | **Q_dropkeep** | Prompt-level sink+recent | Interim eviction (plan Q3 stand-in) | **🟢 In use** for stress / RoPE-safe |
 | Q2 | Uniform INT4 (quanto / KIVI-style) | Low-bit quality ref | **🔴 Blocking** — assert-no-fake; `quanto_cuda` JIT fail on H200 |
-| Q3 | SnapKV @ matched bytes | Eviction baseline | **🟡 Scaffold / LOUD SKIP** — ≤4-day attempt else keep DropKeep |
+| Q3 | SnapKV @ matched bytes | Eviction baseline | **🟡** import OK · matched-byte quality job queued (`w4_snapkv_quality_r1`) |
 | Q6 | FixedHot | Static hot/cold | **⬜** |
 | Q7 | ProtectedRole (no risk score) | Critical ablation | **🟡 Early** via structure keep policies (not yet full P2 stack) |
 | Q8 | Random @ matched bytes | Sanity | **🟢** in structure stress |
@@ -208,7 +208,7 @@ Legend: ✅ done · 🚧 in progress / partial · ⏸ deferred with note · ⬜ 
 ⏸ FlashInfer CUDA (CPU LSE parity ✅).  
 ✅ SnapKV day-count attempt scripted (`run_snapkv_attempt.py`) → DropKeep lock if import fails.
 
-**W4.** 🚧 Denser atlas / page keep_frac 0.15+0.35 · page-perturb labels + linear risk fit · real guardrails harness · CPU LSE multicall · **G2 formal close pending H200 guardrails + denser structure**. Interview-prep track = process (non-code).
+**W4.** ✅ Denser atlas 0.15+0.35 · page-perturb + linear risk fit · guardrails PASS · CPU LSE multicall · **G2 CLOSED path (b)** · FlashInfer CUDA deferred · SnapKV quality job queued. Interview-prep track = process (non-code).
 
 **W5–W6.** As original (allocators Q6/Q7/Q8/P2, ablations, fused go/no-go) — **G3**.
 
