@@ -1,0 +1,7 @@
+{
+  "job_id": "w6_flashinfer_lse_parity_r1",
+  "exit": 1,
+  "finished_at": "2026-07-15T12:57:01Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/w6_flashinfer_lse_parity_r1.log",
+  "job_yaml": "jobs/failed/w6_flashinfer_lse_parity_r1.yaml"
+}
