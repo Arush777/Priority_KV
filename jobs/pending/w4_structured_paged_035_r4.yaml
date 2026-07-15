@@ -1,0 +1,5 @@
+id: w4_structured_paged_035_r4
+command: python scripts/wait_gpu_and_run.py --min-free-gib 95 --poll-sec 60 --timeout-sec 43200 -- python scripts/run_stress_structured.py --config configs/w4_structured_paged_035.yaml
+gpus: "6,7"
+sync_cuda: false
+timeout_sec: 46800
