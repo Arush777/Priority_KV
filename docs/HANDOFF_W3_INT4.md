@@ -1,5 +1,11 @@
 # Handoff: PriorityKV W3 — INT4 / quanto_cuda (continue here)
 
+> **UPDATE (2026-07-15):** Q2 is **GREEN** on H200 (`w3_int4_assert_r4`).
+> Mode `hf_cache_implementation_quantized`, n=6, int4_mean=1.000, `allow_fake_fallback=false`.
+> Fix: `prioritykv.cxx20_cuda_ext` forces `-std=c++20` for Marlin JIT. See `docs/decisions.md`.
+> Remaining work moved to **W4** (guardrails numbers, denser structure sweeps, G2 formal close).
+> Sections below retain forensic history of the JIT bug.
+
 **Audience:** collaborator taking over H200 INT4 debug from Arush’s Cursor session.  
 **Date:** 2026-07-15 · **Repo:** https://github.com/Arush777/Priority_KV · **Commits:** W3 code `3abfe3d` · this handoff `f35adeb+` (`main`)  
 **There is no Cursor `/export`.** This file + §9 prompt *is* the portability layer. **§A–B below list every H200 command already run and the exact next commands.**
