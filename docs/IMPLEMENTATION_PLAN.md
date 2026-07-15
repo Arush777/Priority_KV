@@ -19,9 +19,9 @@
 | **G0** | Env + FullKV stable | **Met** |
 | **G1** (end W2) | Freeze baselines | **Met** (SnapKV→DropKeep) |
 | **G2** (end W4) | structure≥3pt or INT4 drop | **CLOSED path (b)** |
-| **G3** (end W6) | Q6/Q7/Q8/P2 ablations | **NEAR-CLOSE** — mid-context: FixedHot **0.125** vs structure/P2 **0.688** (position heuristic separated); P2==Q7 (honest); mixed serve still missing |
+| **G3** (end W6) | Q6/Q7/Q8/P2 ablations | **CLOSED (with negative)** — mid-context: FixedHot **0.125** vs structure/P2 **0.688**; P2==Q7 once position is controlled |
 | **D1 / D2** | Bench + atlas | **🟢** |
-| **D3** | Mixed paged backend | **🟡** keep pilots + INT4 path; FlashInfer multicall **not shipping** (import OK, LSE JIT fail @ head_dim=32) |
+| **D3** | Mixed paged backend | **🟡** role/dtype planner + corrected quality forward; FlashInfer native LSE multicall **PARITY_PASS**; true packed storage not shipping |
 | **D4–D10** | Systems + publish | **⬜** |
 
 **Do not claim Q2 closed on fake groupwise INT4.** Real Q2 path is green. **Do not claim P2 unique vs FixedHot** on current bury.
@@ -43,7 +43,16 @@
 | — | Optional Pallas/TPU appendix (Week 11–12 buffer only) | Speaks DeepMind's stack; strictly conditional |
 
 **Headline claim being built:**
-> "Uniform KV-cache compression silently corrupts tool schemas and instruction hierarchies in long multi-turn agent traces even when average benchmark accuracy is flat. A structure-protected mixed-precision paged cache (BF16/INT4) removes these failures at 25–30% of FullKV bytes with measured end-to-end serving gains on H200, implemented and verified against vLLM/FlashInfer."
+> "Uniform KV eviction silently corrupts tool schemas and instruction hierarchies
+> in long multi-turn agent traces. Structure-aware retention preserves those
+> traces at matched keep budgets. A structure-protected BF16/INT4 paged cache
+> targets the same reliability below the all-INT4 byte floor, with measured
+> end-to-end serving gains on H200 and FlashInfer-verified attention."
+
+**2026-07-16 correction:** do not say uniform *INT4 quantization* corrupts these
+tasks at the tested operating point: corrected 4-bit and 2-bit quality forwards
+both stayed 1.000. The observed failure is eviction/missing-state. Packed mixed
+storage and D4 measurements must establish the systems contribution separately.
 
 Everything below exists to make that one paragraph true, reproducible, and public.
 
@@ -69,7 +78,10 @@ These are **not** scope expansions — they are precision updates so the plan ma
 3. **Page layout:** backend-native **16-token** physical pages; 128-token allocation units (one ablation at 64). **Page-granularity keep** stress implemented (floor page count to token budget).
 4. **Policy (shipping target):** ProtectedRole++ — deterministic structural rules (protect system/tool/constraint/sink/recent-window in BF16, rest INT4) plus a calibrated **linear** risk score only to break ties. No MLP/trees in the shipped system. **Today:** structure keep policies + page manager scaffolding; linear risk **not fitted yet** (needs atlas / labels).
 5. **Budgets:** 50% and 30% of FullKV bytes for final comparisons; **matched `keep_frac=0.25`** used as the early G2 path-(b) operating point on H200.
-6. **Backend:** multi-call homogeneous paged attention (FlashInfer) + exact LSE merge — **CUDA deferred W5–6**. CPU **dequant-then-attend** + `lse_merge_pair` / `mixed_attend_kv_multicall` are the correctness oracle.
+6. **Backend:** multi-call homogeneous paged attention (FlashInfer) + exact LSE
+   merge — native-head CUDA parity **PASS** (`w6e_flashinfer_lse_parity_r3`,
+   max abs 4.88e-4). CPU **dequant-then-attend** remains the independent oracle.
+   True packed BF16/INT4 storage and scheduling remain open.
 7. **Serving comparison target:** calibrated vLLM FP8. Beating it at *equal agent quality* at ~30% bytes is the systems win. Reliability-at-parity remains an allowed reframe (G4).
 
 ---
@@ -80,7 +92,7 @@ These are **not** scope expansions — they are precision updates so the plan ma
 |---|---|---|---|
 | D1 | PriorityBench-A: 240 scored ex + generator + audit | End W3 | **🟢 Lock+audit+generator** · manual dual audit open · templates v2 non-leaking |
 | D2 | Failure-atlas tech note + headline figures | End W4 | **🟢** denser 0.15/0.25/0.35 folded (`docs/atlas_w4_structure_rows.jsonl`) · Q2 real INT4 logged |
-| D3 | Mixed-precision paged backend + correctness suite | End W6 | **🟡** page manager / tagging / INT4 CPU+H200 path · FlashInfer CUDA deferred · CPU LSE ✅ |
+| D3 | Mixed-precision paged backend + correctness suite | End W6 | **🟡** page manager / tagging / corrected mixed quality forward · FlashInfer CUDA LSE ✅ · packed storage open |
 | D4 | H200 TTFT/TPOT/throughput + Nsight | End W9 | **⬜** |
 | D5 | Upstream PR | Open W8 | **⬜** |
 | D6 | Workshop paper | Draft W9 | **⬜** (CFP check still due) |
@@ -211,9 +223,12 @@ Legend: ✅ done · 🚧 in progress / partial · ⏸ deferred with note · ⬜ 
 
 **W5.** ✅ P2 HIT 1.000 · ✅ Q6 FixedHot 1.000 (ties P2 even when buried) · Q7 buried 0.429 · SnapKV LOCK_Q_DROPKEEP · **open:** stronger FixedHot≠P2 discriminator.
 
-**W6.** ✅ FlashInfer 0.6.13 import+CUDA touch · ❌ tiny LSE JIT FAIL (head_dim=32) · CPU LSE oracle still gates · multicall @ native dims + mixed serve **open**.
+**W6.** ✅ FlashInfer 0.6.13 native-head multicall + LSE merge **PARITY_PASS** ·
+✅ corrected split-prefill mixed quality forward · ❌ no INT4 quality separation
+at 4-bit/2-bit @0.75 · packed mixed storage + D4 **open**.
 
-**W5–W6.** G3 not formally closed (FixedHot≡P2 on current bury; no mixed BF16/INT4 end-to-end).
+**W5–W6.** G3 closed with an honest negative: mid-context separates
+FixedHot from structure, while P2 does not beat Q7 once position is controlled.
 
 **W7.** Pilot 15% IDs · `FINAL_RUN_MANIFEST.yaml` · **G4**.
 

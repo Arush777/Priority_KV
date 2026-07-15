@@ -333,3 +333,24 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   corrected harness. If uniform INT4 remains perfect at the target byte budget,
   the quality-advantage half is falsified for this set and the systems claim must
   pivot to throughput/lower budgets rather than implying a reliability drop.
+
+## 2026-07-16 — Corrected W6 reruns: FlashInfer CLOSED; soft-INT quality pivot
+
+- **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
+  `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
+  (vs CPU dense **0.000470**); CPU multicall oracle error `1.35e-9`.
+  **PARITY_PASS.** The prior 0.085 error was entirely the LSE contract mismatch.
+- **Split-prefill verification:** every row in the replay artifacts records
+  `first_token_from_degraded_cache=true`; FullKV remains **1.000**, so replay
+  itself does not alter the reference.
+- **Corrected mixed results (n=16, int4_frac=0.75, matched masks):**
+  - INT4: uniform **1.000** · structure **1.000**
+  - 2-bit: uniform **1.000** · structure **1.000**
+  - zero stress: uniform **0.3125** · structure **0.6875**
+- **Decision:** planner wiring and the structure signal are real, but a
+  structure-over-uniform *quantization-quality* win is **not supported** at this
+  operating point—even at 2-bit. Stop escalating fake-quant severity: it would
+  be result-seeking. Keep the defensible reliability claim (structure beats
+  uniform eviction / missing-state stress), and move the mixed-dtype systems
+  claim to **packed bytes + TTFT/TPOT/throughput**. A real packed backend, not
+  another fake-quant quality sweep, is the next blocker.
