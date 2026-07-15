@@ -1,0 +1,7 @@
+{
+  "job_id": "w4_structured_paged_015",
+  "exit": 1,
+  "finished_at": "2026-07-15T05:31:43Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/w4_structured_paged_015.log",
+  "job_yaml": "jobs/failed/w4_structured_paged_015.yaml"
+}
