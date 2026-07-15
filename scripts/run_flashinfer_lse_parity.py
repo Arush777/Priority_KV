@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""W6 FlashInfer LSE multi-call tiny parity vs CPU oracle.
+"""W6 FlashInfer LSE multi-call parity vs CPU oracle.
 
 Uses flashinfer.single_prefill_with_kv_cache(..., return_lse=True) on page chunks,
 merges with prioritykv.lse_merge_pair, and checks vs dense prefill + CPU multicall.
+
+SM90 Hopper kernels only support head_dim ∈ {64, 128, 256} — default 128 (Qwen3).
 Coding agents stay off H200 — enqueue via jobs/pending only.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -16,15 +19,40 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+# Hopper SM90 single_prefill supports these VO dims (static_assert in flashinfer).
+_ALLOWED_HEAD_DIMS = (64, 128, 256)
+
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--head-dim",
+        type=int,
+        default=128,
+        help="Attention head dim (SM90 allows 64/128/256; Qwen3-8B=128)",
+    )
+    ap.add_argument("--tq", type=int, default=4, help="Query length")
+    ap.add_argument("--tk", type=int, default=64, help="KV length (must divide page_tokens)")
+    ap.add_argument("--page-tokens", type=int, default=16)
+    ap.add_argument("--out-tag", default="r2", help="Artifact filename tag")
+    args = ap.parse_args()
+    if args.head_dim not in _ALLOWED_HEAD_DIMS:
+        print(
+            f"ERROR: head_dim={args.head_dim} not in {_ALLOWED_HEAD_DIMS} "
+            "(SM90 FlashInfer static_assert). Refusing to JIT a broken kernel.",
+            flush=True,
+        )
+        return 2
+    if args.tk % args.page_tokens != 0:
+        print("ERROR: --tk must be divisible by --page-tokens", flush=True)
+        return 2
+
     import numpy as np
     import torch
 
     from prioritykv.flashinfer_multicall import try_import_flashinfer
     from prioritykv.mixed_cache_reference import (
         attention_reference,
-        attention_with_lse,
         lse_merge_pair,
         mixed_attend_kv_multicall,
         pages_from_sequence,
@@ -35,6 +63,10 @@ def main() -> int:
     result: dict = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "flashinfer": bool(fi is not None),
+        "head_dim": args.head_dim,
+        "tq": args.tq,
+        "tk": args.tk,
+        "page_tokens": args.page_tokens,
     }
     if fi is None:
         result["decision"] = "SKIP_NO_PACKAGE"
@@ -46,11 +78,10 @@ def main() -> int:
         return 0
 
     rng = np.random.default_rng(0)
-    # Small single-head case.
-    tq, tk, d = 4, 64, 32
+    tq, tk, d = args.tq, args.tk, args.head_dim
     q_np = rng.standard_normal((tq, d)).astype(np.float32)
     kv_np = rng.standard_normal((tk, d)).astype(np.float32)
-    page_tokens = 16
+    page_tokens = args.page_tokens
     n_pages = tk // page_tokens
     dtypes = [StorageDtype.BF16] * n_pages
     pages = pages_from_sequence(kv_np, dtypes, page_tokens=page_tokens)
@@ -72,7 +103,6 @@ def main() -> int:
         o, lse = fi.single_prefill_with_kv_cache(
             q_fi, k, v, causal=False, return_lse=True
         )
-        # o: (tq, 1, d) · lse: (tq, 1) or (tq,)
         o_np = o.detach().float().cpu().numpy().reshape(tq, d)
         lse_np = lse.detach().float().cpu().numpy().reshape(tq)
         outs.append(o_np)
@@ -82,7 +112,6 @@ def main() -> int:
     for ob, lb in zip(outs[1:], lses[1:]):
         fi_out, fi_lse = lse_merge_pair(fi_out, fi_lse, ob, lb)
 
-    # Also dense flashinfer once
     k_all = torch.as_tensor(kv_np, device=device, dtype=torch.float16).view(tk, 1, d)
     o_dense, _ = fi.single_prefill_with_kv_cache(
         q_fi, k_all, k_all.clone(), causal=False, return_lse=True
@@ -110,7 +139,7 @@ def main() -> int:
     )
     print(json.dumps(result, indent=2))
     scratch = os.environ.get("PRIORITYKV_SCRATCH", str(ROOT / "runs"))
-    out = Path(scratch) / "baselines" / "flashinfer_lse_parity_r1.json"
+    out = Path(scratch) / "baselines" / f"flashinfer_lse_parity_{args.out_tag}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(f"decision={result['decision']} out={out}", flush=True)

@@ -28,22 +28,34 @@ from prioritykv.mixed_kv import MixedPlanConfig, plan_int4_mask
 from prioritykv.page_roles import PageRole
 
 
-def _fq_positions_tensor(t, idx, cfg: Int4KvConfig):
-    """Round-trip KV at seq positions ``idx`` (axis=2) through INT4; rest untouched."""
+def _degrade_positions_tensor(t, idx, cfg: Int4KvConfig, *, degrade: str):
+    """Degrade KV at seq positions ``idx`` (axis=2); rest untouched.
+
+    ``degrade``:
+      - ``int4``: groupwise fake-quant round-trip (default quality path)
+      - ``zero``: zero demoted K/V (INT0 stress — proves mask wiring / planner)
+    """
     import torch
 
     if idx.numel() == 0 or not torch.is_tensor(t) or t.dim() != 4:
         return t
+    out = t.clone()
+    if degrade == "zero":
+        out.index_fill_(2, idx, 0)
+        return out
+    if degrade != "int4":
+        raise ValueError(f"unknown degrade mode {degrade}")
     sel = t.index_select(2, idx)  # (b, h, m, d)
     y = fake_quant_roundtrip(sel.detach().float().cpu().numpy(), cfg)
     y = torch.from_numpy(y).to(device=t.device, dtype=t.dtype)
-    out = t.clone()
     out.index_copy_(2, idx, y)
     return out
 
 
-def _fake_quant_positions(past, int4_mask: np.ndarray, cfg: Int4KvConfig):
-    """Apply per-position INT4 round-trip to every layer's K/V prompt cache."""
+def _degrade_positions(
+    past, int4_mask: np.ndarray, cfg: Int4KvConfig, *, degrade: str = "int4"
+):
+    """Apply per-position degrade to every layer's K/V prompt cache."""
     import torch
 
     if past is None:
@@ -64,8 +76,16 @@ def _fake_quant_positions(past, int4_mask: np.ndarray, cfg: Int4KvConfig):
                 k = getattr(layer, attr_k, None)
                 v = getattr(layer, attr_v, None)
                 if torch.is_tensor(k) and torch.is_tensor(v):
-                    setattr(layer, attr_k, _fq_positions_tensor(k, _idx_for(k), cfg))
-                    setattr(layer, attr_v, _fq_positions_tensor(v, _idx_for(v), cfg))
+                    setattr(
+                        layer,
+                        attr_k,
+                        _degrade_positions_tensor(k, _idx_for(k), cfg, degrade=degrade),
+                    )
+                    setattr(
+                        layer,
+                        attr_v,
+                        _degrade_positions_tensor(v, _idx_for(v), cfg, degrade=degrade),
+                    )
                     break
         return past
 
@@ -74,9 +94,13 @@ def _fake_quant_positions(past, int4_mask: np.ndarray, cfg: Int4KvConfig):
     if isinstance(kc, list) and isinstance(vc, list):
         for i in range(len(kc)):
             if torch.is_tensor(kc[i]):
-                kc[i] = _fq_positions_tensor(kc[i], _idx_for(kc[i]), cfg)
+                kc[i] = _degrade_positions_tensor(
+                    kc[i], _idx_for(kc[i]), cfg, degrade=degrade
+                )
             if torch.is_tensor(vc[i]):
-                vc[i] = _fq_positions_tensor(vc[i], _idx_for(vc[i]), cfg)
+                vc[i] = _degrade_positions_tensor(
+                    vc[i], _idx_for(vc[i]), cfg, degrade=degrade
+                )
         return past
 
     raise TypeError(f"unsupported past_key_values type: {type(past)}")
@@ -90,6 +114,7 @@ def run_transformers_mixed_kv(
     policy: str,
     plan_cfg: MixedPlanConfig,
     int4_cfg: Optional[Int4KvConfig] = None,
+    degrade: str = "int4",
     revision: str | None = None,
     max_model_len: int = 32768,
 ) -> list[tuple[str, list[int], dict[str, Any]]]:
@@ -97,6 +122,8 @@ def run_transformers_mixed_kv(
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
+    if degrade not in ("int4", "zero"):
+        raise ValueError(f"degrade must be int4|zero, got {degrade}")
     int4_cfg = int4_cfg or Int4KvConfig()
     risk_cfg: LinearRiskConfig | None = None
     if policy == "structure":
@@ -127,8 +154,9 @@ def run_transformers_mixed_kv(
     model.eval()
     chat_kwargs = dict(qwen3_chat_template_kwargs())
     print(
-        f"[mixed] policy={policy} int4_frac={plan_cfg.int4_frac} "
-        f"sink={plan_cfg.sink_tokens} recent={plan_cfg.recent_window} n={len(prompts)}",
+        f"[mixed] policy={policy} degrade={degrade} int4_frac={plan_cfg.int4_frac} "
+        f"nbits={int4_cfg.nbits} sink={plan_cfg.sink_tokens} "
+        f"recent={plan_cfg.recent_window} n={len(prompts)}",
         flush=True,
     )
 
@@ -168,7 +196,7 @@ def run_transformers_mixed_kv(
                         roles = list(roles) + [PageRole.RECENT] * (n - len(roles))
                 mask = plan_int4_mask(roles, plan_cfg, policy=policy, risk_cfg=risk_cfg)
                 int4_realized = int(mask.sum())
-                past = _fake_quant_positions(past, mask, int4_cfg)
+                past = _degrade_positions(past, mask, int4_cfg, degrade=degrade)
 
             next_id = int(torch.argmax(pre.logits[:, -1, :], dim=-1).item())
             gen_ids = [next_id]
@@ -196,6 +224,8 @@ def run_transformers_mixed_kv(
         meta = {
             "mode": f"mixed_{policy}",
             "policy": policy,
+            "degrade": degrade if policy != "full" else "none",
+            "nbits": int(int4_cfg.nbits) if policy != "full" and degrade == "int4" else None,
             "prompt_tokens": n,
             "int4_tokens": int4_realized,
             "int4_frac_realized": (int4_realized / n) if n else 0.0,

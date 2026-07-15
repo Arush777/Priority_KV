@@ -66,6 +66,9 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
         nbits=int(mcfg.get("nbits", 4)),
         group_size=int(mcfg.get("group_size", 32)),
     )
+    degrade = str(mcfg.get("degrade", "int4")).lower()
+    if degrade not in ("int4", "zero"):
+        raise ValueError(f"mixed.degrade must be int4|zero, got {degrade}")
     policies = list(mcfg.get("policies", ["full", "uniform", "structure"]))
 
     full_texts: dict[str, str] = {}
@@ -80,6 +83,7 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
             policy=policy,
             plan_cfg=plan_cfg,
             int4_cfg=int4_cfg,
+            degrade=degrade,
             max_model_len=int(vcfg["max_model_len"]),
         )
         seconds[policy] = time.time() - t1
@@ -135,6 +139,7 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
             "recent_window": plan_cfg.recent_window,
             "nbits": int4_cfg.nbits,
             "group_size": int4_cfg.group_size,
+            "degrade": degrade,
             "risk_fit_path": risk_path,
         },
         "policies": policies,

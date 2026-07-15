@@ -302,3 +302,12 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Systems plumbing:** **WORKS** — real forward + per-position INT4 round-trip executed; uniform/structure **matched** at int4_frac_realized **0.75** (byte-fair by construction).
 - **Quality claim at int4_frac=0.75:** **NOT yet shown.** Means: full **1.000** · uniform **1.000** · structure **1.000** (all cats 1.0). Soft INT4 at 75% does not hurt this mid-context set — same lesson as G2 path (a) / Q2 soft @8k. Discriminator must be a **harder** budget (higher int4_frac, e.g. 0.90–0.95, or true drop+INT4) before structure vs uniform can separate.
 - **Read:** first systems half is on the board (artifact exists and runs on H200). Remaining gap for the *claim* is budget severity, not plumbing. Next: retry `w6_mixed_serve` at higher `int4_frac` (or INT4+evict) until uniform drops while structure holds.
+
+## 2026-07-15 — Tackle soft-INT4 + FlashInfer head_dim blockers
+
+- **FlashInfer:** r1 failed because SM90 `static_assert(HEAD_DIM ∈ {64,128,256})` — head_dim=32 is illegal. Script now defaults to **128**, rejects illegal dims (exit 2), artifact tag `r2`. Job `w6a_flashinfer_lse_parity_r2`.
+- **Soft INT4 at 0.75:** three follow-ups enqueued (wiring first, then severity):
+  1. `w6b_mixed_serve_zero_r1` — `degrade=zero` (INT0) @ matched 0.75: proves mask/planner (expect structure ≫ uniform).
+  2. `w6c_mixed_serve_nbits2_r1` — nbits=2 @ 0.75: harsher groupwise error.
+  3. `w6d_mixed_serve_hard_r1` — nbits=4 @ int4_frac=0.92.
+- **Code:** `mixed_kv_run` supports `degrade: int4|zero`; configs under `configs/w6_mixed_serve_{hard,nbits2,zero}.yaml`.
