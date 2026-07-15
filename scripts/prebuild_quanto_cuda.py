@@ -49,17 +49,23 @@ def main() -> int:
     _prep_env()
     _force_cxx20_on_cpp_extension_load()
 
+    # Importing quanto registers the Extension as "quanto_cuda" (not "cuda").
     import optimum.quanto  # noqa: F401
+    import optimum.quanto.library.extensions.cuda as qcuda
     from optimum.quanto.library.extensions import get_extension
-    from optimum.quanto.library.extensions.cuda import __file__ as cuda_init
 
-    cuda_root = Path(cuda_init).resolve().parent
+    cuda_root = Path(qcuda.__file__).resolve().parent
     build_dir = cuda_root / "build"
     if build_dir.exists():
         print(f"clearing stale quanto build: {build_dir}")
         shutil.rmtree(build_dir, ignore_errors=True)
 
-    ext = get_extension("cuda")
+    # Prefer registered name; fall back to module-local Extension object.
+    try:
+        ext = get_extension("quanto_cuda")
+    except KeyError:
+        ext = qcuda.ext
+    print(f"building extension name={getattr(ext, 'name', '?')}")
     lib = ext.lib  # triggers JIT / ninja build
     so = build_dir / "quanto_cuda.so"
     print(f"OK: quanto_cuda loaded lib={lib} so_exists={so.exists()} so={so}")

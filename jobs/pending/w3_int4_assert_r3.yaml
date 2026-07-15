@@ -1,0 +1,5 @@
+id: w3_int4_assert_r3
+command: python scripts/run_w3_int4_assert_job.py
+gpus: "6,7"
+sync_cuda: false
+timeout_sec: 7200
