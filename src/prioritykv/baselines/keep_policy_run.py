@@ -26,10 +26,18 @@ def run_transformers_keep_policy(
     revision: str | None = None,
     max_model_len: int = 32768,
 ) -> list[tuple[str, list[int], dict[str, Any]]]:
-    """policy ∈ {uniform, structure, random, keep_all}."""
+    """policy ∈ {uniform, structure, structure_risk, random, keep_all}."""
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
+    from prioritykv.linear_risk import LinearRiskConfig, load_linear_risk_config
+
+    risk_cfg: LinearRiskConfig | None = None
+    if policy == "structure_risk":
+        if keep_cfg.risk_fit_path:
+            risk_cfg = load_linear_risk_config(keep_cfg.risk_fit_path)
+        else:
+            risk_cfg = LinearRiskConfig()
     tok = AutoTokenizer.from_pretrained(
         model_path,
         revision=revision if not Path(model_path).exists() else None,
@@ -88,11 +96,11 @@ def run_transformers_keep_policy(
             }
         else:
             roles = None
-            if policy == "structure":
+            if policy in ("structure", "structure_risk"):
                 roles = assign_token_roles(tok, row.messages, chat_kwargs=chat_kwargs)
                 if len(roles) != n:
                     raise RuntimeError(
-                        f"structure role/token mismatch: roles={len(roles)} n={n} "
+                        f"{policy} role/token mismatch: roles={len(roles)} n={n} "
                         f"id={row.id} (prompt exceeded max_model_len trim path)"
                     )
             cfg_i = keep_cfg
@@ -100,7 +108,9 @@ def run_transformers_keep_policy(
                 cfg_i = KeepPolicyConfig(
                     **{**keep_cfg.__dict__, "seed": keep_cfg.seed + i}
                 )
-            idx = select_keep_indices(n, cfg_i, policy=policy, roles=roles)
+            idx = select_keep_indices(
+                n, cfg_i, policy=policy, roles=roles, risk_cfg=risk_cfg
+            )
             kept_ids = apply_keep_indices(ids, idx)
             meta_k = {
                 "kept_tokens": int(kept_ids.numel()),

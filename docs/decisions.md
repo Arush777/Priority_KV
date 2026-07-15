@@ -205,3 +205,15 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Atlas fold:** `scripts/run_atlas_fold_w4.py` → `docs/atlas_w4_structure_rows.jsonl` (0.15/0.25/0.35 arm means + rows when present); `docs/failure_atlas.md` updated.
 - **Page-perturb / linear risk:** already landed (`label_page_perturb.py`, `configs/linear_risk_fit.json`) — seed fit only; not yet wired into `keep_policy` (honest scope).
 - **SnapKV matched-byte pilot:** wired `scripts/run_snapkv_quality.py` + `configs/w4_snapkv_matched.yaml` (FullKV vs DropKeep@~4k keep vs SnapKVPress `compression_ratio=0.75`); H200 job `w4_snapkv_quality_r1`. Until results land, DropKeep remains eviction interim; decision auto-written into run JSON (`Q3_PARTIAL` or `LOCK_Q_DROPKEEP`).
+
+## 2026-07-15 — Q3 SnapKV matched-byte → LOCK_Q_DROPKEEP
+
+- **Run:** `w4_snapkv_quality_r1` · n=14 · full=1.000 · dropkeep=0.000 · snapkv generate **failed** (`KeyError: cache_position` under HF generate + SnapKVPress hooks).
+- **Decision:** **LOCK_Q_DROPKEEP** — DropKeep remains permanent eviction interim. Import-only SnapKV is not a quality baseline.
+- **Out:** `$PRIORITYKV_SCRATCH/runs/snapkv_quality/w4_snapkv_matched_r1.json`
+
+## 2026-07-15 — W5 start: P2 structure_risk wired
+
+- **Landed:** `load_linear_risk_config` · `structure_risk` keep policy (page+token) ranks residual budget by `score_page` · `PageManager.enforce_budget` demotes lowest risk first within a role · config `configs/w5_p2_structure_risk.yaml` · job `w5_p2_structure_risk_r1`.
+- **Claim scope:** matched-keep prompt ablation (Q7 `structure` vs P2 `structure_risk` vs uniform) — **not** end-to-end mixed BF16/INT4 serving yet.
+- **Next:** H200 P2 pilot numbers · FlashInfer CUDA (still deferred) · G3 allocator ablations.

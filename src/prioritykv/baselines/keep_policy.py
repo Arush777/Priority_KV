@@ -1,12 +1,13 @@
-"""Matched-budget keep policies for uniform / structured / random arms (prompt-level)."""
+"""Matched-budget keep policies for uniform / structured / random / structure_risk arms."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Mapping, Sequence
+from typing import List, Mapping, Optional, Sequence
 
 import numpy as np
 
+from prioritykv.linear_risk import LinearRiskConfig, score_page
 from prioritykv.page_roles import PROTECTED_ROLES, PageRole
 from prioritykv.tagging import role_for_message
 
@@ -21,6 +22,8 @@ class KeepPolicyConfig:
     # Page-level stress (W3): majority-role then whole-page keep.
     page_tokens: int = 16
     granularity: str = "token"  # token | page
+    # P2 (W5): path to frozen linear-risk fit JSON (structure_risk policy).
+    risk_fit_path: Optional[str] = None
 
 
 def _message_role_stress(msg: Mapping[str, str]) -> PageRole:
@@ -273,12 +276,98 @@ def select_structure_pages(
     return _finalize(_expand_pages_to_tokens(spans, keep_pages), n)
 
 
+def _page_risk_meta(role: PageRole, n_tokens: int) -> dict:
+    return {"roles": [role.value], "n_tokens": int(n_tokens)}
+
+
+def select_structure_risk_pages(
+    n: int,
+    roles: Sequence[PageRole],
+    cfg: KeepPolicyConfig,
+    risk_cfg: Optional[LinearRiskConfig] = None,
+) -> np.ndarray:
+    """P2 page keep: structure candidates ranked by linear risk (Q7 + ties)."""
+    risk_cfg = risk_cfg or LinearRiskConfig()
+    spans = page_bounds(n, cfg.page_tokens)
+    budget = _token_budget(n, cfg)
+    if budget >= n:
+        return np.arange(n, dtype=np.int64)
+    must_toks = set(range(min(cfg.sink_tokens, n))) | set(
+        range(max(0, n - cfg.force_recent), n)
+    )
+    keep_pages = _pages_covering_tokens(spans, must_toks)
+    page_roles = [majority_page_role(roles, s, e) for s, e in spans]
+
+    def _n_toks(pids: set[int]) -> int:
+        return sum(spans[p][1] - spans[p][0] for p in pids)
+
+    def _score(pi: int) -> float:
+        s, e = spans[pi]
+        return score_page(_page_risk_meta(page_roles[pi], e - s), risk_cfg)
+
+    struct_pages = [
+        pi
+        for pi, r in enumerate(page_roles)
+        if (r in PROTECTED_ROLES or r == PageRole.OTHER) and pi not in keep_pages
+    ]
+    # Highest risk first among structure pages (prefer tool/constraint over OTHER).
+    for pi in sorted(struct_pages, key=_score, reverse=True):
+        trial = set(keep_pages) | {pi}
+        if _n_toks(trial) <= budget:
+            keep_pages = trial
+    # Fill remainder by risk among leftover pages (still floors to budget).
+    leftover = [pi for pi in range(len(spans)) if pi not in keep_pages]
+    for pi in sorted(leftover, key=_score, reverse=True):
+        trial = set(keep_pages) | {pi}
+        if _n_toks(trial) <= budget:
+            keep_pages = trial
+    return _finalize(_expand_pages_to_tokens(spans, keep_pages), n)
+
+
+def select_structure_risk(
+    n: int,
+    roles: Sequence[PageRole],
+    cfg: KeepPolicyConfig,
+    risk_cfg: Optional[LinearRiskConfig] = None,
+) -> np.ndarray:
+    """Token-grain P2: protect structure, break residual ties by risk score."""
+    risk_cfg = risk_cfg or LinearRiskConfig()
+    budget = max(cfg.sink_tokens + cfg.force_recent, int(round(n * cfg.keep_frac)))
+    budget = min(budget, n)
+    if budget >= n:
+        return np.arange(n, dtype=np.int64)
+
+    must = set(range(min(cfg.sink_tokens, n))) | set(
+        range(max(0, n - cfg.force_recent), n)
+    )
+    struct = [
+        i
+        for i, r in enumerate(roles)
+        if (r in PROTECTED_ROLES or r == PageRole.OTHER) and i not in must
+    ]
+
+    def _tok_score(i: int) -> float:
+        return score_page(_page_risk_meta(roles[i], 1), risk_cfg)
+
+    for i in sorted(struct, key=_tok_score, reverse=True):
+        if len(must) >= budget:
+            break
+        must.add(i)
+    leftover = [i for i in range(n) if i not in must]
+    for i in sorted(leftover, key=_tok_score, reverse=True):
+        if len(must) >= budget:
+            break
+        must.add(i)
+    return _finalize(list(must), n)
+
+
 def select_keep_indices(
     n: int,
     cfg: KeepPolicyConfig,
     *,
     policy: str,
     roles: Sequence[PageRole] | None = None,
+    risk_cfg: Optional[LinearRiskConfig] = None,
 ) -> np.ndarray:
     """Dispatch token- or page-granularity keep selection."""
     page = cfg.granularity == "page"
@@ -293,6 +382,14 @@ def select_keep_indices(
             select_structure_pages(n, roles, cfg)
             if page
             else select_structure(n, roles, cfg)
+        )
+    if policy == "structure_risk":
+        if roles is None:
+            raise ValueError("structure_risk policy requires roles")
+        return (
+            select_structure_risk_pages(n, roles, cfg, risk_cfg=risk_cfg)
+            if page
+            else select_structure_risk(n, roles, cfg, risk_cfg=risk_cfg)
         )
     raise ValueError(f"unknown policy {policy}")
 

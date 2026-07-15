@@ -71,3 +71,55 @@ def test_page_structure_floors_budget():
     idx_s = select_structure_pages(n, roles, cfg)
     tool_kept = sum(1 for i in idx_s if 100 <= int(i) < 200)
     assert tool_kept >= 48
+
+
+def test_structure_risk_prefers_tool_over_other_when_budget_tight():
+    from pathlib import Path
+
+    from prioritykv.baselines.keep_policy import (
+        select_structure_pages,
+        select_structure_risk_pages,
+    )
+    from prioritykv.linear_risk import load_linear_risk_config
+
+    root = Path(__file__).resolve().parents[1]
+    risk = load_linear_risk_config(root / "configs" / "linear_risk_fit.json")
+    # Leave residual budget after sink+recent so structure pages compete.
+    cfg = KeepPolicyConfig(
+        keep_frac=0.35,
+        sink_tokens=16,
+        force_recent=64,
+        page_tokens=16,
+        granularity="page",
+    )
+    n = 512
+    roles = [PageRole.FILLER] * n
+    # Early OTHER pages (plain structure adds in page-id order first).
+    for i in range(80, 160):
+        roles[i] = PageRole.OTHER
+    # Later TOOL pages — risk should prefer these over OTHER when competing.
+    for i in range(240, 320):
+        roles[i] = PageRole.TOOL
+    idx_q7 = select_structure_pages(n, roles, cfg)
+    idx_p2 = select_structure_risk_pages(n, roles, cfg, risk_cfg=risk)
+    tool_q7 = sum(1 for i in idx_q7 if 240 <= int(i) < 320)
+    tool_p2 = sum(1 for i in idx_p2 if 240 <= int(i) < 320)
+    other_q7 = sum(1 for i in idx_q7 if 80 <= int(i) < 160)
+    other_p2 = sum(1 for i in idx_p2 if 80 <= int(i) < 160)
+    assert tool_p2 >= tool_q7
+    assert tool_p2 > other_p2 or tool_p2 >= 48
+    assert abs(len(idx_p2) - len(idx_q7)) <= 16
+    # P2 should not starve tools relative to plain early-OTHER preference.
+    assert tool_p2 >= other_p2 or tool_p2 > tool_q7
+
+
+def test_load_linear_risk_fit_json():
+    from pathlib import Path
+
+    from prioritykv.linear_risk import load_linear_risk_config, score_page
+
+    root = Path(__file__).resolve().parents[1]
+    cfg = load_linear_risk_config(root / "configs" / "linear_risk_fit.json")
+    assert score_page({"roles": ["tool"], "n_tokens": 16}, cfg) > score_page(
+        {"roles": ["filler"], "n_tokens": 16}, cfg
+    )

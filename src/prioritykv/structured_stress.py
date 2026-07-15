@@ -45,6 +45,12 @@ def run_structured_stress(
     max_new = int(cfg["decode"]["max_new_tokens"])
     vcfg = cfg["vllm"]
     kcfg_raw = cfg.get("keep", {})
+    risk_path = kcfg_raw.get("risk_fit_path")
+    if risk_path:
+        rp = Path(str(risk_path))
+        if not rp.is_absolute():
+            rp = root / rp
+        risk_path = str(rp)
     keep_cfg = KeepPolicyConfig(
         keep_frac=float(kcfg_raw.get("keep_frac", 0.25)),
         sink_tokens=int(kcfg_raw.get("sink_tokens", 16)),
@@ -52,6 +58,7 @@ def run_structured_stress(
         seed=int(kcfg_raw.get("seed", 0)),
         page_tokens=int(kcfg_raw.get("page_tokens", 16)),
         granularity=str(kcfg_raw.get("granularity", "token")),
+        risk_fit_path=risk_path,
     )
     policies = list(kcfg_raw.get("policies", ["uniform", "structure", "random", "keep_all"]))
 

@@ -15,6 +15,7 @@ from prioritykv.byte_model import (
     ModelKvGeom,
     realized_bytes,
 )
+from prioritykv.linear_risk import LinearRiskConfig, score_page
 from prioritykv.page_roles import (
     HARD_PROTECTED_ROLES,
     PROTECTED_ROLES,
@@ -47,6 +48,8 @@ class PageManagerConfig:
     geom: ModelKvGeom = QWEN3_8B_KV
     # How often generated pages are reconsidered for demotion (plan §4.1).
     demote_every_tokens: int = 128
+    # P2: within a role class, demote lowest linear-risk score first.
+    risk: Optional[LinearRiskConfig] = None
 
 
 @dataclass
@@ -99,6 +102,10 @@ class PageManager:
         if self.seq_len == 0:
             return True
         return self.realized_bytes() <= self.budget_bytes()
+
+    def _page_risk(self, p: Page) -> float:
+        cfg = self.config.risk or LinearRiskConfig()
+        return score_page({"roles": [p.role.value], "n_tokens": p.n_tokens}, cfg)
 
     # --- construction from chat -------------------------------------------
 
@@ -197,7 +204,7 @@ class PageManager:
         """Demote eligible pages until within budget. Returns number demoted.
 
         Order: FILLER → GENERATED → OTHER → protected soft roles (never SINK).
-        Linear risk score (W4) will replace this tie-break later.
+        Within a role, demote lowest linear-risk score first (P2 tie-break).
         """
         demoted = 0
         order = (
@@ -214,14 +221,14 @@ class PageManager:
             for role in order:
                 if role in HARD_PROTECTED_ROLES:
                     continue
-                # Prefer oldest page of this role still in BF16.
                 cands = [
                     p
                     for p in self.pages
                     if p.role == role and p.dtype == StorageDtype.BF16
                 ]
                 if cands:
-                    victim = cands[0]
+                    # Lowest risk demoted first so high-risk pages stay BF16.
+                    victim = min(cands, key=self._page_risk)
                     break
             if victim is None:
                 break  # cannot demote further without violating hard protect
