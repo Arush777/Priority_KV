@@ -274,3 +274,23 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Read (primary goal MET):** with gold at mid-context, **FixedHot collapses 1.000→0.125** while structure/P2 hold at 0.688 — a clean position-heuristic vs structure separation. FixedHot's residual is entirely tool_schema (system-message gold, stays prefix/SYSTEM-protected, as predicted). Novelty claim is now demonstrated honestly: *structure-aware keep ≫ uniform AND prefix (FixedHot) when critical state is not at the edges.*
 - **Honest nuance:** P2 **==** Q7 here (both 0.688). The earlier P2>Q7 gap was partly a prefix artifact; with position controlled the linear-risk tie-break adds nothing on this set, and both leave `multi_turn` at 0.38. Defensible claim = "structure-aware ≫ position heuristics," not "P2 ≫ Q7".
 - **Next:** (1) close G3 on the FixedHot≠structure discriminator; (2) chase `multi_turn` 0.38 (why role-aware keep still misses it — likely OTHER-role short-turn budget contention); (3) a P2≠Q7 test only if the linear-risk refinement is to be claimed separately.
+
+## 2026-07-15 — Systems half started: real mixed BF16/INT4 KV forward
+
+- **Why:** all prior wins were prompt-level *keep* (drop+regenerate at full BF16) — the
+  headline "mixed BF16/INT4 paged serving" was never exercised on a real forward. This
+  is the biggest goal-alignment gap.
+- **Approach (Stage 1–2, avoids blocked FlashInfer JIT + risky custom Cache subclass):**
+  reuse the green uniform-INT4 fake-quant path (`_fake_quant_past`) but make it
+  **per-position**. `mixed_kv.plan_int4_mask` picks which token positions store INT4 at a
+  matched byte budget (`int4_frac`): `structure` protects sink+recent+roles and demotes
+  lowest-risk first; `uniform` demotes role-blind evenly (same INT4 count → byte-fair).
+  `mixed_kv_run.run_transformers_mixed_kv` prefills full, INT4-round-trips only the masked
+  prompt-KV positions in-place (groupwise, same error model as Q2), then greedy-decodes.
+- **Honest scope:** this measures the *quality frontier* of role-aware mixed precision at a
+  matched byte budget — NOT yet wall-clock memory/latency (true packed cache + FlashInfer
+  is a later stage). Realized INT4 fraction is logged per example.
+- **Tests:** `tests/test_mixed_kv.py` (matched budget, sink/recent never INT4, structure
+  protects roles). Full suite 69 passed / 3 skipped.
+- **Job:** `w6_mixed_serve_r1` — FullKV vs uniform-INT4 vs structure-mixed @ int4_frac=0.75,
+  mid-context set. **Desired result: structure ≫ uniform at equal bytes.**
