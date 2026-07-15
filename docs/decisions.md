@@ -246,3 +246,22 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   - uniform **0.000** · **fixed_hot 1.000** · structure (Q7) **0.429** · **structure_risk (P2) 1.000** · keep_all 1.000
   - Q7 matches W2 buried scope (multi_turn→0). **FixedHot still perfect** — bury did **not** discriminate FixedHot from P2 on this set (gold still reachable via prefix+recent keep). Further discriminator needed (harder bury / mid-only keep / lock test split).
 - **FlashInfer LSE parity (`w6_flashinfer_lse_parity_r1`):** **FAILED** `exit=1` — FlashInfer JIT `single_prefill_with_kv_cache` Ninja build failed for head_dim=32 SM90 (package import OK; tiny custom-dim kernel path broken). CPU LSE multicall remains the correctness oracle. Retry with model-native head dims (e.g. 128) or prebuilt kernels later.
+
+## 2026-07-15 — Root-cause of FixedHot≡P2 + mid-context discriminator
+
+- **Diagnosis (setup/eval-design, not a novelty failure):** `pad_with_filler_turns`
+  (`templates/base.py`) emits `[system, <short gold turns>, <filler…>, FINAL]`, so
+  structure-critical state lives in the **prefix**. `select_fixed_hot_pages` keeps
+  sink+recent+**lowest page ids (prefix)** → it grabs the same early gold pages as
+  role/risk-aware P2. Buried-in-place only lengthened those prefix turns; it never
+  moved gold out of the prefix, so FixedHot could not be separated from P2 (both 1.0).
+- **Fix:** `relocate_state_to_middle` (`baselines/buried_state.py`) keeps leading
+  system turns + FINAL fixed and re-inserts the gold block at the middle of the
+  filler band (gold order preserved → supersession/multi-turn semantics intact).
+  Wired via config flag `relocate_middle` in `structured_stress.py` + `--relocate-middle`.
+  Tests: `test_relocate_moves_gold_out_of_prefix`, `test_relocate_preserves_gold_order`.
+- **Prediction:** with gold at mid-context (config `w5_p2_middle`, keep_frac=0.25),
+  uniform ~0 and **fixed_hot should collapse** (prefix is now filler), while
+  `structure`/`structure_risk` still retrieve state by role → clean FixedHot ≠ P2.
+  Tool-schema gold sits in the system message (stays prefix/SYSTEM-protected) so tool
+  ties are expected; discriminator lives in supersession + multi_turn. Job `w5_p2_middle_r1`.
