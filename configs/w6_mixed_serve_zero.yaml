@@ -1,0 +1,35 @@
+# W6 systems: INT0 stress — zero demoted K/V at matched positions.
+# Proves planner/mask wiring: structure should hold mid-context gold BF16 while
+# uniform zeros it. Not a byte-savings claim; a correctness discriminator.
+manifest_id: w6_mixed_serve_zero
+rev: 1
+buried_state: false
+relocate_middle: true
+relocate_position: 0.5
+bench_manifest: data/prioritybench/manifests/w3_lock.json
+selection:
+  splits: [calibration, validation]
+  context_lengths: [16000, 8000]
+  n_tool_schema: 2
+  n_instruction_supersession: 6
+  n_multi_turn_state: 8
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 32768
+mixed:
+  int4_frac: 0.75
+  sink_tokens: 16
+  recent_window: 128
+  nbits: 4
+  group_size: 32
+  degrade: zero
+  risk_fit_path: configs/linear_risk_fit.json
+  policies: [full, uniform, structure]
