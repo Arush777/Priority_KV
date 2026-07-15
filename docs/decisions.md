@@ -231,3 +231,11 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Ops hygiene:** Coding agents (Cursor/Claude) **never** on H200 — only laptop/agent box writes code + pushes `jobs/pending`; H200 runs `pkworker` + allowlisted `python scripts/*.py`. Status checks may use SSH as the human collaborator; do not install or launch IDEs/agents on `dgre2`.
 - **Q6 FixedHot:** `fixed_hot` / `fixed_hot_pages` policy (prefix-hot after sink+recent) · config `configs/w5_q6_fixedhot.yaml` · job `w5_q6_fixedhot_r1`.
 - **W6 FlashInfer:** `scripts/run_flashinfer_probe.py` + `flashinfer_multicall.probe()` · job `w6_flashinfer_probe_r1` (loud SKIP/IMPORT_OK; multicall kernel still not wired).
+
+## 2026-07-15 — Q6 FixedHot pilot + FlashInfer probe results
+
+- **FixedHot (`w5_q6_fixedhot_r1`, n=14, page, keep_frac=0.25):**
+  - uniform **0.000** · **fixed_hot 1.000** · structure (Q7) **0.643** · structure_risk (P2) **1.000** · keep_all 1.000
+  - **Read:** On this unburied set, **prefix-hot FixedHot ties P2** (both perfect). Role-aware P2 is **not uniquely required** here — gold may sit early + in recent. **Buried adversarial is the discriminator** (next).
+- **FlashInfer probe (`w6_flashinfer_probe_r1`):** **IMPORT_OK_CUDA_TOUCH** · flashinfer **0.6.13** on H200 · CUDA touch OK · multicall still unwired.
+- **Next jobs:** `w5_p2_buried_r1` (FixedHot vs Q7 vs P2 under bury) · `w6_flashinfer_lse_parity_r1` (tiny FI multi-call LSE vs CPU).

@@ -183,7 +183,7 @@ Unchanged as *target*. Not yet run. Agent-trace replay should use W3-lock sessio
 | **Q_dropkeep** | Prompt-level sink+recent | Interim eviction (plan Q3 stand-in) | **🟢 In use** for stress / RoPE-safe |
 | Q2 | Uniform INT4 (quanto / KIVI-style) | Low-bit quality ref | **🔴 Blocking** — assert-no-fake; `quanto_cuda` JIT fail on H200 |
 | Q3 | SnapKV @ matched bytes | Eviction baseline | **LOCK_Q_DROPKEEP** — generate failed (`cache_position`); DropKeep permanent interim |
-| Q6 | FixedHot | Static hot/cold | **🟡** `fixed_hot` policy + H200 job queued |
+| Q6 | FixedHot | Static hot/cold | **🟢 unburied pilot 1.000** (ties P2) · buried discriminator queued |
 | Q7 | ProtectedRole (no risk score) | Critical ablation | **🟢** structure=0.643 @0.25 page |
 | Q8 | Random @ matched bytes | Sanity | **🟢** in structure stress |
 | P2 | PriorityKV (structure + linear risk) | Proposed | **🟢 pilot** structure_risk=**1.000** vs Q7 0.643 (prompt keep; not full serve) |
