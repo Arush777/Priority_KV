@@ -13,6 +13,11 @@ import shutil
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+import prioritykv.cxx20_cuda_ext  # noqa: E402,F401
+
 
 def _prep_env() -> None:
     cuda_home = os.environ.get("CUDA_HOME") or "/usr/local/cuda"
@@ -25,29 +30,8 @@ def _prep_env() -> None:
     )
 
 
-def _force_cxx20_on_cpp_extension_load() -> None:
-    import torch.utils.cpp_extension as cpp_ext
-
-    _orig = cpp_ext.load
-
-    def load(*args, **kwargs):  # type: ignore[no-untyped-def]
-        flags = list(kwargs.get("extra_cuda_cflags") or [])
-        flags = [f for f in flags if not str(f).startswith("-std=")]
-        flags.append("-std=c++20")
-        kwargs["extra_cuda_cflags"] = flags
-        cflags = list(kwargs.get("extra_cflags") or [])
-        cflags = [f for f in cflags if not str(f).startswith("-std=")]
-        cflags.append("-std=c++20")
-        kwargs["extra_cflags"] = cflags
-        print(f"cpp_extension.load name={kwargs.get('name') or (args[0] if args else '?')} std=c++20")
-        return _orig(*args, **kwargs)
-
-    cpp_ext.load = load  # type: ignore[assignment]
-
-
 def main() -> int:
     _prep_env()
-    _force_cxx20_on_cpp_extension_load()
 
     # Importing quanto registers the Extension as "quanto_cuda" (not "cuda").
     import optimum.quanto  # noqa: F401
@@ -60,7 +44,6 @@ def main() -> int:
         print(f"clearing stale quanto build: {build_dir}")
         shutil.rmtree(build_dir, ignore_errors=True)
 
-    # Prefer registered name; fall back to module-local Extension object.
     try:
         ext = get_extension("quanto_cuda")
     except KeyError:

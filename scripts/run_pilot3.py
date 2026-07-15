@@ -13,6 +13,9 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+# MUST run before quanto/transformers JIT-build Marlin kernels (same process).
+import prioritykv.cxx20_cuda_ext  # noqa: E402,F401
+
 _dotenv = ROOT / ".env"
 if _dotenv.exists():
     for line in _dotenv.read_text().splitlines():
