@@ -239,6 +239,45 @@ def select_random_pages(n: int, cfg: KeepPolicyConfig) -> np.ndarray:
     return _finalize(_expand_pages_to_tokens(spans, keep_pages), n)
 
 
+def select_fixed_hot(n: int, cfg: KeepPolicyConfig) -> np.ndarray:
+    """Q6 FixedHot: sink + recent + longest prefix (static hot), no roles."""
+    budget = max(cfg.sink_tokens + cfg.force_recent, int(round(n * cfg.keep_frac)))
+    budget = min(budget, n)
+    if budget >= n:
+        return np.arange(n, dtype=np.int64)
+    must = set(range(min(cfg.sink_tokens, n))) | set(
+        range(max(0, n - cfg.force_recent), n)
+    )
+    for i in range(n):
+        if len(must) >= budget:
+            break
+        must.add(i)
+    return _finalize(list(must), n)
+
+
+def select_fixed_hot_pages(n: int, cfg: KeepPolicyConfig) -> np.ndarray:
+    """Q6 page FixedHot: after sink/recent, prefer lowest page ids (prefix-hot)."""
+    spans = page_bounds(n, cfg.page_tokens)
+    budget = _token_budget(n, cfg)
+    if budget >= n:
+        return np.arange(n, dtype=np.int64)
+    must_toks = set(range(min(cfg.sink_tokens, n))) | set(
+        range(max(0, n - cfg.force_recent), n)
+    )
+    keep_pages = _pages_covering_tokens(spans, must_toks)
+
+    def _n_toks(pids: set[int]) -> int:
+        return sum(spans[p][1] - spans[p][0] for p in pids)
+
+    for pi in range(len(spans)):
+        if pi in keep_pages:
+            continue
+        trial = set(keep_pages) | {pi}
+        if _n_toks(trial) <= budget:
+            keep_pages = trial
+    return _finalize(_expand_pages_to_tokens(spans, keep_pages), n)
+
+
 def select_structure_pages(
     n: int, roles: Sequence[PageRole], cfg: KeepPolicyConfig
 ) -> np.ndarray:
@@ -375,6 +414,8 @@ def select_keep_indices(
         return select_uniform_pages(n, cfg) if page else select_uniform(n, cfg)
     if policy == "random":
         return select_random_pages(n, cfg) if page else select_random(n, cfg)
+    if policy == "fixed_hot":
+        return select_fixed_hot_pages(n, cfg) if page else select_fixed_hot(n, cfg)
     if policy == "structure":
         if roles is None:
             raise ValueError("structure policy requires roles")

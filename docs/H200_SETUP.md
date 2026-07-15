@@ -2,6 +2,8 @@
 
 Develop + enqueue jobs from the agent machine. On this host: sync env once, run the job worker (or manual pull/run).
 
+**Hard rule:** Do **not** run Cursor, Claude Code, Codex, or any coding agent on `dgre2`. Humans (or `pkworker`) only: `git pull`, `uv`/`sync.sh`, allowlisted `python scripts/*.py`. Agent IDEs stay on the laptop/CCC box; GPU work is queue-driven.
+
 ## Two-GPU rule
 
 Shared box has 8× H200. We only use **two**. Default in `.env`:

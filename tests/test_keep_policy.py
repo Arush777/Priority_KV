@@ -123,3 +123,20 @@ def test_load_linear_risk_fit_json():
     assert score_page({"roles": ["tool"], "n_tokens": 16}, cfg) > score_page(
         {"roles": ["filler"], "n_tokens": 16}, cfg
     )
+
+
+def test_fixed_hot_prefers_prefix():
+    from prioritykv.baselines.keep_policy import select_fixed_hot, select_fixed_hot_pages
+
+    cfg = KeepPolicyConfig(keep_frac=0.25, sink_tokens=16, force_recent=64)
+    idx = select_fixed_hot(400, cfg)
+    # Prefix bias: most early tokens kept beyond bare sink.
+    early = sum(1 for i in idx if int(i) < 100)
+    late_mid = sum(1 for i in idx if 200 <= int(i) < 300)
+    assert early > late_mid
+    cfg_p = KeepPolicyConfig(
+        keep_frac=0.25, sink_tokens=16, force_recent=64, page_tokens=16, granularity="page"
+    )
+    idx_p = select_fixed_hot_pages(400, cfg_p)
+    assert idx_p[0] == 0
+    assert abs(len(idx_p) / 400 - 0.25) < 0.08 or len(idx_p) >= 16 + 64

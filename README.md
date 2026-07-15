@@ -7,7 +7,7 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
-**Status (2026-07-15):** **W3 CLOSED** · **W4 G2 CLOSED (path b)** · denser 0.15/0.35 GREEN · Q2 INT4 GREEN · guardrails Δ=0 · SnapKV → **LOCK_Q_DROPKEEP** · **W5 P2 `structure_risk` wired** (H200 job queued) · FlashInfer CUDA deferred
+**Status (2026-07-15):** **W3–W4 closed** · P2 `structure_risk` **1.000** vs Q7 0.643 @0.25 · SnapKV→DropKeep · **W5 Q6 FixedHot + W6 FlashInfer probe queued** · agents never on H200
 
 
 ---
@@ -144,3 +144,6 @@ Claude protocol on this project: **Fable** = research/gates · **Opus** = code r
 - [x] FlashInfer CUDA deferred (CPU LSE oracle) · atlas fold for denser sweeps
 - [x] SnapKV matched-byte → LOCK_Q_DROPKEEP (generate incompatible)
 - [ ] W5 P2 structure_risk H200 pilot (`w5_p2_structure_risk_r1`)
+- [x] W5 P2 HIT (structure_risk=1.000 vs structure=0.643)
+- [ ] W5 Q6 FixedHot ablation (`w5_q6_fixedhot_r1`)
+- [ ] W6 FlashInfer probe (`w6_flashinfer_probe_r1`)

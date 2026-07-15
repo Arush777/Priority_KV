@@ -26,7 +26,7 @@ def run_transformers_keep_policy(
     revision: str | None = None,
     max_model_len: int = 32768,
 ) -> list[tuple[str, list[int], dict[str, Any]]]:
-    """policy ∈ {uniform, structure, structure_risk, random, keep_all}."""
+    """policy ∈ {uniform, structure, structure_risk, fixed_hot, random, keep_all}."""
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 

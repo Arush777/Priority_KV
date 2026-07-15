@@ -183,10 +183,10 @@ Unchanged as *target*. Not yet run. Agent-trace replay should use W3-lock sessio
 | **Q_dropkeep** | Prompt-level sink+recent | Interim eviction (plan Q3 stand-in) | **🟢 In use** for stress / RoPE-safe |
 | Q2 | Uniform INT4 (quanto / KIVI-style) | Low-bit quality ref | **🔴 Blocking** — assert-no-fake; `quanto_cuda` JIT fail on H200 |
 | Q3 | SnapKV @ matched bytes | Eviction baseline | **LOCK_Q_DROPKEEP** — generate failed (`cache_position`); DropKeep permanent interim |
-| Q6 | FixedHot | Static hot/cold | **⬜** |
-| Q7 | ProtectedRole (no risk score) | Critical ablation | **🟡** `structure` keep policy |
+| Q6 | FixedHot | Static hot/cold | **🟡** `fixed_hot` policy + H200 job queued |
+| Q7 | ProtectedRole (no risk score) | Critical ablation | **🟢** structure=0.643 @0.25 page |
 | Q8 | Random @ matched bytes | Sanity | **🟢** in structure stress |
-| P2 | PriorityKV (structure + linear risk) | Proposed | **🟡 W5** — `structure_risk` + page_manager risk demotion; H200 pilot queued |
+| P2 | PriorityKV (structure + linear risk) | Proposed | **🟢 pilot** structure_risk=**1.000** vs Q7 0.643 (prompt keep; not full serve) |
 
 Primary comparisons at paper time still: P2 vs S1, P2 vs Q3 (or DropKeep), P2 vs Q7 on locked test.
 
@@ -210,7 +210,9 @@ Legend: ✅ done · 🚧 in progress / partial · ⏸ deferred with note · ⬜ 
 
 **W4.** ✅ Denser atlas 0.15+0.35 · page-perturb + linear risk fit · guardrails PASS · CPU LSE multicall · **G2 CLOSED path (b)** · FlashInfer CUDA deferred · SnapKV → LOCK_Q_DROPKEEP.
 
-**W5.** 🚧 P2 `structure_risk` wired (keep + page_manager demotion) · H200 Q7 vs P2 pilot queued · FlashInfer CUDA still deferred · FixedHot (Q6) not started.
+**W5.** ✅ P2 `structure_risk` HIT (1.000 vs Q7 0.643) · 🚧 Q6 FixedHot job queued · SnapKV LOCK_Q_DROPKEEP.
+
+**W6.** 🚧 FlashInfer probe queued (import/CUDA touch; multicall kernel still open) · G3 ablations continue after FixedHot numbers.
 
 **W7.** Pilot 15% IDs · `FINAL_RUN_MANIFEST.yaml` · **G4**.
 
@@ -245,7 +247,7 @@ Storage paths on H200: `$PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv` · 
 | SnapKV won't reproduce | >4 days | Substitute StreamingLLM/DropKeep; document | **Already substituted** interim; attempt still open |
 | INT4 path won't run on box | quanto JIT / CUDA mismatch | Document platform blocker; CPU ref + own kernels; **never silent fake** | **Active** — see `HANDOFF_W3_INT4.md` |
 | Fake/missed INT4 looks perfect | modes=`fake_*` or config kw bugs | Assert-no-fake; log `int4_modes_seen` | Learned in W2; gated in W3 |
-| Q7 == P2 | W6 val | Ship Q7; risk = negative result | Too early |
+| Q7 == P2 | W6 val | Ship Q7; risk = negative result | **P2 > Q7** on n=14 pilot (1.000 vs 0.643) — reopen if buried/test splits erase gain |
 | Multi-call overhead >12% | W5 profile | Fused kernel / claim cap | N/A yet |
 | Concurrent paper | Weekly arXiv | Cite; sharpen lifecycle+serving | Ongoing |
 | CFP earlier than results | W1 check | Atlas-only then full system | **CFP pick still open** |
