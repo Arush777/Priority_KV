@@ -102,3 +102,57 @@ def mixed_attend_kv(
     v = gather_kv(v_pages)
     assert k.shape[0] == v.shape[0]
     return attention_reference(q, k, v)
+
+
+def attention_with_lse(
+    q: np.ndarray, k: np.ndarray, v: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Single-head attention returning (out, lse) with lse = logsumexp(logits).
+
+    ``lse`` shape (tq,). Used by multi-call merge (FlashInfer / W4).
+    """
+    scale = 1.0 / np.sqrt(max(q.shape[-1], 1))
+    logits = (q @ k.T) * scale
+    m = logits.max(axis=-1, keepdims=True)
+    exp = np.exp(logits - m)
+    se = exp.sum(axis=-1, keepdims=True) + 1e-9
+    out = (exp / se) @ v
+    lse = (m + np.log(se)).reshape(-1)
+    return out, lse
+
+
+def lse_merge_pair(
+    out_a: np.ndarray,
+    lse_a: np.ndarray,
+    out_b: np.ndarray,
+    lse_b: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Exact two-way merge of attention partials via LSE (FlashInfer target)."""
+    assert out_a.shape == out_b.shape
+    assert lse_a.shape == lse_b.shape == (out_a.shape[0],)
+    m = np.maximum(lse_a, lse_b)
+    wa = np.exp(lse_a - m)[:, None]
+    wb = np.exp(lse_b - m)[:, None]
+    denom = wa + wb + 1e-9
+    out = (wa * out_a + wb * out_b) / denom
+    lse = m + np.log(np.exp(lse_a - m) + np.exp(lse_b - m) + 1e-9)
+    return out, lse
+
+
+def mixed_attend_kv_multicall(
+    q: np.ndarray,
+    k_pages: Sequence[RefPage],
+    v_pages: Sequence[RefPage],
+) -> np.ndarray:
+    """Multi-call attention: attend each page separately, LSE-merge.
+
+    Must match ``mixed_attend_kv`` within tight tolerance (W4 FlashInfer gate).
+    """
+    assert len(k_pages) == len(v_pages)
+    if not k_pages:
+        raise ValueError("empty pages")
+    out, lse = attention_with_lse(q, k_pages[0].materialize(), v_pages[0].materialize())
+    for kp, vp in zip(k_pages[1:], v_pages[1:]):
+        ob, lb = attention_with_lse(q, kp.materialize(), vp.materialize())
+        out, lse = lse_merge_pair(out, lse, ob, lb)
+    return out

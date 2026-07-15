@@ -56,6 +56,6 @@ def status() -> dict[str, Any]:
         "next": (
             "run SnapKVPress on Qwen3-8B via kv-press pipeline; match byte budget"
             if press is not None
-            else "pip install kvpress (H200); then re-check scripts/snap_status.py"
+            else "uv sync --extra kvpress (H200); or LOCK_Q_DROPKEEP via run_snapkv_attempt.py"
         ),
     }

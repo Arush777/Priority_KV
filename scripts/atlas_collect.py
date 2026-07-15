@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def rows_from_pilot(pilot: dict) -> list[dict]:
     out = []
     mid = pilot.get("manifest_id", "unknown")
+    # Triple pilot rows
     for r in pilot.get("rows", []):
         eid = r["example_id"]
         cat = r.get("category", "")
@@ -21,6 +22,7 @@ def rows_from_pilot(pilot: dict) -> list[dict]:
             "manifest_id": mid,
             "example_id": eid,
             "category": cat,
+            "context_length": r.get("context_length"),
         }
         fk = r.get("fullkv_score")
         for method, key in (
@@ -45,6 +47,46 @@ def rows_from_pilot(pilot: dict) -> list[dict]:
                     "method": method,
                     "score": float(sc),
                     "delta_vs_fullkv": delta,
+                }
+            )
+    # Structured stress arms
+    arms = pilot.get("arms") or pilot.get("arms_detail") or {}
+    for policy, arm in arms.items():
+        for r in arm.get("rows", []) if isinstance(arm, dict) else []:
+            eid = r.get("example_id") or r.get("id")
+            if not eid:
+                continue
+            sc = r.get("policy_score", r.get("score"))
+            fk = r.get("fullkv_score")
+            if sc is None:
+                continue
+            delta = None
+            if fk is not None and fk == fk:
+                try:
+                    delta = float(sc) - float(fk)
+                except Exception:
+                    delta = None
+            out.append(
+                {
+                    "manifest_id": mid,
+                    "example_id": eid,
+                    "category": r.get("category", ""),
+                    "context_length": r.get("context_length"),
+                    "method": f"keep_{policy}",
+                    "score": float(sc),
+                    "delta_vs_fullkv": delta,
+                }
+            )
+        # Aggregate-only arm without rows
+        if isinstance(arm, dict) and "mean" in arm and not arm.get("rows"):
+            out.append(
+                {
+                    "manifest_id": mid,
+                    "example_id": "_arm_mean_",
+                    "category": "",
+                    "method": f"keep_{policy}",
+                    "score": float(arm["mean"]),
+                    "delta_vs_fullkv": arm.get("delta_minus_full"),
                 }
             )
     return out

@@ -165,3 +165,14 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Evidence (`w3_int4_assert_r4`, exit=0):** `modes=['hf_cache_implementation_quantized']` · n=6 · int4_mean=1.000 · all six rows that mode · **not** `fake_groupwise_prefill` · `allow_fake_fallback: false` unchanged.
 - **Out:** `$PRIORITYKV_SCRATCH/runs/w2c_pb_quality/w3_int4_assert_r1.json` · log `…/logs/w3_int4_assert_r4.log`
 - **Note:** `full=0/fp8=0` expected under `--modes int4_only` (vLLM arms skipped).
+
+## 2026-07-15 — W3 CLOSED
+
+- **Package:** lock 240 + SHA `fc44b966…` · auto-audit · **15% dual audit PASS** (`docs/audit_w3_dual.md`, n=36) · page structure 0.643 · Q2 real INT4 · assert-no-fake · CPU mixed ref + LSE multicall parity tests.
+- **Q3:** `scripts/run_snapkv_attempt.py` — `uv sync --extra kvpress`; if SnapKVPress missing → **LOCK_Q_DROPKEEP** as permanent eviction interim (loud, not silent).
+- **Carry to W4 (not W3 blockers):** denser keep_frac structure sweeps · H200 guardrails numbers · formal G2 sentence · FlashInfer CUDA (CPU LSE done).
+
+## 2026-07-15 — W4 start (systems + G2 evidence)
+
+- **Landed:** `label_page_perturb.py` + `configs/linear_risk_fit.json` · `run_guardrails.py` (real local RULER/SCBench-style probes) · `mixed_attend_kv_multicall` LSE merge == dense · `flashinfer_multicall` loud-skip · denser configs `w4_structured_paged_{015,035}.yaml`.
+- **H200 queue:** snapkv attempt · guardrails · structure 0.15 · structure 0.35 → then formal G2 close on path (b) if structure≥+3pt vs uniform holds and guardrails max|Δ|≤1pt.

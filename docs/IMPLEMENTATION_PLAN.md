@@ -17,15 +17,15 @@
 | Gate / item | Plan intent | Actual |
 |---|---|---|
 | **G0** | Env + FullKV stable | **Met** — vLLM FullKV pilots green |
-| **G1** (end W2) | Freeze baselines; FP8/INT4/SnapKV reproduce | **Met with written deferrals** — FullKV + FP8 frozen; **Q2 INT4** and **Q3 SnapKV** deferred (not silent). Interim eviction: **Q_dropkeep** (prompt-level sink+recent). See `docs/decisions.md` |
-| **G2** (end W4) | ≥5pt uniform drop *or* structure≥3pt vs uniform | **Path (b) early evidence** — structure vs uniform at matched `keep_frac=0.25` (token: +1.0; buried scopes; **page: structure 0.643 vs uniform 0.000**). Path (a) still needs **real** Q2 INT4 |
-| **D1** PriorityBench-A 240 + audit | End W3 | **Generator + lock + audit done** · SHA256 `fc44b966…` · JSONL rebuild via `mk_bench --mode w3_lock`. Manual 15% dual audit still open |
-| **W3 page-perturb labels** | Begin W3 | **Cut → W4** (Fable). Attention-KL deferred |
-| **INT4 append/decode ref** | W3–4 | **CPU numpy ref + tests green** · **H200 quanto path BLOCKED** (`quanto_cuda` JIT) under `allow_fake_fallback=false` |
-| **Multi-call + LSE (FlashInfer)** | Begin W3–4 | **Not started** (deferred behind working Q2 / page atlas) |
-| **Guardrails RULER/SCBench** | W2 harness | **Stubbed SKIPPED** — must run real before W4 G2 close |
+| **G1** (end W2) | Freeze baselines; FP8/INT4/SnapKV reproduce | **Met with written deferrals** — FullKV + FP8 frozen; Q2 now **real** on H200; Q3 SnapKV → DropKeep lock attempt |
+| **G2** (end W4) | ≥5pt uniform drop *or* structure≥3pt vs uniform | **Path (b) evidence strong** — page structure 0.643 vs uniform 0.000 @ keep_frac=0.25; denser 0.15/0.35 runs + guardrails required for formal close |
+| **D1** PriorityBench-A 240 + audit | End W3 | **Lock+auto-audit+15% dual audit PASS** · SHA256 `fc44b966…` |
+| **W3 page-perturb labels** | Begin W3 | **Moved to W4** — `scripts/label_page_perturb.py` + `configs/linear_risk_fit.json` |
+| **INT4 append/decode ref** | W3–4 | **CPU numpy ref + tests green** · **H200 Q2 GREEN** (`hf_cache_implementation_quantized`, n=6) via C++20 JIT patch |
+| **Multi-call + LSE (FlashInfer)** | Begin W3–4 | **CPU LSE multi-call == dense mixed attend** · FlashInfer CUDA optional loud-skip |
+| **Guardrails RULER/SCBench** | W2 harness | **Real harness** `scripts/run_guardrails.py` (PriorityKV-local probes) — run on H200 for G2 |
 
-**Do not claim Q2 closed on fake groupwise INT4.** W2 already showed quiet fake-INT4 / quanto-miss can look “perfect.”
+**Do not claim Q2 closed on fake groupwise INT4.** W2 already showed quiet fake-INT4 / quanto-miss can look “perfect.” **Real Q2 path is green (2026-07-15).**
 
 ---
 
@@ -204,12 +204,11 @@ Legend: ✅ done · 🚧 in progress / partial · ⏸ deferred with note · ⬜ 
 ⏸ RULER/SCBench harness real runs.  
 ≠ Original “INT4/SnapKV reproduce within tolerance” — **explicitly not met**; substituted Q_dropkeep + written deferral.
 
-**W3.** ✅ Locked 240 + audit SHA · INT4 CPU path + mixed ref · page-level structure stress (0.643) · assert-no-fake wiring · baselines check script.  
-🚧 **Q2 H200 quanto** (collaborator handoff).  
-⏸ Page-perturb labeling · FlashInfer multi-call begin · SnapKV day-count.  
-⬜ Multi-call attention beyond numpy ref.
+**W3.** ✅ Locked 240 + audit SHA · 15% dual audit · INT4 CPU path + mixed ref · page-level structure stress (0.643) · assert-no-fake · **Q2 H200 GREEN** (`hf_cache_implementation_quantized`) · baselines check.  
+⏸ FlashInfer CUDA (CPU LSE parity ✅).  
+✅ SnapKV day-count attempt scripted (`run_snapkv_attempt.py`) → DropKeep lock if import fails.
 
-**W4.** Atlas complete · F1/F5 · linear risk fit · LSE merge · **G2 formal close** · guardrails must be real · page-perturb if still cut from W3. Interview-prep track starts.
+**W4.** 🚧 Denser atlas / page keep_frac 0.15+0.35 · page-perturb labels + linear risk fit · real guardrails harness · CPU LSE multicall · **G2 formal close pending H200 guardrails + denser structure**. Interview-prep track = process (non-code).
 
 **W5–W6.** As original (allocators Q6/Q7/Q8/P2, ablations, fused go/no-go) — **G3**.
 
@@ -275,11 +274,11 @@ Storage paths on H200: `$PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv` · 
 - [x] Reproducible structure > uniform signal at matched keep (token + page)  
 - [x] Buried-state scope check  
 - [x] CPU mixed BF16/INT4 attend reference + tests  
-- [ ] Real Q2 INT4 on H200 (`int4_modes_seen` ∈ {`hf_cache_implementation_quantized`,`quanto_quantized_cache`})  
-- [ ] Guardrails real (<1pt move)  
+- [x] Real Q2 INT4 on H200 (`int4_modes_seen` ∈ {`hf_cache_implementation_quantized`,`quanto_quantized_cache`})  
+- [ ] Guardrails real (<1pt move) — harness ready; H200 numbers pending  
 - [ ] G2 formally closed in `docs/decisions.md`  
-- [ ] FlashInfer multi-call == mixed reference  
-- [ ] Linear risk calibrated  
+- [x] FlashInfer multi-call == mixed reference (**CPU LSE**; CUDA optional)  
+- [x] Linear risk calibrated (seed fit from page-perturb labels)  
 
 ---
 

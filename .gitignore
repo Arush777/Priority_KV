@@ -37,6 +37,7 @@ jobs/running/
 data/prioritybench/calibration/
 data/prioritybench/validation/
 data/prioritybench/test/
+data/prioritybench/manifests/page_perturb_labels.jsonl
 
 # Nsight / profiling
 *.nsys-rep
