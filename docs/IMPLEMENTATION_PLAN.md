@@ -12,20 +12,19 @@
 
 ---
 
-## Status snapshot (2026-07-15) — read this first
+## Status snapshot (2026-07-15 evening) — read this first
 
 | Gate / item | Plan intent | Actual |
 |---|---|---|
-| **G0** | Env + FullKV stable | **Met** — vLLM FullKV pilots green |
-| **G1** (end W2) | Freeze baselines; FP8/INT4/SnapKV reproduce | **Met with written deferrals** — FullKV + FP8 frozen; Q2 now **real** on H200; Q3 SnapKV → DropKeep lock attempt |
-| **G2** (end W4) | ≥5pt uniform drop *or* structure≥3pt vs uniform | **CLOSED path (b)** — page structure 0.643 vs uniform 0.000 @ 0.15/0.25/0.35; guardrails gate Δ=0 |
-| **D1** PriorityBench-A 240 + audit | End W3 | **Lock+auto-audit+15% dual audit PASS** · SHA256 `fc44b966…` |
-| **W3 page-perturb labels** | Begin W3 | **Moved to W4** — `scripts/label_page_perturb.py` + `configs/linear_risk_fit.json` |
-| **INT4 append/decode ref** | W3–4 | **CPU numpy ref + tests green** · **H200 Q2 GREEN** (`hf_cache_implementation_quantized`, n=6) via C++20 JIT patch |
-| **Multi-call + LSE (FlashInfer)** | Begin W3–4 | **CPU LSE multi-call == dense mixed attend** · FlashInfer CUDA **DEFERRED_W5_W6** (loud-skip) |
-| **Guardrails RULER/SCBench** | W2 harness | **PASS** on H200 (`guardrails_w4_r2`, gate Δ=0) |
+| **G0** | Env + FullKV stable | **Met** |
+| **G1** (end W2) | Freeze baselines | **Met** (SnapKV→DropKeep) |
+| **G2** (end W4) | structure≥3pt or INT4 drop | **CLOSED path (b)** |
+| **G3** (end W6) | Q6/Q7/Q8/P2 ablations | **PARTIAL** — P2>Q7; FixedHot≡P2 even buried; mixed serve missing |
+| **D1 / D2** | Bench + atlas | **🟢** |
+| **D3** | Mixed paged backend | **🟡** keep pilots + INT4 path; FlashInfer multicall **not shipping** (import OK, LSE JIT fail @ head_dim=32) |
+| **D4–D10** | Systems + publish | **⬜** |
 
-**Do not claim Q2 closed on fake groupwise INT4.** W2 already showed quiet fake-INT4 / quanto-miss can look “perfect.” **Real Q2 path is green (2026-07-15).**
+**Do not claim Q2 closed on fake groupwise INT4.** Real Q2 path is green. **Do not claim P2 unique vs FixedHot** on current bury.
 
 ---
 
