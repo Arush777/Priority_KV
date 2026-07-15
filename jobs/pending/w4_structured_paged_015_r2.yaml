@@ -1,5 +1,0 @@
-id: w4_structured_paged_015_r2
-command: python scripts/run_stress_structured.py --config configs/w4_structured_paged_015.yaml
-gpus: "6,7"
-sync_cuda: false
-timeout_sec: 7200
