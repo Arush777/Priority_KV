@@ -7,7 +7,7 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
-**Status (2026-07-15):** P2=1.000 · **FixedHot also 1.000** (unburied) · FlashInfer 0.6.13 import OK · buried discriminator + LSE parity **queued** · agents never on H200
+**Status (2026-07-15 evening):** W0–W5 pilots largely run · G2b closed · P2=1.000 (incl. buried) · **FixedHot also 1.000 buried** (discriminator weak) · FlashInfer import OK / **LSE JIT FAIL** · **missing: mixed serve, systems D4, paper/PR** · agents never on H200
 
 
 ---
@@ -147,5 +147,9 @@ Claude protocol on this project: **Fable** = research/gates · **Opus** = code r
 - [x] W5 P2 HIT (structure_risk=1.000 vs structure=0.643)
 - [x] W5 Q6 FixedHot ablation (`w5_q6_fixedhot_r1`) — fixed_hot=1.000 (ties P2 unburied)
 - [x] W6 FlashInfer probe (`w6_flashinfer_probe_r1`) — IMPORT_OK_CUDA_TOUCH v0.6.13
-- [ ] W5 buried FixedHot vs P2 (`w5_p2_buried_r1`)
-- [ ] W6 FlashInfer LSE tiny parity (`w6_flashinfer_lse_parity_r1`)
+- [x] W5 buried FixedHot vs P2 (`w5_p2_buried_r1`) — FixedHot=P2=1.000; Q7=0.429
+- [x] W6 FlashInfer LSE tiny parity (`w6_flashinfer_lse_parity_r1`) — FAIL (JIT head_dim=32)
+- [ ] Harder FixedHot vs P2 discriminator (lock-test / mid-only / stronger bury)
+- [ ] Mixed BF16/INT4 serving path (not prompt-keep ablation)
+- [ ] FlashInfer multicall @ native head_dim + H200 D4 latency
+- [ ] Paper / PR / Gemma / outreach (D5–D9)

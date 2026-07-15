@@ -239,3 +239,10 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   - **Read:** On this unburied set, **prefix-hot FixedHot ties P2** (both perfect). Role-aware P2 is **not uniquely required** here — gold may sit early + in recent. **Buried adversarial is the discriminator** (next).
 - **FlashInfer probe (`w6_flashinfer_probe_r1`):** **IMPORT_OK_CUDA_TOUCH** · flashinfer **0.6.13** on H200 · CUDA touch OK · multicall still unwired.
 - **Next jobs:** `w5_p2_buried_r1` (FixedHot vs Q7 vs P2 under bury) · `w6_flashinfer_lse_parity_r1` (tiny FI multi-call LSE vs CPU).
+
+## 2026-07-15 — Buried FixedHot vs P2 + FlashInfer LSE parity
+
+- **Buried (`w5_p2_buried_r1`, n=14, page, keep_frac=0.25, buried=true):**
+  - uniform **0.000** · **fixed_hot 1.000** · structure (Q7) **0.429** · **structure_risk (P2) 1.000** · keep_all 1.000
+  - Q7 matches W2 buried scope (multi_turn→0). **FixedHot still perfect** — bury did **not** discriminate FixedHot from P2 on this set (gold still reachable via prefix+recent keep). Further discriminator needed (harder bury / mid-only keep / lock test split).
+- **FlashInfer LSE parity (`w6_flashinfer_lse_parity_r1`):** **FAILED** `exit=1` — FlashInfer JIT `single_prefill_with_kv_cache` Ninja build failed for head_dim=32 SM90 (package import OK; tiny custom-dim kernel path broken). CPU LSE multicall remains the correctness oracle. Retry with model-native head dims (e.g. 128) or prebuilt kernels later.
