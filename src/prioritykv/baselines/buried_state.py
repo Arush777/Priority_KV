@@ -41,3 +41,57 @@ def bury_short_state_turns(
         buried = f"{left} <<STATE>> {content} <</STATE>> {right}"
         out.append({"role": m["role"], "content": buried})
     return out
+
+
+def _is_filler_turn(msg: Mapping[str, str]) -> bool:
+    """Filler turns produced by ``pad_with_filler_turns`` (position-only pad)."""
+    content = msg.get("content") or ""
+    role = (msg.get("role") or "").lower()
+    if role == "user":
+        return "[filler/" in content
+    if role == "assistant":
+        return content.startswith("Acknowledged filler")
+    return False
+
+
+def relocate_state_to_middle(
+    messages: Sequence[dict],
+    *,
+    position: float = 0.5,
+    seed: int = 0,
+) -> List[Dict[str, str]]:
+    """Move genuine state turns into the middle of the filler band.
+
+    PriorityBench templates emit ``[system, <short gold turns>, <filler…>, FINAL]``
+    so structure-critical state sits in the *prefix*. A trivial FixedHot baseline
+    (sink + prefix + recent) then catches the same pages a role-aware policy does,
+    which is why buried-in-place could not separate FixedHot from P2.
+
+    This transform keeps leading system turns and the final ask fixed, then
+    re-inserts the gold block at ``position`` (fraction) through the filler
+    sequence. Gold turn order is preserved (supersession / multi-turn semantics
+    intact); only unrelated filler is moved around it. After relocation, prefix
+    pages are filler, so FixedHot and uniform miss the mid-context state while a
+    role/risk-aware keep still retrieves it.
+    """
+    del seed  # deterministic; kept for signature parity with bury.
+    msgs = [dict(m) for m in messages]
+    if not msgs:
+        return msgs
+    n = len(msgs)
+    lead = 0
+    while lead < n and (msgs[lead].get("role") or "").lower() == "system":
+        lead += 1
+    if lead >= n - 1:
+        return msgs  # nothing between system and final
+    head = msgs[:lead]
+    final = msgs[-1]
+    body = msgs[lead:-1]
+    filler = [m for m in body if _is_filler_turn(m)]
+    gold = [m for m in body if not _is_filler_turn(m)]
+    if not gold or not filler:
+        return msgs  # cannot relocate meaningfully
+    frac = min(max(position, 0.0), 1.0)
+    cut = int(round(len(filler) * frac))
+    new_body = filler[:cut] + gold + filler[cut:]
+    return head + new_body + [final]

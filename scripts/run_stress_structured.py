@@ -37,17 +37,24 @@ def main() -> int:
         action="store_true",
         help="Embed gold turns in long filler (adversarial scope check)",
     )
+    ap.add_argument(
+        "--relocate-middle",
+        action="store_true",
+        help="Move gold state turns to mid-context (FixedHot vs P2 discriminator)",
+    )
     args = ap.parse_args()
     result = run_structured_stress(
         Path(args.config),
         Path(args.out) if args.out else None,
         reuse_full_path=Path(args.reuse_full) if args.reuse_full else None,
         buried=True if args.buried else None,
+        relocate_middle=True if args.relocate_middle else None,
     )
     print(
         f"n={result['n']} full={result['fullkv_mean']:.3f} "
         f"keep_frac={result['keep']['keep_frac']} "
-        f"buried={result.get('buried_state')} out={result['out_path']}"
+        f"buried={result.get('buried_state')} middle={result.get('relocate_middle')} "
+        f"out={result['out_path']}"
     )
     for p, arm in result["arms"].items():
         cats = " ".join(
