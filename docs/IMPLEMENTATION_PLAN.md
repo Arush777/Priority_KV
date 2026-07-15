@@ -183,10 +183,10 @@ Unchanged as *target*. Not yet run. Agent-trace replay should use W3-lock sessio
 | **Q_dropkeep** | Prompt-level sink+recent | Interim eviction (plan Q3 stand-in) | **🟢 In use** for stress / RoPE-safe |
 | Q2 | Uniform INT4 (quanto / KIVI-style) | Low-bit quality ref | **🔴 Blocking** — assert-no-fake; `quanto_cuda` JIT fail on H200 |
 | Q3 | SnapKV @ matched bytes | Eviction baseline | **LOCK_Q_DROPKEEP** — generate failed (`cache_position`); DropKeep permanent interim |
-| Q6 | FixedHot | Static hot/cold | **🟢 unburied pilot 1.000** (ties P2) · buried discriminator queued |
-| Q7 | ProtectedRole (no risk score) | Critical ablation | **🟢** structure=0.643 @0.25 page |
+| Q6 | FixedHot | Static hot/cold | **🟢 1.000** unburied **and buried** — still ties P2; stronger discriminator needed |
+| Q7 | ProtectedRole (no risk score) | Critical ablation | **🟢** 0.643 unburied · **0.429 buried** |
 | Q8 | Random @ matched bytes | Sanity | **🟢** in structure stress |
-| P2 | PriorityKV (structure + linear risk) | Proposed | **🟢 pilot** structure_risk=**1.000** vs Q7 0.643 (prompt keep; not full serve) |
+| P2 | PriorityKV (structure + linear risk) | Proposed | **🟢 keep pilot 1.000** (buried+unburied) · **not** full mixed serve |
 
 Primary comparisons at paper time still: P2 vs S1, P2 vs Q3 (or DropKeep), P2 vs Q7 on locked test.
 
@@ -210,9 +210,11 @@ Legend: ✅ done · 🚧 in progress / partial · ⏸ deferred with note · ⬜ 
 
 **W4.** ✅ Denser atlas 0.15+0.35 · page-perturb + linear risk fit · guardrails PASS · CPU LSE multicall · **G2 CLOSED path (b)** · FlashInfer CUDA deferred · SnapKV → LOCK_Q_DROPKEEP.
 
-**W5.** ✅ P2 `structure_risk` HIT (1.000 vs Q7 0.643) · 🚧 Q6 FixedHot job queued · SnapKV LOCK_Q_DROPKEEP.
+**W5.** ✅ P2 HIT 1.000 · ✅ Q6 FixedHot 1.000 (ties P2 even when buried) · Q7 buried 0.429 · SnapKV LOCK_Q_DROPKEEP · **open:** stronger FixedHot≠P2 discriminator.
 
-**W6.** 🚧 FlashInfer probe queued (import/CUDA touch; multicall kernel still open) · G3 ablations continue after FixedHot numbers.
+**W6.** ✅ FlashInfer 0.6.13 import+CUDA touch · ❌ tiny LSE JIT FAIL (head_dim=32) · CPU LSE oracle still gates · multicall @ native dims + mixed serve **open**.
+
+**W5–W6.** G3 not formally closed (FixedHot≡P2 on current bury; no mixed BF16/INT4 end-to-end).
 
 **W7.** Pilot 15% IDs · `FINAL_RUN_MANIFEST.yaml` · **G4**.
 
