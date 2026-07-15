@@ -294,3 +294,11 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   protects roles). Full suite 69 passed / 3 skipped.
 - **Job:** `w6_mixed_serve_r1` — FullKV vs uniform-INT4 vs structure-mixed @ int4_frac=0.75,
   mid-context set. **Desired result: structure ≫ uniform at equal bytes.**
+
+## 2026-07-15 — Mixed-serve r1 RESULT (ops unblocked; quality claim soft)
+
+- **Job status:** `w6_mixed_serve_r1` **done, exit=0** (finished 2026-07-15T14:40:53Z). Queue idle.
+- **Ops blocker (git divergence):** **SOLVED** — worker status commit was rebased onto origin; ff-only pulls resumed; job claimed and ran.
+- **Systems plumbing:** **WORKS** — real forward + per-position INT4 round-trip executed; uniform/structure **matched** at int4_frac_realized **0.75** (byte-fair by construction).
+- **Quality claim at int4_frac=0.75:** **NOT yet shown.** Means: full **1.000** · uniform **1.000** · structure **1.000** (all cats 1.0). Soft INT4 at 75% does not hurt this mid-context set — same lesson as G2 path (a) / Q2 soft @8k. Discriminator must be a **harder** budget (higher int4_frac, e.g. 0.90–0.95, or true drop+INT4) before structure vs uniform can separate.
+- **Read:** first systems half is on the board (artifact exists and runs on H200). Remaining gap for the *claim* is budget severity, not plumbing. Next: retry `w6_mixed_serve` at higher `int4_frac` (or INT4+evict) until uniform drops while structure holds.
