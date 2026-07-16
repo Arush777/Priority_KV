@@ -51,7 +51,11 @@ def main() -> int:
     import numpy as np
     import torch
 
-    from prioritykv.flashinfer_multicall import try_import_flashinfer
+    from prioritykv.flashinfer_multicall import (
+        attend_pages_flashinfer,
+        dense_prefill_flashinfer,
+        try_import_flashinfer,
+    )
     from prioritykv.mixed_cache_reference import (
         attention_reference,
         mixed_attend_kv_multicall,
@@ -92,29 +96,20 @@ def main() -> int:
 
     device = torch.device("cuda:0")
     q = torch.as_tensor(q_np, device=device, dtype=torch.float16)
-    # FlashInfer expects q: (qo_len, num_heads, head_dim); use 1 head.
     q_fi = q.view(tq, 1, d)
-    states = []
+    k_pages = []
+    v_pages = []
     for p in pages:
         chunk = p.materialize().astype(np.float32)
         k = torch.as_tensor(chunk, device=device, dtype=torch.float16).view(-1, 1, d)
-        v = k.clone()
-        o, lse = fi.single_prefill_with_kv_cache(
-            q_fi, k, v, causal=False, return_lse=True
-        )
-        # FlashInfer historically returns base-2 LSE. Never feed it to the
-        # natural-log NumPy oracle merge; use FlashInfer's state merge contract.
-        states.append((o, lse.float()))
+        k_pages.append(k)
+        v_pages.append(k.clone())
 
-    fi_out_t, fi_lse_t = states[0]
-    for ob, lb in states[1:]:
-        fi_out_t, fi_lse_t = fi.merge_state(fi_out_t, fi_lse_t, ob, lb)
+    fi_out_t = attend_pages_flashinfer(q_fi, k_pages, v_pages, fi=fi)
     fi_out = fi_out_t.detach().float().cpu().numpy().reshape(tq, d)
 
     k_all = torch.as_tensor(kv_np, device=device, dtype=torch.float16).view(tk, 1, d)
-    o_dense, _ = fi.single_prefill_with_kv_cache(
-        q_fi, k_all, k_all.clone(), causal=False, return_lse=True
-    )
+    o_dense = dense_prefill_flashinfer(q_fi, k_all, k_all.clone(), fi=fi)
     fi_dense = o_dense.detach().float().cpu().numpy().reshape(tq, d)
 
     err_vs_cpu = float(np.max(np.abs(fi_out - cpu_dense)))

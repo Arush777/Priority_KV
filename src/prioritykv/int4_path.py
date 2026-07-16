@@ -28,6 +28,10 @@ class PackedInt4Page:
             self.q, self.scale, self.zero_point, group_size=self.group_size
         )
 
+    def payload_bytes(self) -> int:
+        """Packed codes + scale + zero_point (excludes BF16 source tensor)."""
+        return int(self.q.nbytes + self.scale.nbytes + self.zero_point.nbytes)
+
 
 def append_quantize(
     bf16_slice: np.ndarray,

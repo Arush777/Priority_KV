@@ -1,0 +1,5 @@
+id: w6i_flashinfer_packed_parity_r1
+command: python scripts/wait_gpu_and_run.py --min-free-gib 20 --num-gpus 1 --poll-sec 30 --timeout-sec 7200 -- python scripts/run_flashinfer_packed_parity.py --head-dim 128 --seq-len 256 --int4-frac 0.75 --n-layers 2 --out-tag r1
+gpus: "0,1,2,3,4,5,6,7"
+sync_cuda: false
+timeout_sec: 14400
