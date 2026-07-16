@@ -7,13 +7,11 @@ Primary hardware: NVIDIA H200 (`dgre2`).
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
 
-**Status (2026-07-16):** G2b closed · mid-context discriminator: structure/P2
-**0.688** vs FixedHot **0.125** · FlashInfer native-head LSE multicall
-**PARITY_PASS** (max abs 4.88e-4) · corrected mixed forward works, but uniform
-INT4 and 2-bit remain **1.000** at 75% quantized positions (no quality advantage
-to claim); zero stress separates structure **0.688** vs uniform **0.312** ·
-**missing: true packed mixed cache + D4 systems measurements + paper/PR** ·
-agents never on H200
+**Status (2026-07-16):** G0–G3 closed · mid-context: structure/P2 **0.688** vs
+FixedHot **0.125** · FlashInfer LSE + packed-page multicall **PARITY_PASS** ·
+true packed BF16/INT4 storage wired (`storage=packed`) · soft INT4/2-bit quality
+gap **falsified** (both 1.000 @0.75) · **missing: FI decode without materialize +
+D4 TTFT/TPOT + paper/PR** · full handoff: [`docs/HANDOFF.md`](docs/HANDOFF.md)
 
 
 ---
@@ -22,10 +20,10 @@ agents never on H200
 
 | Where | Role |
 |---|---|
-| **Agent machine** (Cursor / IBM CCC) | Write code, CPU tests, enqueue `jobs/pending/*.yaml`, **push**, then `./scripts/fetch_results.sh` |
-| **H200** (`anupam@dgre2`) | No coding agents. One-time: `./scripts/sync.sh --cuda` + tmux `remote_worker.sh`. Worker pulls, runs queued jobs, tees logs |
+| **Agent machine** (Cursor / IBM CCC) | Write code, CPU tests, push; optionally enqueue `jobs/pending/*.yaml`; `./scripts/fetch_results.sh` |
+| **H200** (`anupam@dgre2` / `169.38.10.80`) | Direct GPU machine — `git pull`, `uv`/`sync.sh --cuda`, run `python scripts/*.py` on GPUs 6,7. No coding agents installed on the box. |
 
-Agents never run on the H200. **Deps = uv only** — never `pip install` into `.venv` (that already broke torch/vLLM once).
+Agents never run *on* the H200. The host is **directly available via SSH** (not a batch queue). `jobs/` + `remote_worker.sh` are optional bookkeeping. **Deps = uv only** — never `pip install` into `.venv`.
 
 ```bash
 # H200 — one-time bootstrap + worker
@@ -125,12 +123,9 @@ tmux new -s pkworker './scripts/remote_worker.sh'   # poll jobs/pending
 
 ## Collaborator / Cursor handoff
 
-There is no Cursor `/export`. Give them:
-
-1. This README + **[`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md)** (Opus-reviewed)
-2. The Cursor starter prompt inside that file (§9)
-
-Claude protocol on this project: **Fable** = research/gates · **Opus** = code review (MUST-FIX). Unset bad auth env vars before `claude -p` (see handoff §6).
+1. **[`docs/HANDOFF.md`](docs/HANDOFF.md)** — ground-up status (start here)
+2. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) · [`docs/decisions.md`](docs/decisions.md)
+3. Historical INT4 trail: [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md)
 
 ---
 
@@ -157,6 +152,8 @@ Claude protocol on this project: **Fable** = research/gates · **Opus** = code r
 - [x] W6 FlashInfer LSE parity — r1 illegal head_dim=32; **r3 native merge PASS @128**
 - [x] Harder FixedHot discriminator — mid-context FixedHot 0.125 vs structure/P2 0.688
 - [x] Mixed BF16/INT4 quality-forward scaffold (split-prefill corrected; fake quant)
-- [ ] True packed mixed BF16/INT4 storage path (quality-forward does not save bytes)
+- [x] True packed mixed BF16/INT4 storage path (`packed_mixed_cache` + `storage=packed`)
+- [x] FlashInfer packed-page multicall parity (`w6i` / `w6j`, dtype-coalesced)
+- [ ] FlashInfer decode without full KV materialize
 - [ ] H200 D4 TTFT/TPOT/throughput/Nsight
 - [ ] Paper / PR / Gemma / outreach (D5–D9)
