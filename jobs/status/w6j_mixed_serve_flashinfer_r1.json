@@ -1,0 +1,7 @@
+{
+  "job_id": "w6j_mixed_serve_flashinfer_r1",
+  "exit": 0,
+  "finished_at": "2026-07-16T10:51:50Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/w6j_mixed_serve_flashinfer_r1.log",
+  "job_yaml": "jobs/done/w6j_mixed_serve_flashinfer_r1.yaml"
+}
