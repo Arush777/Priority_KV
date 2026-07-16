@@ -99,19 +99,50 @@ def page_tensors_from_packed_layer(
     *,
     device: Any,
     dtype: Any = None,
+    coalesce_by_dtype: bool = True,
 ) -> tuple[list[Any], list[Any]]:
-    """Materialize each ``KvPagePayload`` to FI layout ``(tk, heads, dim)``."""
+    """Materialize each ``KvPagePayload`` to FI layout ``(tk, heads, dim)``.
+
+    When ``coalesce_by_dtype`` is True (default), merge all BF16 pages into one
+    chunk and all INT4 pages into one chunk. Homogeneous 2-way multicall avoids
+    FlashInfer TMA / merge_state failures on many 1-token run-length pages.
+    """
     import torch
 
+    from prioritykv.page_roles import StorageDtype
+
     dtype = dtype or torch.float16
-    k_pages: list[Any] = []
-    v_pages: list[Any] = []
+    bf16_k: list[Any] = []
+    bf16_v: list[Any] = []
+    int4_k: list[Any] = []
+    int4_v: list[Any] = []
+    raw_k: list[Any] = []
+    raw_v: list[Any] = []
     for payload in layer.pages:
         k_np, v_np = payload.materialize_kv()  # (heads, tk, dim)
         k = torch.from_numpy(k_np).to(device=device, dtype=dtype).permute(1, 0, 2).contiguous()
         v = torch.from_numpy(v_np).to(device=device, dtype=dtype).permute(1, 0, 2).contiguous()
-        k_pages.append(k)
-        v_pages.append(v)
+        if not coalesce_by_dtype:
+            raw_k.append(k)
+            raw_v.append(v)
+            continue
+        if payload.dtype == StorageDtype.INT4:
+            int4_k.append(k)
+            int4_v.append(v)
+        else:
+            bf16_k.append(k)
+            bf16_v.append(v)
+    if not coalesce_by_dtype:
+        return raw_k, raw_v
+    k_pages: list[Any] = []
+    v_pages: list[Any] = []
+    # Stable order: BF16 first, then INT4 (matches "hot then cold" intuition).
+    if bf16_k:
+        k_pages.append(torch.cat(bf16_k, dim=0))
+        v_pages.append(torch.cat(bf16_v, dim=0))
+    if int4_k:
+        k_pages.append(torch.cat(int4_k, dim=0))
+        v_pages.append(torch.cat(int4_v, dim=0))
     return k_pages, v_pages
 
 
@@ -122,14 +153,16 @@ def attend_packed_layer_flashinfer(
     causal: bool = False,
     fi: Any = None,
     dtype: Any = None,
+    coalesce_by_dtype: bool = True,
 ) -> Any:
     """FlashInfer multicall over one ``PackedMixedLayer`` (per-page dequant)."""
-    import torch
-
     device = q.device
     dtype = dtype or q.dtype
     k_pages, v_pages = page_tensors_from_packed_layer(
-        layer, device=device, dtype=dtype
+        layer,
+        device=device,
+        dtype=dtype,
+        coalesce_by_dtype=coalesce_by_dtype,
     )
     return attend_pages_flashinfer(
         q, k_pages, v_pages, causal=causal, fi=fi
