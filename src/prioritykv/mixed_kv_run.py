@@ -1,14 +1,19 @@
-"""Real mixed-precision KV forward: per-position BF16/INT4 prompt cache (W6).
+"""Mixed-precision KV forward: packed BF16/INT4 prompt cache (W6→D3).
 
 Unlike the keep experiments (which *drop* tokens and regenerate), this runs the
-model on the full prompt, then quantizes only the INT4-planned prompt-KV
-positions in-place before greedy decode. Structure positions stay BF16; low-risk
-positions are round-tripped through INT4 (same groupwise error model as the green
-uniform Q2 path). Decode tokens stay BF16.
+model on the prompt, packs INT4-planned positions into real ``PackedInt4Page``
+storage, then materializes a dequantized HF cache for greedy decode.
 
-This measures the *quality frontier* of role-aware mixed precision at a matched
-byte budget (uniform vs structure). Wall-clock memory / latency (true packed
-cache, FlashInfer) is a later stage; realized INT4 fraction is reported here.
+``storage="packed"`` (default for ``degrade=int4``) is the systems path: demoted
+positions leave BF16 tensors and live as INT4 codes + scales until materialize.
+``storage="fake"`` keeps the legacy in-place round-trip for A/B parity.
+``degrade="zero"`` zeroes demoted K/V in-place (planner/wiring stress).
+
+``attn_backend="flashinfer"`` gates FlashInfer page-multicall + ``merge_state``
+parity over the packed cache into the serve path (decode still SDPA on
+materialized KV until a full attention monkeypatch lands).
+
+Decode tokens stay BF16. Meta reports realized INT4 fraction + payload bytes.
 """
 
 from __future__ import annotations
@@ -25,14 +30,15 @@ from prioritykv.fullkv_compare import PromptRow, _apply_chat
 from prioritykv.int4_kv import Int4KvConfig, fake_quant_roundtrip
 from prioritykv.linear_risk import LinearRiskConfig, load_linear_risk_config
 from prioritykv.mixed_kv import MixedPlanConfig, plan_int4_mask
-from prioritykv.page_roles import PageRole
+from prioritykv.page_roles import PageRole, StorageDtype
+from prioritykv.packed_mixed_cache import apply_packed_int4_to_hf_past
 
 
 def _degrade_positions_tensor(t, idx, cfg: Int4KvConfig, *, degrade: str):
     """Degrade KV at seq positions ``idx`` (axis=2); rest untouched.
 
     ``degrade``:
-      - ``int4``: groupwise fake-quant round-trip (default quality path)
+      - ``int4``: groupwise fake-quant round-trip (legacy ``storage=fake``)
       - ``zero``: zero demoted K/V (INT0 stress — proves mask wiring / planner)
     """
     import torch
@@ -55,7 +61,7 @@ def _degrade_positions_tensor(t, idx, cfg: Int4KvConfig, *, degrade: str):
 def _degrade_positions(
     past, int4_mask: np.ndarray, cfg: Int4KvConfig, *, degrade: str = "int4"
 ):
-    """Apply per-position degrade to every layer's K/V prompt cache."""
+    """Apply per-position degrade to every layer's K/V prompt cache (in-place)."""
     import torch
 
     if past is None:
@@ -106,6 +112,27 @@ def _degrade_positions(
     raise TypeError(f"unsupported past_key_values type: {type(past)}")
 
 
+def _resolve_storage(degrade: str, storage: str | None) -> str:
+    """Default storage: packed for int4, none for zero/full."""
+    if storage is not None:
+        if storage not in ("packed", "fake"):
+            raise ValueError(f"storage must be packed|fake, got {storage}")
+        return storage
+    if degrade == "int4":
+        return "packed"
+    return "fake"
+
+
+def _resolve_attn_backend(attn_backend: str | None, storage_mode: str) -> str:
+    """Default SDPA; flashinfer requires packed storage."""
+    backend = (attn_backend or "sdpa").lower()
+    if backend not in ("sdpa", "flashinfer"):
+        raise ValueError(f"attn_backend must be sdpa|flashinfer, got {backend}")
+    if backend == "flashinfer" and storage_mode != "packed":
+        raise ValueError("attn_backend=flashinfer requires storage=packed")
+    return backend
+
+
 def run_transformers_mixed_kv(
     model_path: str,
     prompts: list[PromptRow],
@@ -115,15 +142,36 @@ def run_transformers_mixed_kv(
     plan_cfg: MixedPlanConfig,
     int4_cfg: Optional[Int4KvConfig] = None,
     degrade: str = "int4",
+    storage: str | None = None,
+    attn_backend: str | None = None,
+    fi_parity_every: int = 1,
+    fi_require_pass: bool = True,
     revision: str | None = None,
     max_model_len: int = 32768,
 ) -> list[tuple[str, list[int], dict[str, Any]]]:
-    """policy ∈ {full, uniform, structure}. Greedy decode over a real mixed cache."""
+    """policy ∈ {full, uniform, structure}. Greedy decode over a mixed cache.
+
+    ``storage``:
+      - ``packed`` (default when degrade=int4): true INT4 page payloads via
+        ``PackedMixedCache``, then dequant materialize for SDPA decode.
+      - ``fake``: legacy in-place groupwise round-trip (A/B parity).
+
+    ``attn_backend``:
+      - ``sdpa`` (default): Transformers SDPA on materialized KV.
+      - ``flashinfer``: after packing, run FlashInfer page-multicall parity on
+        the packed cache (merge_state), then decode via SDPA materialize.
+        Generation still uses SDPA until a full attention monkeypatch lands;
+        FI is gated into the serve path as a hard parity check over packed pages.
+    """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     if degrade not in ("int4", "zero"):
         raise ValueError(f"degrade must be int4|zero, got {degrade}")
+    storage_mode = _resolve_storage(degrade, storage)
+    if degrade == "zero" and storage_mode == "packed":
+        raise ValueError("degrade=zero has no packed representation; use storage=fake")
+    backend = _resolve_attn_backend(attn_backend, storage_mode)
     int4_cfg = int4_cfg or Int4KvConfig()
     risk_cfg: LinearRiskConfig | None = None
     if policy == "structure":
@@ -154,9 +202,9 @@ def run_transformers_mixed_kv(
     model.eval()
     chat_kwargs = dict(qwen3_chat_template_kwargs())
     print(
-        f"[mixed] policy={policy} degrade={degrade} int4_frac={plan_cfg.int4_frac} "
-        f"nbits={int4_cfg.nbits} sink={plan_cfg.sink_tokens} "
-        f"recent={plan_cfg.recent_window} n={len(prompts)}",
+        f"[mixed] policy={policy} degrade={degrade} storage={storage_mode} "
+        f"attn={backend} int4_frac={plan_cfg.int4_frac} nbits={int4_cfg.nbits} "
+        f"sink={plan_cfg.sink_tokens} recent={plan_cfg.recent_window} n={len(prompts)}",
         flush=True,
     )
 
@@ -182,10 +230,8 @@ def run_transformers_mixed_kv(
         ids = ids.to(model.device)
         # Correctness-critical split prefill:
         # 1) prefill all but the final prompt token,
-        # 2) degrade that cache,
+        # 2) degrade/pack that cache,
         # 3) replay the final prompt token against the degraded cache.
-        # The old harness took the first generated token from full-prompt,
-        # undegraded prefill logits, leaking an undegraded decision into every arm.
         cache_n = n - 1
         prefill_inputs = {
             "input_ids": ids[:cache_n].unsqueeze(0),
@@ -195,13 +241,13 @@ def run_transformers_mixed_kv(
         }
 
         int4_realized = 0
+        packed_meta: dict[str, Any] = {}
         with torch.no_grad():
             pre = model(**prefill_inputs, use_cache=True, return_dict=True)
             past = pre.past_key_values
             if policy != "full":
                 roles = assign_token_roles(tok, row.messages, chat_kwargs=chat_kwargs)
                 if len(roles) != cache_n:
-                    # Align to cached prompt positions (no-trim case is full-1).
                     if len(roles) > cache_n:
                         roles = roles[:cache_n]
                     else:
@@ -210,7 +256,64 @@ def run_transformers_mixed_kv(
                         )
                 mask = plan_int4_mask(roles, plan_cfg, policy=policy, risk_cfg=risk_cfg)
                 int4_realized = int(mask.sum())
-                past = _degrade_positions(past, mask, int4_cfg, degrade=degrade)
+                if storage_mode == "packed" and degrade == "int4":
+                    past, packed = apply_packed_int4_to_hf_past(
+                        past,
+                        roles,
+                        mask,
+                        int4_cfg=int4_cfg,
+                        device=model.device,
+                        dtype=torch.bfloat16,
+                    )
+                    packed_meta = {
+                        "storage": "packed",
+                        "n_pages": len(packed.page_manager.pages),
+                        "payload_bytes": packed.payload_bytes(),
+                        "realized_bytes": packed.realized_bytes(),
+                        "fullkv_bf16_bytes": packed.fullkv_bf16_bytes(),
+                        "compression_ratio": round(packed.compression_ratio(), 6),
+                        "int4_tokens_pages": packed.dtype_token_counts()[
+                            StorageDtype.INT4
+                        ],
+                    }
+                    if backend == "flashinfer" and (
+                        fi_parity_every > 0 and i % fi_parity_every == 0
+                    ):
+                        from prioritykv.flashinfer_multicall import (
+                            verify_packed_cache_flashinfer,
+                        )
+
+                        fi_res = verify_packed_cache_flashinfer(packed)
+                        packed_meta["attn_backend"] = "flashinfer"
+                        packed_meta["fi_parity"] = {
+                            "decision": fi_res.get("decision"),
+                            "pass": fi_res.get("pass"),
+                            "layers": [
+                                {
+                                    "layer": r.get("layer"),
+                                    "decision": r.get("decision"),
+                                    "err": r.get("fi_multicall_vs_fi_dense_max_abs"),
+                                }
+                                for r in fi_res.get("layers", [])
+                            ],
+                        }
+                        print(
+                            f"[mixed/{policy}] fi_parity={fi_res.get('decision')} "
+                            f"pass={fi_res.get('pass')}",
+                            flush=True,
+                        )
+                        if fi_require_pass and fi_res.get("pass") is False:
+                            raise RuntimeError(
+                                f"FlashInfer packed parity failed: {fi_res}"
+                            )
+                else:
+                    past = _degrade_positions(past, mask, int4_cfg, degrade=degrade)
+                    packed_meta = {
+                        "storage": storage_mode if degrade == "int4" else "inplace",
+                        "attn_backend": "sdpa",
+                    }
+            else:
+                packed_meta = {"storage": "none", "attn_backend": "sdpa"}
 
             # Recompute the first output-token logits from the degraded cache.
             attn = torch.ones(1, n, dtype=torch.long, device=model.device)
@@ -248,6 +351,8 @@ def run_transformers_mixed_kv(
             "mode": f"mixed_{policy}",
             "policy": policy,
             "degrade": degrade if policy != "full" else "none",
+            "storage": packed_meta.get("storage", "none"),
+            "attn_backend": packed_meta.get("attn_backend", backend if policy != "full" else "sdpa"),
             "nbits": int(int4_cfg.nbits) if policy != "full" and degrade == "int4" else None,
             "prompt_tokens": n,
             "cache_tokens_degraded": cache_n,
@@ -256,12 +361,18 @@ def run_transformers_mixed_kv(
             "first_token_from_degraded_cache": True,
             "preview": new_text[:120],
             "seconds": time.time() - t0,
+            **{
+                k: v
+                for k, v in packed_meta.items()
+                if k not in ("storage", "attn_backend")
+            },
         }
         out.append((new_text, gen_ids, meta))
         if tqdm is None:
             print(
                 f"[mixed/{policy}] {i + 1}/{len(prompts)} "
-                f"int4={int4_realized}/{n} {meta['seconds']:.1f}s",
+                f"int4={int4_realized}/{n} storage={meta.get('storage')} "
+                f"attn={meta.get('attn_backend')} {meta['seconds']:.1f}s",
                 flush=True,
             )
         elif hasattr(iterator, "set_postfix"):

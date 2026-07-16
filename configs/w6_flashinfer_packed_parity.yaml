@@ -1,0 +1,4 @@
+# FlashInfer multicall over mixed BF16/INT4 packed pages (systems wire).
+# Expect: PARITY_PASS — page multicall + merge_state ≈ dense FI prefill.
+manifest_id: w6i_flashinfer_packed_parity
+rev: 1

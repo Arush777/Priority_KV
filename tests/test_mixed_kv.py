@@ -110,6 +110,104 @@ def test_nbits2_has_higher_roundtrip_error_than_nbits4():
     assert e2 > e4 * 2.0
 
 
+def test_page_manager_from_mask_preserves_int4_positions():
+    from prioritykv.packed_mixed_cache import page_manager_from_int4_mask
+    from prioritykv.page_roles import PageRole, StorageDtype
+
+    n = 40
+    roles = [PageRole.FILLER] * n
+    for i in range(16):
+        roles[i] = PageRole.SINK
+    mask = np.zeros(n, dtype=bool)
+    mask[16:32] = True  # one full page of INT4
+    mask[32:36] = True  # partial INT4 run
+    pm = page_manager_from_int4_mask(roles, mask, page_tokens=16)
+    recovered = np.zeros(n, dtype=bool)
+    for p in pm.pages:
+        if p.dtype == StorageDtype.INT4:
+            recovered[p.start_token : p.end_token] = True
+        assert p.n_tokens <= 16
+    assert np.array_equal(recovered, mask)
+    assert pm.seq_len == n
+
+
+def test_apply_packed_int4_saves_bytes_and_roundtrips():
+    import pytest
+
+    torch = pytest.importorskip("torch")
+
+    from prioritykv.int4_kv import Int4KvConfig
+    from prioritykv.packed_mixed_cache import apply_packed_int4_to_hf_past
+    from prioritykv.page_roles import PageRole, StorageDtype
+
+    heads, dim, seq = 2, 8, 32
+    rng = np.random.default_rng(0)
+    k = rng.standard_normal((1, heads, seq, dim)).astype(np.float32)
+    v = rng.standard_normal((1, heads, seq, dim)).astype(np.float32)
+    past = type(
+        "Past",
+        (),
+        {
+            "key_cache": [torch.from_numpy(k.copy()), torch.from_numpy(k.copy())],
+            "value_cache": [torch.from_numpy(v.copy()), torch.from_numpy(v.copy())],
+        },
+    )()
+    roles = [PageRole.FILLER] * seq
+    for i in range(8):
+        roles[i] = PageRole.SINK
+    for i in range(seq - 8, seq):
+        roles[i] = PageRole.RECENT
+    mask = np.zeros(seq, dtype=bool)
+    mask[8 : seq - 8] = True
+
+    past_out, cache = apply_packed_int4_to_hf_past(
+        past,
+        roles,
+        mask,
+        int4_cfg=Int4KvConfig(group_size=8, nbits=4),
+        device="cpu",
+        dtype=torch.float32,
+    )
+    assert cache.payload_bytes() < cache.fullkv_bf16_bytes()
+    assert cache.dtype_token_counts()[StorageDtype.INT4] == int(mask.sum())
+    assert cache.check_invariants() == []
+    # Materialized past is usable as key_cache / DynamicCache.
+    kc = getattr(past_out, "key_cache", None)
+    if kc is None:
+        # DynamicCache path
+        assert hasattr(past_out, "layers") or hasattr(past_out, "update")
+    else:
+        assert kc[0].shape == (1, heads, seq, dim)
+
+
+def test_resolve_storage_defaults():
+    from prioritykv.mixed_kv_run import _resolve_storage
+
+    assert _resolve_storage("int4", None) == "packed"
+    assert _resolve_storage("int4", "fake") == "fake"
+    assert _resolve_storage("zero", None) == "fake"
+
+
+def test_resolve_attn_backend_requires_packed():
+    import pytest
+
+    from prioritykv.mixed_kv_run import _resolve_attn_backend
+
+    assert _resolve_attn_backend(None, "packed") == "sdpa"
+    assert _resolve_attn_backend("flashinfer", "packed") == "flashinfer"
+    with pytest.raises(ValueError, match="packed"):
+        _resolve_attn_backend("flashinfer", "fake")
+
+
+def test_flashinfer_status_api_lists_wired_entrypoints():
+    from prioritykv.flashinfer_multicall import status
+
+    st = status()
+    assert st["name"] == "flashinfer_multicall"
+    assert 128 in st["allowed_head_dims"]
+    assert "merge_state" in st["lse_merge"]
+
+
 def test_zero_degrade_changes_only_selected_sequence_positions():
     import pytest
 
@@ -143,3 +241,4 @@ def test_flashinfer_script_rejects_illegal_head_dim():
     )
     assert proc.returncode == 2
     assert "not in" in (proc.stdout + proc.stderr)
+

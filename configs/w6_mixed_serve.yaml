@@ -30,5 +30,7 @@ mixed:
   recent_window: 128
   nbits: 4
   group_size: 32
+  # packed = true INT4 page payloads (default); fake = legacy in-place round-trip
+  storage: packed
   risk_fit_path: configs/linear_risk_fit.json
   policies: [full, uniform, structure]

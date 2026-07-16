@@ -69,6 +69,18 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
     degrade = str(mcfg.get("degrade", "int4")).lower()
     if degrade not in ("int4", "zero"):
         raise ValueError(f"mixed.degrade must be int4|zero, got {degrade}")
+    storage = mcfg.get("storage")
+    if storage is not None:
+        storage = str(storage).lower()
+        if storage not in ("packed", "fake"):
+            raise ValueError(f"mixed.storage must be packed|fake, got {storage}")
+    attn_backend = mcfg.get("attn_backend")
+    if attn_backend is not None:
+        attn_backend = str(attn_backend).lower()
+        if attn_backend not in ("sdpa", "flashinfer"):
+            raise ValueError(f"mixed.attn_backend must be sdpa|flashinfer, got {attn_backend}")
+    fi_parity_every = int(mcfg.get("fi_parity_every", 1))
+    fi_require_pass = bool(mcfg.get("fi_require_pass", True))
     policies = list(mcfg.get("policies", ["full", "uniform", "structure"]))
 
     full_texts: dict[str, str] = {}
@@ -84,6 +96,10 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
             plan_cfg=plan_cfg,
             int4_cfg=int4_cfg,
             degrade=degrade,
+            storage=storage,
+            attn_backend=attn_backend,
+            fi_parity_every=fi_parity_every,
+            fi_require_pass=fi_require_pass,
             max_model_len=int(vcfg["max_model_len"]),
         )
         seconds[policy] = time.time() - t1
@@ -140,6 +156,8 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
             "nbits": int4_cfg.nbits,
             "group_size": int4_cfg.group_size,
             "degrade": degrade,
+            "storage": storage,
+            "attn_backend": attn_backend,
             "risk_fit_path": risk_path,
         },
         "policies": policies,
