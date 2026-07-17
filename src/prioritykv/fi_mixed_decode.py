@@ -58,6 +58,9 @@ class FiMixedDecodeState:
     num_layers: int = 0
     cache_len: int = 0
     decode_len: int = 0
+    # Tokens appended this forward step but not yet committed into decode_len.
+    # Needed so attend sees fresh K/V after append_decode_kv and before commit.
+    step_kv_len: int = 0
     forbid_materialize: bool = True
     device: Any = None
     dtype: Any = None
@@ -81,7 +84,13 @@ class FiMixedDecodeState:
 
     @property
     def total_kv_len(self) -> int:
+        """Committed KV length (excludes in-flight ``step_kv_len``)."""
         return int(self.cache_len + self.decode_len)
+
+    @property
+    def live_kv_len(self) -> int:
+        """Committed + in-flight step tokens (what FI attend must see)."""
+        return int(self.cache_len + self.decode_len + self.step_kv_len)
 
     def assert_no_materialize_path(self, used_materialize: bool) -> None:
         if self.forbid_materialize and used_materialize:
@@ -252,7 +261,7 @@ def fi_chunks_for_layer(
     _fill_cold_scratch(buf, device=state.device, dtype=state.dtype)
     k_pages: list[Any] = []
     v_pages: list[Any] = []
-    live = buf.hot_len + state.decode_len
+    live = buf.hot_len + state.decode_len + state.step_kv_len
     if live > 0:
         # HF (heads, tok, dim) → FI (tok, heads, dim)
         k_ht = buf.k_hot[:, :live, :].permute(1, 0, 2).contiguous()
@@ -293,14 +302,24 @@ def append_decode_kv(
         raise RuntimeError(
             f"decode tail overflow: pos={pos} cap={buf.hot_capacity} — grow decode_tail_cap"
         )
-    n = k_new.shape[1]
+    n = int(k_new.shape[1])
     buf.k_hot[:, pos : pos + n, :] = k_new.to(dtype=buf.k_hot.dtype)
     buf.v_hot[:, pos : pos + n, :] = v_new.to(dtype=buf.v_hot.dtype)
+    # Record step width once (all layers must append the same n this forward).
+    if state.step_kv_len == 0:
+        state.step_kv_len = n
+    elif state.step_kv_len != n:
+        raise RuntimeError(
+            f"layer {layer_idx}: step_kv_len mismatch {state.step_kv_len} vs {n}"
+        )
 
 
 def commit_decode_step(state: FiMixedDecodeState) -> None:
-    """Advance decode_len after all layers received append_decode_kv."""
-    state.decode_len += 1
+    """Fold in-flight step tokens into decode_len after every layer appended."""
+    if state.step_kv_len <= 0:
+        raise RuntimeError("commit_decode_step called with no in-flight KV")
+    state.decode_len += int(state.step_kv_len)
+    state.step_kv_len = 0
 
 
 def attend_layer_flashinfer(
@@ -372,7 +391,9 @@ def layer_parity_vs_dense(
     err = float(torch.max(torch.abs(fi_multi.float() - fi_dense.float())).item())
     buf = state.layers[layer_idx]
     hot_t, cold_t = coalesce_hot_cold_lengths(
-        hot_len=buf.hot_len, cold_len=buf.cold_len, decode_tail=state.decode_len
+        hot_len=buf.hot_len,
+        cold_len=buf.cold_len,
+        decode_tail=state.decode_len + state.step_kv_len,
     )
     out.update(
         {
