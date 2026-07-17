@@ -338,8 +338,8 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 
 - **Council:** Fable + Codex Sol 5.6 xhigh → FI decode before D4; refuse silent materialize.
 - **Landed:** `src/prioritykv/fi_mixed_decode.py` — `FiMixedDecodeState`, `build_from_packed_cache`, FI chunk attend (≤2 chunks), parity vs dense without `materialize_hf_past`.
-- **H200 job:** `jobs/pending/w7_fi_decode_smoke_r1.yaml` → `scripts/run_fi_decode_smoke.py`.
-- **Still open (Stage-1b):** Qwen3 attention shim for full greedy decode through FI state; then D4 TTFT/TPOT.
+- **H200:** `w7_fi_decode_smoke_r1` → **PARITY_PASS** (exit=0).
+- **Stage-1b (in flight):** `qwen3_fi_shim.py` monkeypatch + `w8_fi_greedy_smoke_r1` greedy ID match vs materialize→SDPA; then D4 TTFT/TPOT.
 
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
