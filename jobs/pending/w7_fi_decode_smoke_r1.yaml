@@ -1,0 +1,5 @@
+id: w7_fi_decode_smoke_r1
+command: python scripts/run_fi_decode_smoke.py --out-tag r1 --seq 256 --layers 4 --head-dim 128
+gpus: "6,7"
+sync_cuda: false
+timeout_sec: 1800
