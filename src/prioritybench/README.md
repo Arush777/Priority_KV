@@ -1,39 +1,32 @@
 # PriorityBench-A (`src/prioritybench`)
 
-Workstream **S1** for the agent-reliability benchmark in
-`docs/PRIORITYKV_IMPLEMENTATION_PLAN.md` §3.
+Custom **agent-reliability** benchmark for PriorityKV (not LongBench).
+
+**Locked dataset docs:** [`docs/DATASET.md`](../../docs/DATASET.md)  
+**Manifest:** `data/prioritybench/manifests/w3_lock.json` (n=240, audit PASS)
 
 | Module | Role |
 |--------|------|
 | `schema.py` | Example contract, categories, splits, context strata |
 | `scoring.py` | Deterministic scorers (JSON-schema subset, regex, exact slots) |
-| `templates/` | W1 template engine (starts with `tool_schema`) |
+| `templates/` | `tool_schema` · `instruction_supersession` · `multi_turn_state` |
 | `generate.py` | Seeded generator → JSONL splits |
 | `pins.py` | Locked Qwen3-8B HF revision + `enable_thinking=False` |
 
 ## Categories (80 each → 240)
 
-1. `tool_schema` — tool-call / JSON validity under long context  
-2. `instruction_supersession` — follow *latest* constraint  
-3. `multi_turn_state` — verbatim reuse of early-turn IDs / paths  
+1. **`tool_schema`** — emit a valid tool call after long filler (early schema planted).  
+2. **`instruction_supersession`** — obey the *latest* constraint when an earlier one conflicts.  
+3. **`multi_turn_state`** — reuse early-turn order ID / file path / user pref verbatim.
 
-## Storage (locked)
+Every example: plant state → long filler → final ask → programmatic 0/1 score.
 
-- **Committed:** generator, seeds, templates, scorers, small fixtures under
-  `data/prioritybench/fixtures/`
-- **Gitignored:** generated splits
-  `data/prioritybench/{calibration,validation,test}/`
+## Storage
 
-## Generate W1 pilot (40 tool_schema examples)
+- **Committed:** generator, seeds, templates, scorers, fixtures, **manifest**  
+- **Gitignored:** `data/prioritybench/{calibration,validation,test}/` JSONL (rebuild locally)
 
 ```bash
-PYTHONPATH=src python scripts/generate_prioritybench.py --n 40 \
-  --fixture data/prioritybench/fixtures/tool_schema_smoke.jsonl
-```
-
-## Run tests
-
-```bash
-PYTHONPATH=src python scripts/test_prioritybench_scoring.py
-PYTHONPATH=src python scripts/test_prioritybench_generate.py
+PYTHONPATH=src uv run python scripts/mk_bench.py --mode w3_lock
+PYTHONPATH=src uv run python scripts/audit_bench.py
 ```

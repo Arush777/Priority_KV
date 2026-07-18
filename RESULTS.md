@@ -85,7 +85,9 @@ arXiv submit · blog go-live · upstream PR · outreach · interview prep.
 
 ## Source of truth
 
+- Dataset (tasks): [`docs/DATASET.md`](docs/DATASET.md)  
 - Freeze: [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml)  
+- Next chat: [`docs/NEXT_CHAT_HANDOFF.md`](docs/NEXT_CHAT_HANDOFF.md)  
 - Decisions log: [`docs/decisions.md`](docs/decisions.md)  
 - Paper draft: [`paper/prioritykv_arxiv_draft.md`](paper/prioritykv_arxiv_draft.md)  
 - Job status: `jobs/status/<id>.json` · done YAMLs: `jobs/done/`
