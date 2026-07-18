@@ -3,8 +3,15 @@
 # Do not silently retune configs under these job IDs; bump rev + new job if re-running.
 
 schema_rev: 1
-freeze_id: G4_MIDDLE_GROUND_2026_07_19
-status: FROZEN
+freeze_id: G4_PUBLISH_TRACK_2026_07_19
+status: FROZEN_CORE_PLUS_PUBLISH_JOBS_PENDING
+
+# Core middle-ground jobs remain canonical below.
+# Publish-track jobs (fill decisions when done):
+#   pub_a_d4_fp8_compare_gpu01_r1
+#   pub_b_guardrails_gpu5_r1
+#   pub_c_gemma_reduced_gpu5_r1
+# Paper draft: paper/prioritykv_arxiv_draft.md
 
 model:
   hub_id: Qwen/Qwen3-8B
