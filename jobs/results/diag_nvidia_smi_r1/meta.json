@@ -1,0 +1,9 @@
+{
+  "job_id": "diag_nvidia_smi_r1",
+  "exit": 0,
+  "decision": "OK",
+  "pass": true,
+  "log_scratch": "/data/anupam/scratch/prioritykv/logs/diag_nvidia_smi_r1.log",
+  "has_summary": true,
+  "has_nvidia_smi": true
+}
