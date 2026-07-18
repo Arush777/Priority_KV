@@ -25,7 +25,7 @@ from prioritykv.fi_mixed_decode import (
 )
 from prioritykv.int4_kv import Int4KvConfig
 from prioritykv.mixed_kv import MixedPlanConfig, plan_int4_mask
-from prioritykv.packed_mixed_cache import build_from_hf_prefill, page_manager_from_int4_mask
+from prioritykv.packed_mixed_cache import build_from_hf_prefill_batched
 from prioritykv.page_roles import PageRole
 
 
@@ -168,13 +168,17 @@ def pack_prefill_to_fi_state(
     int4_cfg: Optional[Int4KvConfig] = None,
     decode_tail_cap: int = 256,
 ) -> tuple[Any, FiMixedDecodeState]:
-    """Pack HF prefill past → PackedMixedCache → FiMixedDecodeState (no materialize)."""
+    """Pack HF prefill past → PackedMixedCache → FiMixedDecodeState (no materialize).
+
+    M2b: batched gather+quantize (≤1 BF16 page + ≤1 INT4 page per layer).
+    ``roles`` retained for API compat; mask drives packing.
+    """
     import torch
 
     dtype = dtype or torch.bfloat16
     cfg = int4_cfg or Int4KvConfig()
-    pm = page_manager_from_int4_mask(roles, int4_mask)
-    packed = build_from_hf_prefill(past, pm, int4_cfg=cfg)
+    _ = roles  # API compat / callers still pass roles for planning upstream
+    packed = build_from_hf_prefill_batched(past, int4_mask, int4_cfg=cfg)
     state = build_from_packed_cache(
         packed, device=device, dtype=dtype, decode_tail_cap=decode_tail_cap
     )

@@ -380,6 +380,16 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   scratch dequants on device.
 - **Job:** `d4_latency_m2_gpu5_r1` on free GPU 5.
 
+## 2026-07-18 — D4 M2 FAIL → M2b batched pack
+
+- **M2** `d4_latency_m2_gpu5_r1`: **D4_M2_E2E_GATE_FAIL**. Structure pack
+  4.8s / cold 1.7s (better than 9s/3.9s but far from gate). Uniform worse
+  (pack 27s) — per-page launch tax.
+- **Council:** batch gather+quantize once/layer; keep pack≤200 cold≤100;
+  relax e2e to ≤1.5× FullKV for M2b; don't ship uniform gate.
+- **M2b:** `build_from_hf_prefill_batched` (≤1 BF16 + ≤1 INT4 page/layer);
+  job `d4_latency_m2b_gpu5_r1`.
+
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
   (vs CPU dense **0.000470**); CPU multicall oracle error `1.35e-9`.
