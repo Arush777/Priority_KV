@@ -339,7 +339,13 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Council:** Fable + Codex Sol 5.6 xhigh → FI decode before D4; refuse silent materialize.
 - **Landed:** `src/prioritykv/fi_mixed_decode.py` — `FiMixedDecodeState`, `build_from_packed_cache`, FI chunk attend (≤2 chunks), parity vs dense without `materialize_hf_past`.
 - **H200:** `w7_fi_decode_smoke_r1` → **PARITY_PASS** (exit=0).
-- **Stage-1b (in flight):** `qwen3_fi_shim.py` monkeypatch + `w8_fi_greedy_smoke_r1` greedy ID match vs materialize→SDPA; then D4 TTFT/TPOT.
+
+## 2026-07-18 — Agent-remote control (no H200 laptop)
+
+- **Worker:** `remote_worker.sh` now pushes `jobs/results/<id>/` (summary.json from `out=`, log_tail, nvidia-smi before/after) + richer `jobs/status/*.json` (`decision`/`pass`).
+- **Agent helpers:** `./scripts/pull_job.sh [--watch] <id>`, `scripts/diag_nvidia_smi.py`.
+- **One-time H200:** `bash scripts/h200_bootstrap_pkworker.sh` (reset --hard + restart tmux pkworker).
+- **w8:** confirmed GREEDY_PASS; summary backfilled under `jobs/results/w8_fi_greedy_smoke_r1/`.
 
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
