@@ -21,9 +21,24 @@ from prioritykv.byte_model import (
     realized_bytes,
 )
 from prioritykv.int4_kv import Int4KvConfig
-from prioritykv.int4_path import PackedInt4Page, append_quantize
+from prioritykv.int4_path import PackedInt4Page, append_quantize, append_quantize_torch
 from prioritykv.page_manager import Page, PageManager, PageManagerConfig
 from prioritykv.page_roles import PageRole, StorageDtype
+
+
+def _is_torch(x: Any) -> bool:
+    try:
+        import torch
+
+        return torch.is_tensor(x)
+    except Exception:
+        return False
+
+
+def _nbytes(x: Any) -> int:
+    if _is_torch(x):
+        return int(x.numel() * x.element_size())
+    return int(x.nbytes)
 
 
 @dataclass
@@ -35,8 +50,8 @@ class KvPagePayload:
     n_tokens: int
     num_kv_heads: int = 0
     head_dim: int = 0
-    k_bf16: Optional[np.ndarray] = None  # (num_kv_heads, n_tokens, head_dim)
-    v_bf16: Optional[np.ndarray] = None
+    k_bf16: Optional[Any] = None  # (num_kv_heads, n_tokens, head_dim) np or torch
+    v_bf16: Optional[Any] = None
     k_packed: Optional[PackedInt4Page] = None
     v_packed: Optional[PackedInt4Page] = None
 
@@ -44,23 +59,69 @@ class KvPagePayload:
         """Bytes actually held in this page (K+V payloads only)."""
         if self.dtype == StorageDtype.BF16:
             assert self.k_bf16 is not None and self.v_bf16 is not None
-            return int(self.k_bf16.nbytes + self.v_bf16.nbytes)
+            return _nbytes(self.k_bf16) + _nbytes(self.v_bf16)
         assert self.k_packed is not None and self.v_packed is not None
         return self.k_packed.payload_bytes() + self.v_packed.payload_bytes()
 
     def materialize_kv(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Return float32 K/V shaped (num_kv_heads, n_tokens, head_dim)."""
+        """Return float32 K/V shaped (num_kv_heads, n_tokens, head_dim) on host."""
+        k, v = self.materialize_kv_device(device="cpu", dtype=None)
+        if _is_torch(k):
+            return (
+                k.detach().float().cpu().numpy(),
+                v.detach().float().cpu().numpy(),
+            )
+        return (
+            np.asarray(k, dtype=np.float32),
+            np.asarray(v, dtype=np.float32),
+        )
+
+    def materialize_kv_device(
+        self, *, device: Any = None, dtype: Any = None
+    ) -> Tuple[Any, Any]:
+        """Return K/V (heads, tok, dim) on ``device`` (torch) or host numpy."""
+        import torch
+
         if self.dtype == StorageDtype.BF16:
             assert self.k_bf16 is not None and self.v_bf16 is not None
+            if _is_torch(self.k_bf16):
+                k = self.k_bf16
+                v = self.v_bf16
+                if device is not None:
+                    k = k.to(device=device, dtype=dtype or k.dtype)
+                    v = v.to(device=device, dtype=dtype or v.dtype)
+                return k, v
+            k = self.k_bf16.astype(np.float32, copy=False)
+            v = self.v_bf16.astype(np.float32, copy=False)
+            if device is None or str(device) == "cpu":
+                return k, v
+            dt = dtype or torch.float32
             return (
-                self.k_bf16.astype(np.float32, copy=False),
-                self.v_bf16.astype(np.float32, copy=False),
+                torch.from_numpy(np.ascontiguousarray(k)).to(device=device, dtype=dt),
+                torch.from_numpy(np.ascontiguousarray(v)).to(device=device, dtype=dt),
             )
         assert self.k_packed is not None and self.v_packed is not None
         h, d = self.num_kv_heads, self.head_dim
-        k = self.k_packed.dequant().astype(np.float32).reshape(h, d, self.n_tokens)
-        v = self.v_packed.dequant().astype(np.float32).reshape(h, d, self.n_tokens)
-        return np.transpose(k, (0, 2, 1)), np.transpose(v, (0, 2, 1))
+        k_raw = self.k_packed.dequant()
+        v_raw = self.v_packed.dequant()
+        if _is_torch(k_raw):
+            k = k_raw.reshape(h, d, self.n_tokens).permute(0, 2, 1).contiguous()
+            v = v_raw.reshape(h, d, self.n_tokens).permute(0, 2, 1).contiguous()
+            if device is not None:
+                k = k.to(device=device, dtype=dtype or k.dtype)
+                v = v.to(device=device, dtype=dtype or v.dtype)
+            return k, v
+        k = np.asarray(k_raw, dtype=np.float32).reshape(h, d, self.n_tokens)
+        v = np.asarray(v_raw, dtype=np.float32).reshape(h, d, self.n_tokens)
+        k = np.transpose(k, (0, 2, 1))
+        v = np.transpose(v, (0, 2, 1))
+        if device is None or str(device) == "cpu":
+            return k, v
+        dt = dtype or torch.float32
+        return (
+            torch.from_numpy(np.ascontiguousarray(k)).to(device=device, dtype=dt),
+            torch.from_numpy(np.ascontiguousarray(v)).to(device=device, dtype=dt),
+        )
 
     def demote_to_int4(self, cfg: Int4KvConfig) -> None:
         """Pack current BF16 payload → INT4; drop BF16 arrays."""
@@ -69,14 +130,20 @@ class KvPagePayload:
         assert self.k_bf16 is not None and self.v_bf16 is not None
         self.num_kv_heads = int(self.k_bf16.shape[0])
         self.head_dim = int(self.k_bf16.shape[2])
-        # Quantize along token axis: (h, d, t) layout for groupwise INT4.
-        k_tok = np.transpose(self.k_bf16.astype(np.float32), (0, 2, 1))
-        v_tok = np.transpose(self.v_bf16.astype(np.float32), (0, 2, 1))
-        h, t, d = k_tok.shape
-        k_flat = k_tok.reshape(h * d, t)
-        v_flat = v_tok.reshape(h * d, t)
-        self.k_packed = append_quantize(k_flat, cfg=cfg)
-        self.v_packed = append_quantize(v_flat, cfg=cfg)
+        # Match legacy layout: (h, T, D) → (h, D, T) → reshape(h*T, D).
+        # Names mirror original numpy path (t=head_dim, d=n_tokens).
+        if _is_torch(self.k_bf16):
+            k_tok = self.k_bf16.float().permute(0, 2, 1).contiguous()
+            v_tok = self.v_bf16.float().permute(0, 2, 1).contiguous()
+            h, t, d = k_tok.shape
+            self.k_packed = append_quantize_torch(k_tok.reshape(h * d, t), cfg=cfg)
+            self.v_packed = append_quantize_torch(v_tok.reshape(h * d, t), cfg=cfg)
+        else:
+            k_tok = np.transpose(self.k_bf16.astype(np.float32), (0, 2, 1))
+            v_tok = np.transpose(self.v_bf16.astype(np.float32), (0, 2, 1))
+            h, t, d = k_tok.shape
+            self.k_packed = append_quantize(k_tok.reshape(h * d, t), cfg=cfg)
+            self.v_packed = append_quantize(v_tok.reshape(h * d, t), cfg=cfg)
         self.k_bf16 = None
         self.v_bf16 = None
         self.dtype = StorageDtype.INT4
@@ -208,8 +275,8 @@ def _slice_page_kv(
     return k[:, start:end, :].copy(), v[:, start:end, :].copy()
 
 
-def _layer_tensors_from_hf(past: Any, layer_idx: int) -> Tuple[np.ndarray, np.ndarray]:
-    """Extract layer K/V as numpy (heads, seq, dim) from HF DynamicCache."""
+def _layer_kv_torch_raw(past: Any, layer_idx: int) -> Tuple[Any, Any]:
+    """Extract layer K/V tensors (batch stripped) without host copy."""
     import torch
 
     layers = getattr(past, "layers", None)
@@ -223,20 +290,37 @@ def _layer_tensors_from_hf(past: Any, layer_idx: int) -> Tuple[np.ndarray, np.nd
             kt = getattr(layer, attr_k, None)
             vt = getattr(layer, attr_v, None)
             if torch.is_tensor(kt) and torch.is_tensor(vt):
-                return (
-                    kt[0].detach().float().cpu().numpy(),
-                    vt[0].detach().float().cpu().numpy(),
-                )
+                return kt[0].detach(), vt[0].detach()
     kc = getattr(past, "key_cache", None)
     vc = getattr(past, "value_cache", None)
     if isinstance(kc, list) and isinstance(vc, list):
         kt, vt = kc[layer_idx], vc[layer_idx]
         if torch.is_tensor(kt) and torch.is_tensor(vt):
-            return (
-                kt[0].detach().float().cpu().numpy(),
-                vt[0].detach().float().cpu().numpy(),
-            )
+            return kt.detach(), vt.detach()
     raise TypeError(f"unsupported past_key_values for layer {layer_idx}: {type(past)}")
+
+
+def _layer_tensors_from_hf(past: Any, layer_idx: int) -> Tuple[np.ndarray, np.ndarray]:
+    """Extract layer K/V as numpy (heads, seq, dim) from HF DynamicCache."""
+    kt, vt = _layer_kv_torch_raw(past, layer_idx)
+    return kt.float().cpu().numpy(), vt.float().cpu().numpy()
+
+
+def _layer_tensors_from_hf_torch(past: Any, layer_idx: int) -> Tuple[Any, Any]:
+    """Extract layer K/V as CUDA/CPU torch (heads, seq, dim) — no host roundtrip."""
+    kt, vt = _layer_kv_torch_raw(past, layer_idx)
+    # HF may be (batch, heads, seq, dim) already stripped, or (heads, seq, dim).
+    if kt.dim() == 4:
+        kt, vt = kt[0], vt[0]
+    return kt.contiguous(), vt.contiguous()
+
+
+def _hf_past_on_cuda(past: Any) -> bool:
+    try:
+        kt, _ = _layer_kv_torch_raw(past, 0)
+        return bool(kt.is_cuda)
+    except Exception:
+        return False
 
 
 def _num_hf_layers(past: Any) -> int:
@@ -319,11 +403,19 @@ def build_from_hf_prefill(
     *,
     geom: ModelKvGeom = QWEN3_8B_KV,
     int4_cfg: Optional[Int4KvConfig] = None,
+    prefer_gpu: bool = True,
 ) -> PackedMixedCache:
-    """Split an HF prefill cache into pages and apply manager dtypes."""
+    """Split an HF prefill cache into pages and apply manager dtypes.
+
+    M2: when HF past lives on CUDA, keep slices/quant on device (no D2H).
+    """
     cfg = int4_cfg or Int4KvConfig()
     n_layers = _num_hf_layers(past)
-    k0, _v0 = _layer_tensors_from_hf(past, 0)
+    use_gpu = bool(prefer_gpu and _hf_past_on_cuda(past))
+    if use_gpu:
+        k0, _v0 = _layer_tensors_from_hf_torch(past, 0)
+    else:
+        k0, _v0 = _layer_tensors_from_hf(past, 0)
     geom = ModelKvGeom(
         num_layers=n_layers,
         num_kv_heads=int(k0.shape[0]),
@@ -334,25 +426,42 @@ def build_from_hf_prefill(
     cache = PackedMixedCache(page_manager=page_manager, geom=geom, int4_cfg=cfg)
     cache._head_shape = (geom.num_kv_heads, geom.head_dim)
     for li in range(n_layers):
-        k_full, v_full = _layer_tensors_from_hf(past, li)
-        if k_full.shape[1] != page_manager.seq_len:
+        if use_gpu:
+            k_full, v_full = _layer_tensors_from_hf_torch(past, li)
+        else:
+            k_full, v_full = _layer_tensors_from_hf(past, li)
+        if int(k_full.shape[1]) != page_manager.seq_len:
             raise ValueError(
                 f"layer {li} seq {k_full.shape[1]} != page table {page_manager.seq_len}"
             )
         layer = PackedMixedLayer()
         for meta in page_manager.pages:
-            k_slice, v_slice = _slice_page_kv(
-                k_full, v_full, meta.start_token, meta.end_token
-            )
-            payload = KvPagePayload(
-                meta=meta,
-                dtype=meta.dtype,
-                n_tokens=meta.n_tokens,
-                num_kv_heads=int(k_slice.shape[0]),
-                head_dim=int(k_slice.shape[2]),
-                k_bf16=k_slice.astype(np.float16),
-                v_bf16=v_slice.astype(np.float16),
-            )
+            if use_gpu:
+                k_slice = k_full[:, meta.start_token : meta.end_token, :].contiguous()
+                v_slice = v_full[:, meta.start_token : meta.end_token, :].contiguous()
+                # Stay in model dtype (bf16) on device until demote.
+                payload = KvPagePayload(
+                    meta=meta,
+                    dtype=meta.dtype,
+                    n_tokens=meta.n_tokens,
+                    num_kv_heads=int(k_slice.shape[0]),
+                    head_dim=int(k_slice.shape[2]),
+                    k_bf16=k_slice,
+                    v_bf16=v_slice,
+                )
+            else:
+                k_slice, v_slice = _slice_page_kv(
+                    k_full, v_full, meta.start_token, meta.end_token
+                )
+                payload = KvPagePayload(
+                    meta=meta,
+                    dtype=meta.dtype,
+                    n_tokens=meta.n_tokens,
+                    num_kv_heads=int(k_slice.shape[0]),
+                    head_dim=int(k_slice.shape[2]),
+                    k_bf16=k_slice.astype(np.float16),
+                    v_bf16=v_slice.astype(np.float16),
+                )
             if meta.dtype == StorageDtype.INT4:
                 payload.demote_to_int4(cfg)
             layer.pages.append(payload)

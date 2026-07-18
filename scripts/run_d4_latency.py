@@ -266,6 +266,10 @@ def main() -> int:
     ap.add_argument("--max-new-tokens", type=int, default=32)
     ap.add_argument("--warmup", type=int, default=1)
     ap.add_argument("--ttft-gate-mult", type=float, default=3.0)
+    ap.add_argument("--m2-gate", action="store_true", help="Apply Fable M2 pack/cold/e2e gates")
+    ap.add_argument("--pack-ms-max", type=float, default=200.0)
+    ap.add_argument("--cold-ms-max", type=float, default=100.0)
+    ap.add_argument("--e2e-gate-mult", type=float, default=1.15)
     args = ap.parse_args()
 
     scratch = Path(os.environ.get("PRIORITYKV_SCRATCH", ROOT / "runs"))
@@ -426,26 +430,61 @@ def main() -> int:
         }
 
     full_dec = summary_arms.get("fullkv_sdpa", {}).get("decode_ttft_ms_mean")
-    struct_dec = summary_arms.get("mixed_structure_fi_shim", {}).get("decode_ttft_ms_mean")
+    struct = summary_arms.get("mixed_structure_fi_shim", {})
+    struct_dec = struct.get("decode_ttft_ms_mean")
+    full_e2e = summary_arms.get("fullkv_sdpa", {}).get("e2e_ttft_ms_mean")
+    struct_e2e = struct.get("e2e_ttft_ms_mean")
+    struct_pack = struct.get("pack_ms_mean")
+    struct_cold = struct.get("cold_scratch_ms_mean")
     no_mat = all(not r.get("used_materialize_hf_past") for r in rows_out)
     ttft_ratio = (struct_dec / full_dec) if full_dec and struct_dec else None
+    e2e_ratio = (struct_e2e / full_e2e) if full_e2e and struct_e2e else None
     ttft_gate = (
         ttft_ratio is not None and ttft_ratio <= float(args.ttft_gate_mult)
     )
-    if no_mat and ttft_gate:
-        decision = "D4_M1_PASS"
-    elif no_mat:
-        decision = "D4_M1_TTFT_GATE_FAIL"
+    m2_pack_ok = struct_pack is not None and struct_pack <= float(args.pack_ms_max)
+    m2_cold_ok = struct_cold is not None and struct_cold <= float(args.cold_ms_max)
+    m2_e2e_ok = e2e_ratio is not None and e2e_ratio <= float(args.e2e_gate_mult)
+    if args.m2_gate:
+        if no_mat and ttft_gate and m2_pack_ok and m2_cold_ok and m2_e2e_ok:
+            decision = "D4_M2_PASS"
+        elif no_mat and ttft_gate:
+            decision = "D4_M2_E2E_GATE_FAIL"
+        elif no_mat:
+            decision = "D4_M2_TTFT_GATE_FAIL"
+        else:
+            decision = "D4_M2_FAIL"
+        pass_ok = decision == "D4_M2_PASS"
+        job_name = "d4_latency_m2"
     else:
-        decision = "D4_M1_FAIL"
+        if no_mat and ttft_gate:
+            decision = "D4_M1_PASS"
+        elif no_mat:
+            decision = "D4_M1_TTFT_GATE_FAIL"
+        else:
+            decision = "D4_M1_FAIL"
+        pass_ok = decision == "D4_M1_PASS"
+        job_name = "d4_latency_m1"
 
     result = {
-        "job": "d4_latency_m1",
+        "job": job_name,
         "tag": args.out_tag,
         "decision": decision,
-        "pass": decision == "D4_M1_PASS",
+        "pass": pass_ok,
         "ttft_gate_mult": args.ttft_gate_mult,
+        "m2_gate": bool(args.m2_gate),
         "decode_ttft_ratio_structure_vs_full": ttft_ratio,
+        "e2e_ttft_ratio_structure_vs_full": e2e_ratio,
+        "m2": {
+            "pack_ms_max": args.pack_ms_max,
+            "cold_ms_max": args.cold_ms_max,
+            "e2e_gate_mult": args.e2e_gate_mult,
+            "pack_ok": m2_pack_ok,
+            "cold_ok": m2_cold_ok,
+            "e2e_ok": m2_e2e_ok,
+            "structure_pack_ms": struct_pack,
+            "structure_cold_ms": struct_cold,
+        },
         "n_examples": len(prompts),
         "max_new_tokens": max_new,
         "warmup": args.warmup,
@@ -455,8 +494,8 @@ def main() -> int:
         "seconds": round(time.time() - t_wall0, 3),
         "rows": rows_out,
         "note": (
-            "M1 harness: eager cold scratch + untimed FI warmup; "
-            "decode_ttft comparable; e2e_ttft includes prefill+pack+cold."
+            "M2 GPU pack/dequant when past is CUDA; phases timed; "
+            "e2e_ttft = prefill+pack+cold+decode."
         ),
     }
     out_path.write_text(json.dumps(result, indent=2, default=str) + "\n")
@@ -466,6 +505,8 @@ def main() -> int:
                 "decision": decision,
                 "pass": result["pass"],
                 "decode_ttft_ratio_structure_vs_full": ttft_ratio,
+                "e2e_ttft_ratio_structure_vs_full": e2e_ratio,
+                "m2": result["m2"],
                 "arms": {
                     k: {
                         "decode_ttft_ms_mean": v.get("decode_ttft_ms_mean"),

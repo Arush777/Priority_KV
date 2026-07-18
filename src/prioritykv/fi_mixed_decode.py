@@ -125,19 +125,54 @@ def stage1_acceptance_checklist() -> dict[str, str]:
 
 
 def _cat_bf16_pages(pages: Sequence[Any]) -> Tuple[np.ndarray, np.ndarray]:
-    """Concat BF16 page payloads → (heads, tok, dim)."""
+    """Concat BF16 page payloads → (heads, tok, dim) float32 numpy."""
     ks, vs = [], []
     for p in pages:
         assert p.k_bf16 is not None and p.v_bf16 is not None
-        ks.append(p.k_bf16.astype(np.float32, copy=False))
-        vs.append(p.v_bf16.astype(np.float32, copy=False))
+        k, v = p.k_bf16, p.v_bf16
+        if hasattr(k, "detach"):
+            k = k.detach().float().cpu().numpy()
+            v = v.detach().float().cpu().numpy()
+        else:
+            k = k.astype(np.float32, copy=False)
+            v = v.astype(np.float32, copy=False)
+        ks.append(k)
+        vs.append(v)
     if not ks:
         raise ValueError("no BF16 pages to concatenate")
     return np.concatenate(ks, axis=1), np.concatenate(vs, axis=1)
 
 
+def _cat_bf16_pages_torch(
+    pages: Sequence[Any], *, device: Any, dtype: Any
+) -> Tuple[Any, Any]:
+    """Concatenate BF16 pages on device → (heads, tok, dim)."""
+    import torch
+
+    ks, vs = [], []
+    for p in pages:
+        assert p.k_bf16 is not None and p.v_bf16 is not None
+        if torch.is_tensor(p.k_bf16):
+            ks.append(p.k_bf16.to(device=device, dtype=dtype))
+            vs.append(p.v_bf16.to(device=device, dtype=dtype))
+        else:
+            ks.append(
+                torch.from_numpy(np.ascontiguousarray(p.k_bf16.astype(np.float32))).to(
+                    device=device, dtype=dtype
+                )
+            )
+            vs.append(
+                torch.from_numpy(np.ascontiguousarray(p.v_bf16.astype(np.float32))).to(
+                    device=device, dtype=dtype
+                )
+            )
+    if not ks:
+        raise ValueError("no BF16 pages to concatenate")
+    return torch.cat(ks, dim=1), torch.cat(vs, dim=1)
+
+
 def _dequant_cold_pages(pages: Sequence[Any]) -> Tuple[np.ndarray, np.ndarray]:
-    """Dequant INT4 pages → (heads, tok, dim) float32."""
+    """Dequant INT4 pages → (heads, tok, dim) float32 (host)."""
     ks, vs = [], []
     for p in pages:
         k, v = p.materialize_kv()
@@ -146,6 +181,22 @@ def _dequant_cold_pages(pages: Sequence[Any]) -> Tuple[np.ndarray, np.ndarray]:
     if not ks:
         raise ValueError("no INT4 pages to dequant")
     return np.concatenate(ks, axis=1), np.concatenate(vs, axis=1)
+
+
+def _dequant_cold_pages_torch(
+    pages: Sequence[Any], *, device: Any, dtype: Any
+) -> Tuple[Any, Any]:
+    """Dequant INT4 pages on device → (heads, tok, dim)."""
+    import torch
+
+    ks, vs = [], []
+    for p in pages:
+        k, v = p.materialize_kv_device(device=device, dtype=dtype)
+        ks.append(k)
+        vs.append(v)
+    if not ks:
+        raise ValueError("no INT4 pages to dequant")
+    return torch.cat(ks, dim=1), torch.cat(vs, dim=1)
 
 
 def build_from_packed_cache(
@@ -199,13 +250,29 @@ def build_from_packed_cache(
         bf16_pages = [p for p in layer.pages if p.dtype == StorageDtype.BF16]
         int4_pages = [p for p in layer.pages if p.dtype == StorageDtype.INT4]
         buf = LayerMixedBuffers(cold_pages=list(int4_pages))
+        use_torch_hot = bool(
+            bf16_pages
+            and any(
+                hasattr(p.k_bf16, "detach") and hasattr(p.k_bf16, "device")
+                for p in bf16_pages
+            )
+        )
         if bf16_pages:
-            k_np, v_np = _cat_bf16_pages(bf16_pages)
-            hot_len = int(k_np.shape[1])
+            if use_torch_hot:
+                k_hot_src, v_hot_src = _cat_bf16_pages_torch(
+                    bf16_pages, device=device, dtype=dtype
+                )
+                hot_len = int(k_hot_src.shape[1])
+            else:
+                k_np, v_np = _cat_bf16_pages(bf16_pages)
+                hot_len = int(k_np.shape[1])
+                k_hot_src = v_hot_src = None
         else:
             k_np = np.zeros((heads, 0, dim), dtype=np.float32)
             v_np = np.zeros((heads, 0, dim), dtype=np.float32)
             hot_len = 0
+            k_hot_src = v_hot_src = None
+            use_torch_hot = False
         cold_len = sum(int(p.n_tokens) for p in int4_pages)
         if hot_len + cold_len != seq:
             raise ValueError(
@@ -215,8 +282,16 @@ def build_from_packed_cache(
         k_hot = torch.zeros((heads, cap, dim), device=device, dtype=dtype)
         v_hot = torch.zeros((heads, cap, dim), device=device, dtype=dtype)
         if hot_len:
-            k_hot[:, :hot_len, :] = torch.from_numpy(k_np).to(device=device, dtype=dtype)
-            v_hot[:, :hot_len, :] = torch.from_numpy(v_np).to(device=device, dtype=dtype)
+            if use_torch_hot:
+                k_hot[:, :hot_len, :] = k_hot_src
+                v_hot[:, :hot_len, :] = v_hot_src
+            else:
+                k_hot[:, :hot_len, :] = torch.from_numpy(k_np).to(
+                    device=device, dtype=dtype
+                )
+                v_hot[:, :hot_len, :] = torch.from_numpy(v_np).to(
+                    device=device, dtype=dtype
+                )
         buf.k_hot, buf.v_hot = k_hot, v_hot
         buf.hot_len = hot_len
         buf.hot_capacity = cap
@@ -239,14 +314,25 @@ def _fill_cold_scratch(buf: LayerMixedBuffers, *, device: Any, dtype: Any) -> No
         return
     if buf.cold_scratch_valid and buf.k_cold_scratch is not None:
         return
-    k_np, v_np = _dequant_cold_pages(buf.cold_pages)
-    # (heads, tok, dim) → (tok, heads, dim)
-    buf.k_cold_scratch = (
-        torch.from_numpy(k_np).to(device=device, dtype=dtype).permute(1, 0, 2).contiguous()
+    # M2: prefer on-device dequant when packed pages already live on CUDA.
+    use_gpu = any(
+        getattr(p.k_packed, "is_torch", lambda: False)() for p in buf.cold_pages
     )
-    buf.v_cold_scratch = (
-        torch.from_numpy(v_np).to(device=device, dtype=dtype).permute(1, 0, 2).contiguous()
-    )
+    if use_gpu:
+        k_t, v_t = _dequant_cold_pages_torch(
+            buf.cold_pages, device=device, dtype=dtype
+        )
+        # (heads, tok, dim) → (tok, heads, dim)
+        buf.k_cold_scratch = k_t.permute(1, 0, 2).contiguous()
+        buf.v_cold_scratch = v_t.permute(1, 0, 2).contiguous()
+    else:
+        k_np, v_np = _dequant_cold_pages(buf.cold_pages)
+        buf.k_cold_scratch = (
+            torch.from_numpy(k_np).to(device=device, dtype=dtype).permute(1, 0, 2).contiguous()
+        )
+        buf.v_cold_scratch = (
+            torch.from_numpy(v_np).to(device=device, dtype=dtype).permute(1, 0, 2).contiguous()
+        )
     buf.cold_scratch_valid = True
 
 
