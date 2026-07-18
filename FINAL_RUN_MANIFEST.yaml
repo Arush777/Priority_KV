@@ -1,17 +1,13 @@
-# PriorityKV — FINAL RUN MANIFEST (G4 freeze)
-# Frozen: 2026-07-19. Middle-ground close (not LongBench / not publish track).
+# PriorityKV — FINAL RUN MANIFEST (science-core home)
+# Frozen: 2026-07-19. G4 middle-ground + D3 CLOSED + publish-track GPU jobs done.
 # Do not silently retune configs under these job IDs; bump rev + new job if re-running.
 
-schema_rev: 1
-freeze_id: G4_PUBLISH_TRACK_2026_07_19
-status: FROZEN_CORE_PLUS_PUBLISH_JOBS_PENDING
+schema_rev: 2
+freeze_id: SCIENCE_CORE_HOME_2026_07_19
+status: FROZEN_SCIENCE_CORE
 
-# Core middle-ground jobs remain canonical below.
-# Publish-track jobs (fill decisions when done):
-#   pub_a_d4_fp8_compare_gpu01_r1
-#   pub_b_guardrails_gpu5_r1
-#   pub_c_gemma_reduced_gpu5_r1
-# Paper draft: paper/prioritykv_arxiv_draft.md
+# Packaging still open (DeepMind track): arXiv submit, blog publish, upstream PR, outreach.
+# D3 close note: docs/D3_CLOSE.md (cold-scratch peak caveat accepted).
 
 model:
   hub_id: Qwen/Qwen3-8B
@@ -29,9 +25,6 @@ hardware:
   host: dgre2 (H200)
   notes: Friend/COSMOS may share GPUs; canonical jobs used free/shared slots as logged.
 
-# ---------------------------------------------------------------------------
-# Locked claim (use this wording; do not invent a soft-INT4 quality gap)
-# ---------------------------------------------------------------------------
 claim: |
   Uniform KV eviction / missing-state silently corrupts tool schemas and
   instruction hierarchies in long multi-turn agent traces. Structure-aware
@@ -46,10 +39,8 @@ do_not_claim:
   - Uniform INT4 quantization alone collapses PriorityBench quality at int4_frac=0.75
   - Peak CUDA memory ≪ FullKV (FI cold scratch expands INT4→BF16 for attend)
   - Paper-grade LongBench/RULER matrices (out of middle-ground scope)
+  - Gemma matches Qwen lock-240 absolute scores (reduced secondary; Qwen-tuned scorers)
 
-# ---------------------------------------------------------------------------
-# Canonical jobs (artifacts under jobs/results/<id>/)
-# ---------------------------------------------------------------------------
 canonical_jobs:
   reliability_matched_keep:
     note: Structure ≫ uniform at matched keep_frac (family A). Cite prior w3/w4 jobs.
@@ -63,9 +54,6 @@ canonical_jobs:
     config: configs/d4_latency_m3.yaml
     script: scripts/run_d4_latency_dual.py
     gpus: "5,6"
-    highlights:
-      structure_8k: {pack_ms: ~35, cold_ms: ~14, e2e_vs_fullkv: ~1.12x, tpot_vs_fullkv: ~1.20x, score: 1.0}
-      structure_16k: {pack_ms: ~48, cold_ms: ~20, e2e_vs_fullkv: ~1.11x, tpot_vs_fullkv: ~1.21x, score: 0.89}
 
   systems_peak_mem:
     job_id: mg_a_peak_mem_gpu5_r1
@@ -86,29 +74,39 @@ canonical_jobs:
     script: scripts/run_mg_lock240_dual.py
     gpus: "0,1"
     int4_frac: 0.75
-    policies: [full, uniform, structure]
-    wall_seconds: ~1368
     means:
       full: 0.8875
       uniform: 0.8792
       structure: 0.8833
-    by_context:
-      "8000": {full: 1.0, uniform: 1.0, structure: 1.0}
-      "16000": {full: 1.0, uniform: 1.0, structure: 1.0}
-      "32000": {full: 0.645, uniform: 0.618, structure: 0.632}
 
-# ---------------------------------------------------------------------------
-# Repro (H200)
-# ---------------------------------------------------------------------------
+  publish_fp8_compare:
+    job_id: pub_a_d4_fp8_compare_gpu01_r1
+    decision: D4_FP8_COMPARE_PASS
+    script: scripts/run_d4_fp8_compare_dual.py
+    gpus: "0,1"
+
+  publish_guardrails:
+    job_id: pub_b_guardrails_gpu5_r1
+    decision: GUARDRAILS_PUB_PASS
+    script: scripts/run_guardrails_pub.py
+    gpus: "5"
+
+  publish_gemma_reduced:
+    job_id: pub_c_gemma_reduced_gpu01_r6
+    decision: GEMMA_REDUCED_PASS
+    script: scripts/run_gemma_reduced.py
+    gpus: "0,1"
+    means: {full: 0.357, uniform: 0.0, structure: 0.143}
+
 repro:
   clone: /data/anupam/scratch/Priority_KV
   scratch: /data/anupam/scratch/prioritykv
-  worker: scripts/remote_worker.sh  # tmux session pkworker
-  enqueue: jobs/pending/<id>.yaml then git push (author Arush777)
-  pull_results: ./scripts/pull_job.sh --watch <id>
+  worker: scripts/remote_worker.sh
+  d3_close: docs/D3_CLOSE.md
 
 deferred_out_of_scope:
-  - Optional thin RULER/SCBench guardrail re-run (prior W4 Δ=0; not blocking)
+  - Page-streamed INT4 attend without full-layer BF16 cold scratch (post-core)
   - LongBench / RULER full matrices
-  - Workshop paper / blog / outreach / Gemma secondary
-  - vLLM FP8 latency head-to-head beyond S1 quality cite
+  - Nsight roofline (optional polish)
+  - Workshop CFP submit / blog go-live / upstream PR merge / outreach sends
+  - DeepMind interview prep (personal parallel track)

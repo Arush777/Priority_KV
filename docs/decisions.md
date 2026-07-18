@@ -476,6 +476,18 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   PriorityBench scorers are Qwen-oriented. r4 was invalid (full=0 overflow);
   r5 empty selection (no 4k rows).
 
+## 2026-07-19 — D3 CLOSED + science-core HOME
+
+- **D3:** Declared **CLOSED** — packed BF16/INT4 + FI shim decode already landed
+  (`packed_mixed_cache.py`, `fi_mixed_decode.py`, M3c/peak/lock240). See
+  [`docs/D3_CLOSE.md`](D3_CLOSE.md). **Accepted caveat:** cold-scratch peak VRAM.
+- **Science core:** freeze id **`SCIENCE_CORE_HOME_2026_07_19`** in
+  `FINAL_RUN_MANIFEST.yaml`. Publish GPU jobs a/b/c done.
+- **Still open for DeepMind track (packaging, not GPU science):** arXiv submit,
+  blog go-live, upstream PR, outreach, interview prep. Optional post-core:
+  page-streamed INT4 attend without full-layer BF16 scratch.
+- Plan overlay: `docs/IMPLEMENTATION_PLAN.md` D3/D4 marked 🟢.
+
 ## 2026-07-19 — G4 FREEZE (middle-ground close)
 
 - **Status:** **G4 CLOSED** for the middle-ground definition of done.

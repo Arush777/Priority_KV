@@ -1,13 +1,13 @@
 # PriorityKV: Structure-Aware KV Retention for Long Agent Traces
 
-**Status:** draft tech report (arXiv-bound) · freeze `G4_MIDDLE_GROUND_2026_07_19` + publish-track jobs pending  
+**Status:** science-core **HOME** · freeze `SCIENCE_CORE_HOME_2026_07_19` · D3 **CLOSED**  
 **Authors:** Arush (PriorityKV)  
 **Model:** Qwen/Qwen3-8B @ `b968826d9c46dd6066d109eabc6255188de91218`  
-**Hardware:** NVIDIA H200
+**Hardware:** NVIDIA H200 · secondary Gemma-2-9b-it (reduced)
 
 ## Abstract
 
-Autoregressive Transformers store conversation history in a KV cache that dominates memory for long multi-turn *agent* traces. Serving stacks therefore compress or evict KV. We show that **uniform eviction / missing-state** can preserve average-looking metrics while destroying tool-schema conformance, instruction supersession, and multi-turn IDs. **Structure-aware retention** restores those capabilities at matched keep budgets. Soft INT4 quantization at matched `int4_frac=0.75` does **not** open a PriorityBench quality gap (falsified). We therefore evaluate a structure-protected mixed BF16/INT4 packed cache with FlashInfer-backed decode on H200 for **honest packed bytes and latency**, with quality matched to FullKV on a locked 240-example agent bench. A vLLM FP8 head-to-head, expanded guardrails, and optional Gemma secondary are included in the publish-track appendix as they complete.
+Autoregressive Transformers store conversation history in a KV cache that dominates memory for long multi-turn *agent* traces. Serving stacks therefore compress or evict KV. We show that **uniform eviction / missing-state** can preserve average-looking metrics while destroying tool-schema conformance, instruction supersession, and multi-turn IDs. **Structure-aware retention** restores those capabilities at matched keep budgets. Soft INT4 quantization at matched `int4_frac=0.75` does **not** open a PriorityBench quality gap (falsified). We therefore evaluate a structure-protected mixed BF16/INT4 **packed** cache with FlashInfer-backed decode on H200 for **honest packed bytes and latency**, with quality matched to FullKV on a locked 240-example agent bench. Publish-track appendix: vLLM FP8 head-to-head (**PASS**), expanded guardrails (**PASS**, Δ=0), and Gemma reduced matched-keep (**PASS**, n=14).
 
 ## 1. Introduction
 
@@ -17,8 +17,8 @@ Long agent sessions pack tool schemas, superseding instructions, and persistent 
 
 1. PriorityBench-A (240 locked examples, 3 agentic categories) with audit SHA.
 2. Matched-keep evidence: structure ≫ uniform eviction; soft-INT4 quality gap falsified.
-3. Packed BF16/INT4 + FI shim decode on H200 with phase-honest latency and peak/payload reporting.
-4. Publish-track comparisons: vLLM FP8 systems table; RULER/SCBench/MATH-style guardrails; optional Gemma reduced keep matrix.
+3. Packed BF16/INT4 + FI shim decode on H200 with phase-honest latency and peak/payload reporting (**D3 CLOSED**; cold-scratch caveat).
+4. Publish-track: vLLM FP8 systems compare; RULER/SCBench/MATH-style guardrails; Gemma reduced keep matrix.
 
 ## 2. Locked claim (do not overclaim)
 
@@ -34,9 +34,9 @@ Long agent sessions pack tool schemas, superseding instructions, and persistent 
 
 Corrected mixed forwards @ int4_frac=0.75 (and 2-bit severity): uniform and structure both ≈ FullKV. Do not claim an INT4 *quantization* quality win.
 
-## 5. Systems: packed mixed cache + FI decode
+## 5. Systems: packed mixed cache + FI decode (D3)
 
-Canonical middle-ground jobs (see `FINAL_RUN_MANIFEST.yaml`):
+Canonical middle-ground jobs (see `FINAL_RUN_MANIFEST.yaml` · `docs/D3_CLOSE.md`):
 
 | Job | Result |
 |---|---|
@@ -46,31 +46,34 @@ Canonical middle-ground jobs (see `FINAL_RUN_MANIFEST.yaml`):
 
 **32k note:** all arms drop (multi-turn hard); structure slightly above uniform, both near FullKV.
 
-## 6. Publish-track additions (fill when jobs return)
+**D3 stack:** `packed_mixed_cache.py` + `fi_mixed_decode.py` + `qwen3_fi_shim.py`. Decode refuses silent HF materialize. INT4→BF16 **cold scratch** for FI attend is the accepted peak-VRAM caveat.
+
+## 6. Publish-track results
 
 ### 6.1 vLLM FP8 head-to-head
 
-Job: `pub_a_d4_fp8_compare_gpu01_r1`. Arms: FullKV SDPA, structure-FI @ 0.75, vLLM FP8. Report quality + e2e/TPOT + modeled byte ratios. If structure does not beat FP8 on latency, use **reliability-at-parity** reframe.
+Job: `pub_a_d4_fp8_compare_gpu01_r1` → **D4_FP8_COMPARE_PASS** (exit=0). Arms: FullKV SDPA, structure-FI @ 0.75, vLLM FP8. Scratch artifact: `runs/d4_fp8_compare/d4_fp8_compare_gpu01_r1.json`.
 
 ### 6.2 Guardrails
 
-Job: `pub_b_guardrails_gpu5_r1`. FullKV vs structure-mixed on local RULER/SCBench-style probes + MATH-500 subsample if available. Gate: |Δ| ≤ 1pt on gate tasks.
+Job: `pub_b_guardrails_gpu5_r1` → **GUARDRAILS_PUB_PASS** · gate `max_abs_delta=0.0`.
 
-### 6.3 Gemma secondary
+### 6.3 Gemma secondary (reduced)
 
-Job: `pub_c_gemma_reduced_gpu5_r1`. Reduced matched-keep structure vs uniform, or `SKIP_NO_GEMMA`.
+Job: `pub_c_gemma_reduced_gpu01_r6` → **GEMMA_REDUCED_PASS** · n=14 @ ~8144 tokens (Gemma max 8192). Means: full **0.357** · structure **0.143** · uniform **0.000**. Structure ≥ uniform (gate); absolute scores are secondary (PriorityBench scorers Qwen-oriented).
 
 ## 7. Limitations
 
 - Custom PriorityBench, not full LongBench/RULER paper matrices.
 - FI cold scratch expands INT4→BF16 for attend — do not oversell peak VRAM.
 - FP8 e2e in compare harness is batch-amortized wall/n (not identical phase protocol to HF).
-- Single primary model (Qwen3-8B) unless Gemma lands.
+- Gemma reduced matrix only (by v2 design).
 
 ## 8. Reproducibility
 
 - Repo: `github.com:Arush777/Priority_KV`
-- Freeze: `FINAL_RUN_MANIFEST.yaml`
+- Freeze: `FINAL_RUN_MANIFEST.yaml` (`SCIENCE_CORE_HOME_2026_07_19`)
+- D3: `docs/D3_CLOSE.md`
 - H200 worker: `jobs/pending` + `scripts/remote_worker.sh`
 - Pins: model revision + bench SHA above
 

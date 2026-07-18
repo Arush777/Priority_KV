@@ -21,8 +21,8 @@
 | **G2** (end W4) | structure≥3pt or INT4 drop | **CLOSED path (b)** |
 | **G3** (end W6) | Q6/Q7/Q8/P2 ablations | **CLOSED (with negative)** — mid-context: FixedHot **0.125** vs structure/P2 **0.688**; P2==Q7 once position is controlled |
 | **D1 / D2** | Bench + atlas | **🟢** |
-| **D3** | Mixed paged backend | **🟡** role/dtype planner + corrected quality forward; FlashInfer native LSE multicall **PARITY_PASS**; true packed storage not shipping |
-| **D4–D10** | Systems + publish | **⬜** |
+| **D3** | Mixed paged backend | **🟢 CLOSED** — packed storage + FI shim decode; cold-scratch peak caveat accepted (`docs/D3_CLOSE.md`) |
+| **D4–D10** | Systems + publish | **D4 🟢** (M3c+peak+lock240) · publish GPU 🟢 · **D5–D9 packaging ⬜** |
 
 **Do not claim Q2 closed on fake groupwise INT4.** Real Q2 path is green. **Do not claim P2 unique vs FixedHot** on current bury.
 
@@ -81,7 +81,9 @@ These are **not** scope expansions — they are precision updates so the plan ma
 6. **Backend:** multi-call homogeneous paged attention (FlashInfer) + exact LSE
    merge — native-head CUDA parity **PASS** (`w6e_flashinfer_lse_parity_r3`,
    max abs 4.88e-4). CPU **dequant-then-attend** remains the independent oracle.
-   True packed BF16/INT4 storage and scheduling remain open.
+   True packed BF16/INT4 storage **shipped** (`packed_mixed_cache.py`); FI decode via
+   shim (**no** `materialize_hf_past`). Cold-scratch peak caveat accepted — see
+   `docs/D3_CLOSE.md`.
 7. **Serving comparison target:** calibrated vLLM FP8. Beating it at *equal agent quality* at ~30% bytes is the systems win. Reliability-at-parity remains an allowed reframe (G4).
 
 ---
@@ -92,11 +94,11 @@ These are **not** scope expansions — they are precision updates so the plan ma
 |---|---|---|---|
 | D1 | PriorityBench-A: 240 scored ex + generator + audit | End W3 | **🟢 Lock+audit+generator** · manual dual audit open · templates v2 non-leaking |
 | D2 | Failure-atlas tech note + headline figures | End W4 | **🟢** denser 0.15/0.25/0.35 folded (`docs/atlas_w4_structure_rows.jsonl`) · Q2 real INT4 logged |
-| D3 | Mixed-precision paged backend + correctness suite | End W6 | **🟡** page manager / tagging / corrected mixed quality forward · FlashInfer CUDA LSE ✅ · packed storage open |
-| D4 | H200 TTFT/TPOT/throughput + Nsight | End W9 | **⬜** |
-| D5 | Upstream PR | Open W8 | **⬜** |
-| D6 | Workshop paper | Draft W9 | **⬜** (CFP check still due) |
-| D7 | Public blog + repro | W10 | **⬜** |
+| D3 | Mixed-precision paged backend + correctness suite | End W6 | **🟢 CLOSED** (`docs/D3_CLOSE.md`) · cold-scratch caveat |
+| D4 | H200 TTFT/TPOT/throughput + Nsight | End W9 | **🟢** M3c + peak-mem (Nsight optional) |
+| D5 | Upstream PR | Open W8 | **🚧** plan drafted (`docs/UPSTREAM_PR_PLAN.md`) |
+| D6 | Workshop paper | Draft W9 | **🚧** `paper/prioritykv_arxiv_draft.md` |
+| D7 | Public blog + repro | W10 | **🚧** `docs/BLOG_DRAFT.md` |
 | D8 | One-command smoke + full-run script | W10 | **🟡** partial scripts; not one-command clean-machine yet |
 | D9 | Outreach log ≥6 | Continuous | **⬜** |
 | D10 | Pallas/TPU appendix (buffer) | W11–12 | **⬜** conditional |
@@ -223,9 +225,8 @@ Legend: ✅ done · 🚧 in progress / partial · ⏸ deferred with note · ⬜ 
 
 **W5.** ✅ P2 HIT 1.000 · ✅ Q6 FixedHot 1.000 (ties P2 even when buried) · Q7 buried 0.429 · SnapKV LOCK_Q_DROPKEEP · **open:** stronger FixedHot≠P2 discriminator.
 
-**W6.** ✅ FlashInfer 0.6.13 native-head multicall + LSE merge **PARITY_PASS** ·
-✅ corrected split-prefill mixed quality forward · ❌ no INT4 quality separation
-at 4-bit/2-bit @0.75 · packed mixed storage + D4 **open**.
+**W6.** ✅ FlashInfer LSE **PARITY_PASS** · corrected mixed quality · packed storage
+landed · INT4 quality gap falsified · D4 opened then closed via M3c/peak/lock240.
 
 **W5–W6.** G3 closed with an honest negative: mid-context separates
 FixedHot from structure, while P2 does not beat Q7 once position is controlled.
