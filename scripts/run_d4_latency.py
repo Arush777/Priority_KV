@@ -324,8 +324,17 @@ def main() -> int:
         return 0
 
     cfg = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
+    # Dual-GPU parent can restrict shard via env.
+    only_ctx = os.environ.get("PRIORITYKV_ONLY_CONTEXT_LENGTH")
+    if only_ctx:
+        cfg = dict(cfg)
+        sel = dict(cfg.get("selection") or {})
+        sel["context_lengths"] = [int(only_ctx)]
+        cfg["selection"] = sel
+        print(f"[d4] ONLY_CONTEXT_LENGTH={only_ctx}", flush=True)
     bench = json.loads((ROOT / cfg["bench_manifest"]).read_text(encoding="utf-8"))
     rows = select_stress_rows(bench, cfg["selection"])
+    print(f"[d4] selected n={len(rows)} contexts={sorted({int(r['context_length']) for r in rows})}", flush=True)
     examples = materialize_examples(rows, data_root=ROOT / "data" / "prioritybench")
     prompts: list[PromptRow] = []
     for ex in examples:
