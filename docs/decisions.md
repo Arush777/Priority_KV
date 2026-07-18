@@ -348,6 +348,7 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **w8:** confirmed GREEDY_PASS; summary backfilled under `jobs/results/w8_fi_greedy_smoke_r1/`.
 - **w8b GPU5:** GREEDY_PASS in 8.8s on single GPU 5.
 - **w9:** `mixed_kv_run` flashinfer path uses FI shim decode (no materialize); job `w9_mixed_fi_decode_gpu5_r1` on GPU 5 (full/uniform/structure @ 8k n=3).
+- **D4:** `d4_latency_micro_gpu5_r1` enqueued (TTFT/TPOT microbench on GPU 5).
 
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
