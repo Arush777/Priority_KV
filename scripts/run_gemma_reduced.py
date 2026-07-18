@@ -24,7 +24,7 @@ import prioritykv.cxx20_cuda_ext  # noqa: F401
 from prioritykv.baselines.keep_policy import KeepPolicyConfig, select_structure, select_uniform
 from prioritykv.baselines.keep_policy import assign_token_roles
 from prioritykv.bench_pilot import materialize_examples
-from prioritykv.fullkv_compare import PromptRow, _apply_chat
+from prioritykv.fullkv_compare import PromptRow
 from prioritykv.page_roles import PageRole
 from prioritykv.stress_pilot import select_stress_rows
 
@@ -34,6 +34,38 @@ DEFAULT_GEMMA = {
     "revision": None,
     "local_dirname": "gemma-2-9b-it",
 }
+
+
+def _fold_system_for_gemma(messages: list[dict]) -> list[dict]:
+    """Gemma chat templates reject role=system; fold into the first user turn."""
+    out: list[dict] = []
+    sys_bits: list[str] = []
+    for m in messages:
+        role = str(m.get("role") or "user")
+        content = str(m.get("content") or "")
+        if role == "system":
+            if content.strip():
+                sys_bits.append(content)
+            continue
+        if role not in ("user", "assistant"):
+            role = "user"
+        if role == "user" and sys_bits:
+            content = "\n\n".join([*sys_bits, content]) if content else "\n\n".join(sys_bits)
+            sys_bits = []
+        out.append({"role": role, "content": content})
+    if sys_bits:
+        out.insert(0, {"role": "user", "content": "\n\n".join(sys_bits)})
+    if not out:
+        out = [{"role": "user", "content": ""}]
+    return out
+
+
+def _apply_gemma_chat(tokenizer, messages: list[dict]) -> str:
+    return tokenizer.apply_chat_template(
+        _fold_system_for_gemma(messages),
+        tokenize=False,
+        add_generation_prompt=True,
+    )
 
 
 def _resolve_gemma(cfg: dict) -> str | None:
@@ -135,7 +167,7 @@ def main() -> int:
     def _gen(messages, keep_idx):
         import torch
         # Apply chat; then drop tokens not in keep_idx (prompt-level keep)
-        text = _apply_chat(tok, messages)
+        text = _apply_gemma_chat(tok, messages)
         ids = tok(text, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
         n = int(ids.numel())
         if keep_idx is not None:
@@ -151,19 +183,18 @@ def main() -> int:
         return tok.decode(out[0, ids.numel() :], skip_special_tokens=True)
 
     from prioritybench.scoring import score_example
-    from prioritybench.pins import qwen3_chat_template_kwargs
 
-    # Gemma may ignore qwen chat kwargs — use empty
+    # Gemma: no Qwen chat kwargs; roles via folded messages
     chat_kwargs = {}
     t0 = time.time()
     detail = []
     for ex in examples:
-        msgs = list(ex.messages)
+        msgs = _fold_system_for_gemma(list(ex.messages))
         try:
             roles = assign_token_roles(tok, msgs, chat_kwargs=chat_kwargs)
         except Exception:
             roles = [PageRole.FILLER] * 512
-        text = _apply_chat(tok, msgs)
+        text = _apply_gemma_chat(tok, msgs)
         n = len(tok(text, add_special_tokens=False)["input_ids"])
         roles = list(roles)[:n] + [PageRole.RECENT] * max(0, n - len(roles))
         u_idx = select_uniform(n, keep_cfg)
