@@ -3,16 +3,24 @@
 Structure-protected mixed-precision KV cache (BF16/INT4) for long multi-turn agent traces.
 Primary hardware: NVIDIA H200 (`dgre2`).
 
-**Headline claim:** uniform KV compression silently breaks tool schemas / instruction hierarchies in long agent traces even when average accuracy looks fine; PriorityKV keeps structure-critical pages so agent reliability holds at matched byte/keep budgets.
+**One-line point:** Uniform KV *eviction* silently breaks agent tool/instruction/state
+reliability; structure-aware retention fixes that at matched budgets. Soft INT4 does
+**not** open a PriorityBench quality gap — systems value is **packed bytes + honest latency**.
 
-Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) (v2.1 execution overlay) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200 ops: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
+**Science core: HOME** (`SCIENCE_CORE_HOME_2026_07_19`) · D3 **CLOSED**  
+→ Start here: [`RESULTS.md`](RESULTS.md) · freeze: [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) · D3: [`docs/D3_CLOSE.md`](docs/D3_CLOSE.md)
 
-**Status (2026-07-16):** G0–G3 closed · mid-context: structure/P2 **0.688** vs
-FixedHot **0.125** · FlashInfer LSE + packed-page multicall **PARITY_PASS** ·
-true packed BF16/INT4 storage wired (`storage=packed`) · soft INT4/2-bit quality
-gap **falsified** (both 1.000 @0.75) · **missing: FI decode without materialize +
-D4 TTFT/TPOT + paper/PR** · full handoff: [`docs/HANDOFF.md`](docs/HANDOFF.md)
+Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200: [`docs/H200_SETUP.md`](docs/H200_SETUP.md) · Paper draft: [`paper/prioritykv_arxiv_draft.md`](paper/prioritykv_arxiv_draft.md)
 
+### Headline numbers (Qwen3-8B, H200)
+
+| Evidence | Result |
+|---|---|
+| Lock-240 packed quality | full **0.888** · structure **0.883** · uniform **0.879** |
+| Matched keep_frac=0.25 (token) | uniform **0.0** · structure **1.0** |
+| Latency (structure-FI) | e2e ~**1.12×** FullKV · TPOT ~**1.2×** |
+| Payload / peak | payload ~**0.72×** · peak ~**0.87×** (cold-scratch caveat) |
+| Guardrails | Δ=**0** · FP8 compare **PASS** · Gemma reduced **PASS** |
 
 ---
 
@@ -20,63 +28,41 @@ D4 TTFT/TPOT + paper/PR** · full handoff: [`docs/HANDOFF.md`](docs/HANDOFF.md)
 
 | Where | Role |
 |---|---|
-| **Agent machine** (Cursor / IBM CCC) | Write code, CPU tests, push; optionally enqueue `jobs/pending/*.yaml`; `./scripts/fetch_results.sh` |
-| **H200** (`anupam@dgre2` / `169.38.10.80`) | Direct GPU machine — `git pull`, `uv`/`sync.sh --cuda`, run `python scripts/*.py` on GPUs 6,7. No coding agents installed on the box. |
-
-Agents never run *on* the H200. The host is **directly available via SSH** (not a batch queue). `jobs/` + `remote_worker.sh` are optional bookkeeping. **Deps = uv only** — never `pip install` into `.venv`.
+| **Agent machine** (Cursor / IBM CCC) | Write code, CPU tests, push; enqueue `jobs/pending/*.yaml` |
+| **H200** (`anupam@dgre2`) | `git pull`, `uv`/`sync.sh --cuda`, `pkworker` · **max 2 GPUs** · no coding agents on box |
 
 ```bash
-# H200 — one-time bootstrap + worker
-./scripts/sync.sh --cuda          # ≡ uv sync --extra gpu --extra dev
-export CUDA_VISIBLE_DEVICES=6,7
+# H200
+./scripts/sync.sh --cuda
 export PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
-mkdir -p "$PRIORITYKV_SCRATCH/logs"
 tmux new -s pkworker './scripts/remote_worker.sh'
 
-# Agent machine — after push, pull artifacts
-./scripts/fetch_results.sh        # → scratch_mirror/{runs,logs}/
+# Agent — pull job status
+./scripts/pull_job.sh --watch <job_id>
 ```
 
-Job queue docs: [`jobs/README.md`](jobs/README.md) · H200 detail: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
+Job queue: [`jobs/README.md`](jobs/README.md) · H200 detail: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
+
 ---
 
-## Results so far (H200, Qwen3-8B)
+## Results archive
 
-PriorityBench agent-reliability scores (1.0 = programmatic pass). Full evidence in `docs/decisions.md`.
+Full tables and history: [`RESULTS.md`](RESULTS.md) · narrative log: [`docs/decisions.md`](docs/decisions.md).
 
-### Uniform compression is too gentle / wrong stress
+Canonical job IDs live in [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml). Failed experiment jobs under `jobs/failed/` are kept for audit (e.g. early Gemma attempts) — they are **not** the claim.
 
-| Run | Setting | FullKV | FP8 / DropKeep / notes |
-|---|---|---|---|
-| W2 FP8 @ 16k (3-cat) | vLLM FP8 KV | 1.000 | FP8 **1.000** (δ≈0 ≤16k — not the stress) |
-| DropKeep kill | sink+recent ~64× | 1.000 | drop **0.000** (first clear info-loss) |
+---
 
-### Structure at matched keep budget (G2 path b)
+## Dev quickstart (agent box / CPU)
 
-Matched `keep_frac=0.25`, prompt-level then page-level. Arms: uniform / structure / random / keep_all.
+```bash
+git clone git@github.com:Arush777/Priority_KV.git
+cd Priority_KV
+./scripts/sync.sh
+./scripts/check.sh
+```
 
-| Run | Granularity | Full | Uniform | Structure | Random | Keep-all |
-|---|---|---|---|---|---|---|
-| `stress_structured_25_r1` | token | 1.000 | **0.000** | **1.000** | 0.000 | 1.000 |
-| `stress_structured_25_buried_r1` | token + buried gold | 1.000 | 0.000 | **0.429** | 0.000 | 1.000 |
-| `w3_structured_paged_r1` | **page** (16 tok) @0.25 | 1.000 | **0.000** | **0.643** | 0.286 | 1.000 |
-| `w4_structured_paged_015_r1` | page @0.15 | 1.000 | **0.000** | **0.643** | 0.071 | 1.000 |
-| `w4_structured_paged_035_r1` | page @0.35 | 1.000 | **0.000** | **0.643** | 0.429 | 1.000 |
-
-Buried run: structure drops (tool_schema still 1.0; supersession/multi_turn → 0) — scopes the claim to role/length-separable state, not an oracle leak.
-
-### W3 lock
-
-| Item | Value |
-|---|---|
-| Manifest | `data/prioritybench/manifests/w3_lock.json` |
-| Size | 240 examples · 80/category · splits cal/val/test |
-| SHA256 | `fc44b966725738c94008ba61ce57ad7366169b9c0be73074f8161d909ccfae89` |
-| Audit | [`docs/audit_w3.md`](docs/audit_w3.md) PASS · W2d 145 IDs preserved |
-
-### Open — Q2 uniform INT4
-
-**CLOSED (H200 `w3_int4_assert_r4`):** real mode `hf_cache_implementation_quantized`, n=6 scored, int4_mean=1.000, `allow_fake_fallback: false`. JIT fix = force `-std=c++20` via `prioritykv.cxx20_cuda_ext` in the pilot process (see `docs/decisions.md`).
+Git author for pushes: `Arush777 <153831754+Arush777@users.noreply.github.com>`.
 
 Older handoff detail remains in [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md).
 
@@ -123,37 +109,18 @@ tmux new -s pkworker './scripts/remote_worker.sh'   # poll jobs/pending
 
 ## Collaborator / Cursor handoff
 
-1. **[`docs/HANDOFF.md`](docs/HANDOFF.md)** — ground-up status (start here)
-2. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) · [`docs/decisions.md`](docs/decisions.md)
-3. Historical INT4 trail: [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md)
+1. **[`RESULTS.md`](RESULTS.md)** — point of project + metrics (start here)
+2. [`docs/HANDOFF.md`](docs/HANDOFF.md) · [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml)
+3. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) · [`docs/decisions.md`](docs/decisions.md)
 
 ---
 
-## Checklist
+## Checklist (science core)
 
-- [x] Repo pushes; H200 `git pull`
-- [x] CPU smoke / pytest green for W3 refs
-- [x] H200: `uv sync --extra gpu` · Qwen3-8B pinned rev on scratch
-- [x] W2 closed (FP8 flat; DropKeep kill; structure HIT; buried scope)
-- [x] W3 lock + audit SHA256
-- [x] W3 page-level structure pilot (`structure=0.643`)
-- [x] Q2 real quanto INT4 (`w3_int4_assert`) — GREEN on H200 (`hf_cache_implementation_quantized`)
-- [x] Q3 SnapKV ≤4-day attempt or keep DropKeep (loud) — attempt scripted; lock DropKeep if import fails
-- [x] W3 15% dual audit (`docs/audit_w3_dual.md`)
-- [x] W4 guardrails H200 + G2 formal close (path b)
-- [x] W4 confirmatory denser structure sweeps (0.15 / 0.35)
-- [x] FlashInfer CUDA deferred (CPU LSE oracle) · atlas fold for denser sweeps
-- [x] SnapKV matched-byte → LOCK_Q_DROPKEEP (generate incompatible)
-- [ ] W5 P2 structure_risk H200 pilot (`w5_p2_structure_risk_r1`)
-- [x] W5 P2 HIT (structure_risk=1.000 vs structure=0.643)
-- [x] W5 Q6 FixedHot ablation (`w5_q6_fixedhot_r1`) — fixed_hot=1.000 (ties P2 unburied)
-- [x] W6 FlashInfer probe (`w6_flashinfer_probe_r1`) — IMPORT_OK_CUDA_TOUCH v0.6.13
-- [x] W5 buried FixedHot vs P2 (`w5_p2_buried_r1`) — FixedHot=P2=1.000; Q7=0.429
-- [x] W6 FlashInfer LSE parity — r1 illegal head_dim=32; **r3 native merge PASS @128**
-- [x] Harder FixedHot discriminator — mid-context FixedHot 0.125 vs structure/P2 0.688
-- [x] Mixed BF16/INT4 quality-forward scaffold (split-prefill corrected; fake quant)
-- [x] True packed mixed BF16/INT4 storage path (`packed_mixed_cache` + `storage=packed`)
-- [x] FlashInfer packed-page multicall parity (`w6i` / `w6j`, dtype-coalesced)
-- [ ] FlashInfer decode without full KV materialize
-- [ ] H200 D4 TTFT/TPOT/throughput/Nsight
-- [ ] Paper / PR / Gemma / outreach (D5–D9)
+- [x] PriorityBench-A lock-240 + audit
+- [x] Structure ≫ uniform matched-keep (token + page); buried scoped
+- [x] Soft INT4 quality gap falsified @ 0.75
+- [x] Packed BF16/INT4 + FI decode (D3 CLOSED; cold-scratch caveat)
+- [x] Lock-240 / latency M3c / peak-mem canonical jobs
+- [x] Publish GPU: FP8 compare · guardrails · Gemma reduced
+- [ ] arXiv submit · blog · upstream PR · outreach (DeepMind packaging)
