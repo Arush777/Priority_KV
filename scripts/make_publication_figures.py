@@ -3,53 +3,70 @@
 
 The script intentionally uses only the Python standard library. If `rsvg-convert`
 is available, matching PDF files are emitted for LaTeX/arXiv packaging.
+
+Design notes (paper conventions):
+- No in-image titles, subtitles, or footnotes: LaTeX captions carry that text.
+- Result charts show Wilson 95% intervals derived from the canonical counts.
+- Categorical colors are fixed per entity across figures and were validated for
+  color-vision-deficiency separation and lightness/chroma bands on white.
+- Text uses ink tokens, never series colors; grids are recessive hairlines.
 """
 
 from __future__ import annotations
 
 import json
+import math
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Sequence
+from typing import Optional, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "paper" / "figures"
 
-COLORS = {
-    "full": "#2F6B4F",
-    "uniform": "#737B86",
-    "random": "#D18B2C",
-    "structure": "#2673B8",
-    "payload": "#2673B8",
-    "modeled": "#55A868",
-    "peak": "#C44E52",
-    "e2e": "#8172B2",
-    "tpot": "#CC6B35",
-}
+# Ink and chrome tokens (light/print surface).
+SURFACE = "#FFFFFF"
+INK = "#0B0B0B"
+SEC = "#52514E"
+MUTED = "#898781"
+GRID = "#E1E0D9"
+BASELINE = "#C3C2B7"
+
+# Entity colors -- fixed across every figure (CVD-validated in display order).
+C_STRUCT = "#2A78D6"   # structure-aware arm (hero)
+C_FULL = "#008300"     # FullKV / keep-all upper bound
+C_RB = "#E87BA4"       # role-blind / uniform baseline
+C_RAND = "#EDA100"     # random control
+C_INT4 = "#9EC5F4"     # demoted-precision pages (light step of the blue ramp)
+C_ACCENT = "#EB6834"   # limitation accent (cold scratch)
+C_VIOLET = "#4A3AA7"   # constraint role / merge stage
+C_AQUA = "#1BAF7A"     # free-form state role
+C_FILLER = "#D8D7D2"   # filler spans (deliberate de-emphasis, not a series)
+
+FONT = "DejaVu Sans,Arial,sans-serif"
 
 
-def esc(text: object) -> str:
+def esc(text_value: object) -> str:
     return (
-        str(text)
+        str(text_value)
         .replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
 
 
-def text(x: float, y: float, value: object, *, size: int = 22, anchor: str = "middle",
-         weight: int = 400, fill: str = "#20252B") -> str:
+def text(x: float, y: float, value: object, *, size: float = 15, anchor: str = "middle",
+         weight: int = 400, fill: str = SEC) -> str:
     return (
         f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="{anchor}" '
-        f'font-family="DejaVu Sans,Arial,sans-serif" font-size="{size}" '
+        f'font-family="{FONT}" font-size="{size:g}" '
         f'font-weight="{weight}" fill="{fill}">{esc(value)}</text>'
     )
 
 
-def line(x1: float, y1: float, x2: float, y2: float, *, color: str = "#D7DCE1",
-         width: float = 1.5, dash: str | None = None) -> str:
+def line(x1: float, y1: float, x2: float, y2: float, *, color: str = GRID,
+         width: float = 1.0, dash: str | None = None) -> str:
     dashed = f' stroke-dasharray="{dash}"' if dash else ""
     return (
         f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
@@ -57,8 +74,8 @@ def line(x1: float, y1: float, x2: float, y2: float, *, color: str = "#D7DCE1",
     )
 
 
-def arrow(x1: float, y1: float, x2: float, y2: float, *, color: str = "#4E5964",
-          width: float = 2.5) -> str:
+def arrow(x1: float, y1: float, x2: float, y2: float, *, color: str = SEC,
+          width: float = 2.0) -> str:
     return (
         f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
         f'stroke="{color}" stroke-width="{width}" marker-end="url(#arrowhead)"/>'
@@ -66,11 +83,42 @@ def arrow(x1: float, y1: float, x2: float, y2: float, *, color: str = "#4E5964",
 
 
 def rect(x: float, y: float, width: float, height: float, color: str,
-         *, stroke: str = "none") -> str:
+         *, stroke: str = "none", stroke_width: float = 1.0, rx: float = 0.0,
+         opacity: float = 1.0) -> str:
+    extra = f' rx="{rx:.1f}"' if rx else ""
+    if opacity < 1.0:
+        extra += f' fill-opacity="{opacity:.2f}"'
     return (
         f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(0, width):.1f}" '
-        f'height="{max(0, height):.1f}" fill="{color}" stroke="{stroke}"/>'
+        f'height="{max(0, height):.1f}" fill="{color}" stroke="{stroke}" '
+        f'stroke-width="{stroke_width:g}"{extra}/>'
     )
+
+
+def bar(x: float, y_top: float, width: float, height: float, color: str,
+        *, radius: float = 3.0) -> str:
+    """Column with a rounded data-end and a square baseline."""
+    if height <= 0.05:
+        return ""
+    r = min(radius, width / 2, height)
+    y_bot = y_top + height
+    return (
+        f'<path d="M{x:.1f},{y_bot:.1f} L{x:.1f},{y_top + r:.1f} '
+        f'Q{x:.1f},{y_top:.1f} {x + r:.1f},{y_top:.1f} '
+        f'L{x + width - r:.1f},{y_top:.1f} '
+        f'Q{x + width:.1f},{y_top:.1f} {x + width:.1f},{y_top + r:.1f} '
+        f'L{x + width:.1f},{y_bot:.1f} Z" fill="{color}"/>'
+    )
+
+
+def wilson(p: float, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson 95% score interval for a binomial proportion."""
+    if n <= 0:
+        return (p, p)
+    denom = 1.0 + z * z / n
+    center = (p + z * z / (2 * n)) / denom
+    half = z * math.sqrt(p * (1.0 - p) / n + z * z / (4.0 * n * n)) / denom
+    return (max(0.0, center - half), min(1.0, center + half))
 
 
 def svg_document(width: int, height: int, body: Sequence[str], title_value: str) -> str:
@@ -81,8 +129,8 @@ def svg_document(width: int, height: int, body: Sequence[str], title_value: str)
             f'<title id="title">{esc(title_value)}</title>',
             '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" '
             'refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" '
-            'fill="#4E5964"/></marker></defs>',
-            rect(0, 0, width, height, "#FFFFFF"),
+            f'fill="{SEC}"/></marker></defs>',
+            rect(0, 0, width, height, SURFACE),
             *body,
             "</svg>",
         ]
@@ -103,111 +151,132 @@ def write_figure(name: str, svg: str) -> None:
 
 def grouped_bars(
     *,
-    title_value: str,
-    subtitle: str,
+    figure_title: str,
     categories: Sequence[str],
     series: Sequence[tuple[str, Sequence[float], str]],
-    y_max: float,
+    ci_ns: Optional[Sequence[int]],
     y_label: str,
-    note: str,
 ) -> str:
-    width, height = 1200, 700
-    left, right, top, bottom = 115, 40, 120, 125
-    plot_w, plot_h = width - left - right, height - top - bottom
-    body = [text(left, 48, title_value, size=30, anchor="start", weight=700)]
-    body.append(text(left, 82, subtitle, size=18, anchor="start", fill="#56606B"))
+    """Grouped column chart with optional Wilson intervals (one n per category)."""
+    width, height = 1200, 500
+    left, right, top = 92, 24, 40
+    plot_bottom = 408
+    plot_w, plot_h = width - left - right, plot_bottom - top
 
+    body: list[str] = []
+    # Recessive grid and tick labels; solid hairlines only.
     for i in range(6):
-        value = y_max * i / 5
-        y = top + plot_h - plot_h * value / y_max
+        v = i / 5
+        y = plot_bottom - plot_h * v
         body.append(line(left, y, left + plot_w, y))
-        body.append(text(left - 16, y + 7, f"{value:.1f}", size=17, anchor="end", fill="#56606B"))
-    body.append(line(left, top, left, top + plot_h, color="#6D747C", width=2))
-    body.append(line(left, top + plot_h, left + plot_w, top + plot_h, color="#6D747C", width=2))
+        body.append(text(left - 12, y + 5, f"{v:.1f}", size=14, anchor="end", fill=MUTED))
+    body.append(line(left, plot_bottom, left + plot_w, plot_bottom, color=BASELINE, width=1.5))
     body.append(
-        f'<text x="30" y="{top + plot_h / 2:.1f}" transform="rotate(-90 30 '
-        f'{top + plot_h / 2:.1f})" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" '
-        f'font-size="19" fill="#343B43">{esc(y_label)}</text>'
+        f'<text x="28" y="{top + plot_h / 2:.1f}" transform="rotate(-90 28 '
+        f'{top + plot_h / 2:.1f})" text-anchor="middle" font-family="{FONT}" '
+        f'font-size="16" fill="{SEC}">{esc(y_label)}</text>'
     )
 
     group_w = plot_w / len(categories)
-    usable = group_w * 0.76
-    bar_w = usable / len(series)
+    usable = group_w * 0.64
+    slot_w = usable / len(series)
+    bar_w = slot_w - 3.0  # 3px surface gap between adjacent bars
     for ci, category in enumerate(categories):
         group_x = left + ci * group_w + (group_w - usable) / 2
-        for si, (name, values, color) in enumerate(series):
-            value = float(values[ci])
-            bar_h = plot_h * value / y_max
-            x = group_x + si * bar_w + 2
-            y = top + plot_h - bar_h
-            body.append(rect(x, y, bar_w - 5, bar_h, color))
-            body.append(text(x + (bar_w - 5) / 2, y - 9, f"{value:.3f}", size=14))
-        body.append(text(left + (ci + 0.5) * group_w, top + plot_h + 32, category, size=19))
+        n = ci_ns[ci] if ci_ns else 0
+        for si, (_, values, color) in enumerate(series):
+            v = float(values[ci])
+            x = group_x + si * slot_w + 1.5
+            y_top = plot_bottom - plot_h * v
+            body.append(bar(x, y_top, bar_w, plot_h * v, color))
+            label_top = y_top
+            if n:
+                lo, hi = wilson(v, n)
+                y_lo = plot_bottom - plot_h * lo
+                y_hi = plot_bottom - plot_h * hi
+                xc = x + bar_w / 2
+                body.append(line(xc, y_lo, xc, y_hi, color=SEC, width=1.8))
+                body.append(line(xc - 4, y_hi, xc + 4, y_hi, color=SEC, width=1.8))
+                body.append(line(xc - 4, y_lo, xc + 4, y_lo, color=SEC, width=1.8))
+                label_top = min(label_top, y_hi)
+            body.append(
+                text(x + bar_w / 2, label_top - 8, f"{v:.3f}", size=13, fill=SEC)
+            )
+        body.append(text(left + (ci + 0.5) * group_w, plot_bottom + 27, category,
+                         size=17, fill=INK))
 
-    legend_y = height - 65
-    total_legend_w = len(series) * 205
-    legend_x = left + (plot_w - total_legend_w) / 2
-    for si, (name, _, color) in enumerate(series):
-        x = legend_x + si * 205
-        body.append(rect(x, legend_y - 17, 24, 17, color))
-        body.append(text(x + 34, legend_y - 2, name, size=17, anchor="start"))
-    body.append(text(left, height - 18, note, size=15, anchor="start", fill="#606A75"))
-    return svg_document(width, height, body, title_value)
+    # Legend row below the axis labels (identity channel for >= 2 series).
+    entries = [(label, color) for label, _, color in series]
+    entry_w = [22 + 8.6 * len(label) + 26 for label, _ in entries]
+    legend_x = left + (plot_w - sum(entry_w)) / 2
+    legend_y = height - 30
+    for (label, color), w in zip(entries, entry_w, strict=True):
+        body.append(rect(legend_x, legend_y - 13, 15, 15, color, rx=3))
+        body.append(text(legend_x + 22, legend_y - 1, label, size=15, anchor="start",
+                         fill=SEC))
+        legend_x += w
+    return svg_document(width, height, body, figure_title)
 
 
 def reliability_figure() -> None:
-    rows = [json.loads(line) for line in (ROOT / "docs/atlas_w4_structure_rows.jsonl").read_text().splitlines()]
+    rows = [json.loads(row) for row in
+            (ROOT / "docs/atlas_w4_structure_rows.jsonl").read_text().splitlines()]
     manifests = ["w4_structured_paged_015", "w3_structured_paged", "w4_structured_paged_035"]
     methods = ["keep_uniform", "keep_random", "keep_structure", "keep_keep_all"]
-    labels = {"keep_uniform": "Role-blind", "keep_random": "Random", "keep_structure": "Structure", "keep_keep_all": "Keep all"}
-    color_keys = {"keep_uniform": "uniform", "keep_random": "random", "keep_structure": "structure", "keep_keep_all": "full"}
+    labels = {"keep_uniform": "Role-blind", "keep_random": "Random",
+              "keep_structure": "Structure", "keep_keep_all": "Keep all"}
+    colors = {"keep_uniform": C_RB, "keep_random": C_RAND,
+              "keep_structure": C_STRUCT, "keep_keep_all": C_FULL}
     lookup = {(row["manifest_id"], row["method"]): row["score"] for row in rows}
     series = [
-        (labels[method], [lookup[(manifest, method)] for manifest in manifests], COLORS[color_keys[method]])
-        for method in methods
+        (labels[m], [lookup[(manifest, m)] for manifest in manifests], colors[m])
+        for m in methods
     ]
     write_figure(
         "reliability_keep_sweep",
         grouped_bars(
-            title_value="Structure-aware retention preserves agent-critical state",
-            subtitle="Matched 16-token page budgets on the same 14-example Qwen3-8B stress slice",
+            figure_title="Matched keep-budget eviction sweep",
             categories=["15% keep", "25% keep", "35% keep"],
             series=series,
-            y_max=1.0,
+            ci_ns=[14, 14, 14],
             y_label="PriorityBench score",
-            note="The sweep is an ablation over one fixed slice, not three independent replications.",
         ),
     )
 
 
 def quality_figure() -> None:
-    data = json.loads((ROOT / "jobs/results/mg_b_lock240_quality_gpu01_r1/summary.json").read_text())
+    data = json.loads(
+        (ROOT / "jobs/results/mg_b_lock240_quality_gpu01_r1/summary.json").read_text())
     contexts = ["8000", "16000", "32000"]
-    names = [("FullKV", "full", "full"), ("Role-blind INT4", "uniform", "uniform"), ("Structure INT4", "structure", "structure")]
+    names = [("FullKV", "full", C_FULL),
+             ("Role-blind INT4", "uniform", C_RB),
+             ("Structure INT4", "structure", C_STRUCT)]
     series = [
-        (label, [data["by_context"][ctx][key]["mean"] for ctx in contexts], COLORS[color])
+        (label, [data["by_context"][ctx][key]["mean"] for ctx in contexts], color)
         for label, key, color in names
     ]
+    ns = [data["by_context"][ctx]["full"]["n"] for ctx in contexts]
     write_figure(
         "lock240_quality_by_length",
         grouped_bars(
-            title_value="Soft INT4 remains close to FullKV on the locked benchmark",
-            subtitle="Qwen3-8B, int4_frac=0.75; n=83/81/76 for 8k/16k/32k",
+            figure_title="Lock-240 quality by context length",
             categories=["8k", "16k", "32k"],
             series=series,
-            y_max=1.0,
+            ci_ns=ns,
             y_label="PriorityBench score",
-            note="Overall means: FullKV 0.8875, role-blind 0.8792, structure-aware 0.8833 (n=240).",
         ),
     )
 
 
 def systems_figure() -> None:
-    peak = json.loads((ROOT / "jobs/results/mg_a_peak_mem_gpu5_r1/summary.json").read_text())
-    latency = json.loads((ROOT / "jobs/results/d4_latency_m3c_gpu56_r1/summary.json").read_text())
+    peak = json.loads(
+        (ROOT / "jobs/results/mg_a_peak_mem_gpu5_r1/summary.json").read_text())
+    latency = json.loads(
+        (ROOT / "jobs/results/d4_latency_m3c_gpu56_r1/summary.json").read_text())
+    arm = peak["arms"]["mixed_structure_fi_shim"]
     memory_values = [
-        peak["arms"]["mixed_structure_fi_shim"]["compression_ratio_modeled_mean"],
-        peak["arms"]["mixed_structure_fi_shim"]["payload_ratio_measured_mean"],
+        arm["compression_ratio_modeled_mean"],
+        arm["payload_ratio_measured_mean"],
         peak["structure_vs_fullkv_peak_ratio"],
     ]
     ctx = latency["m3"]["ctx_gates"]
@@ -218,176 +287,188 @@ def systems_figure() -> None:
         ctx["16000"]["tpot_ratio"],
     ]
 
-    width, height = 1200, 690
-    body = [text(70, 48, "Packed bytes do not translate directly to peak or latency", size=30, anchor="start", weight=700)]
-    body.append(text(70, 82, "Structure-aware mixed cache relative to FullKV on H200", size=18, anchor="start", fill="#56606B"))
-
+    width, height = 1200, 400
+    y_max = 1.3
+    plot_top, plot_bottom = 56, 330
+    plot_h = plot_bottom - plot_top
     panels = [
-        (70, 130, 500, 430, "Memory ratios (lower is better)", ["Modeled", "Payload", "Peak"], memory_values,
-         [COLORS["modeled"], COLORS["payload"], COLORS["peak"]], 1.30),
-        (640, 130, 500, 430, "Latency ratios (lower is better)", ["E2E 8k", "E2E 16k", "TPOT 8k", "TPOT 16k"], latency_values,
-         [COLORS["e2e"], COLORS["e2e"], COLORS["tpot"], COLORS["tpot"]], 1.30),
+        (86, 470, "KV memory, ratio to FullKV (lower is better)",
+         ["Modeled", "Payload", "Peak"], memory_values, True),
+        (656, 470, "Latency, ratio to FullKV (lower is better)",
+         ["E2E 8k", "E2E 16k", "TPOT 8k", "TPOT 16k"], latency_values, False),
     ]
-    for x0, y0, panel_w, panel_h, panel_title, labels, values, colors, y_max in panels:
-        body.append(text(x0, y0 - 20, panel_title, size=21, anchor="start", weight=700))
-        for i in range(6):
-            value = y_max * i / 5
-            y = y0 + panel_h - panel_h * value / y_max
+    body: list[str] = []
+    for x0, panel_w, panel_title, cat_labels, values, label_parity in panels:
+        body.append(text(x0, 32, panel_title, size=16, anchor="start", weight=600,
+                         fill=INK))
+        for tick in (0.0, 0.25, 0.5, 0.75, 1.25):
+            y = plot_bottom - plot_h * tick / y_max
             body.append(line(x0, y, x0 + panel_w, y))
-            body.append(text(x0 - 12, y + 6, f"{value:.2f}", size=14, anchor="end", fill="#56606B"))
-        parity_y = y0 + panel_h - panel_h / y_max
-        body.append(line(x0, parity_y, x0 + panel_w, parity_y, color="#303840", width=2, dash="8 6"))
-        body.append(line(x0, y0, x0, y0 + panel_h, color="#6D747C", width=2))
-        body.append(line(x0, y0 + panel_h, x0 + panel_w, y0 + panel_h, color="#6D747C", width=2))
+            body.append(text(x0 - 10, y + 5, f"{tick:.2f}", size=13, anchor="end",
+                             fill=MUTED))
+        parity_y = plot_bottom - plot_h * 1.0 / y_max
+        body.append(line(x0, parity_y, x0 + panel_w, parity_y, color=SEC,
+                         width=1.5, dash="7 5"))
+        if label_parity:
+            body.append(text(x0 + panel_w - 2, parity_y - 7, "FullKV parity",
+                             size=13, anchor="end", fill=SEC))
+        body.append(text(x0 - 10, parity_y + 5, "1.00", size=13, anchor="end",
+                         fill=MUTED))
+        body.append(line(x0, plot_bottom, x0 + panel_w, plot_bottom,
+                         color=BASELINE, width=1.5))
         slot = panel_w / len(values)
-        for i, (label, value, color) in enumerate(zip(labels, values, colors, strict=True)):
-            bar_w = slot * 0.58
+        bar_w = min(64.0, slot * 0.52)
+        for i, (label, value) in enumerate(zip(cat_labels, values, strict=True)):
             x = x0 + i * slot + (slot - bar_w) / 2
-            bar_h = panel_h * value / y_max
-            y = y0 + panel_h - bar_h
-            body.append(rect(x, y, bar_w, bar_h, color))
-            body.append(text(x + bar_w / 2, y - 9, f"{value:.3f}x", size=15))
-            body.append(text(x + bar_w / 2, y0 + panel_h + 28, label, size=15))
-        body.append(text(x0 + panel_w - 4, parity_y - 9, "FullKV parity", size=14, anchor="end", fill="#303840"))
-    body.append(text(70, 625, "Measured payload includes packed values and scale metadata; modeled uses ideal 4-bit values.", size=16, anchor="start", fill="#606A75"))
-    body.append(text(70, 652, "Cold INT4 pages expand to BF16 scratch before attention, limiting peak savings and increasing TPOT.", size=16, anchor="start", fill="#606A75"))
-    write_figure("systems_tradeoff", svg_document(width, height, body, "PriorityKV systems tradeoff"))
+            y_top = plot_bottom - plot_h * value / y_max
+            body.append(bar(x, y_top, bar_w, plot_bottom - y_top, C_STRUCT))
+            body.append(text(x + bar_w / 2, y_top - 8, f"{value:.3f}×", size=13,
+                             fill=SEC))
+            body.append(text(x + bar_w / 2, plot_bottom + 26, label, size=15,
+                             fill=INK))
+    write_figure("systems_tradeoff",
+                 svg_document(width, height, body, "PriorityKV systems tradeoff"))
 
 
-def labeled_box(body: list[str], x: float, y: float, width: float, height: float,
-                title_value: str, lines: Sequence[str], *, fill: str, stroke: str) -> None:
-    body.append(
-        f'<rect x="{x:.1f}" y="{y:.1f}" width="{width:.1f}" height="{height:.1f}" '
-        f'rx="6" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
-    )
-    body.append(text(x + width / 2, y + 34, title_value, size=20, weight=700))
+def panel_box(body: list[str], x: float, y: float, width: float, height: float,
+              title_value: str, lines: Sequence[str], *, tint: str | None = None,
+              border: str = BASELINE, border_width: float = 1.5) -> None:
+    body.append(rect(x, y, width, height, SURFACE, stroke=border,
+                     stroke_width=border_width, rx=8))
+    if tint:
+        body.append(rect(x, y, width, height, tint, rx=8, opacity=0.08))
+    body.append(text(x + width / 2, y + 30, title_value, size=17, weight=600,
+                     fill=INK))
     for i, value in enumerate(lines):
-        body.append(text(x + width / 2, y + 66 + i * 25, value, size=15, fill="#3D4650"))
+        body.append(text(x + width / 2, y + 56 + i * 22, value, size=13.5, fill=SEC))
+
+
+def _ink_for(color: str) -> str:
+    """Pick label ink by fill luminance so in-strip labels always read."""
+    r, g, b = (int(color[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return "#FFFFFF" if lum < 0.45 else INK
 
 
 def token_strip(body: list[str], x: float, y: float, width: float, height: float,
-                segments: Sequence[tuple[str, float, str]], *, labels: bool = True) -> None:
+                segments: Sequence[tuple[str, float, str]]) -> None:
     cursor = x
     for label, fraction, color in segments:
-        segment_w = width * fraction
-        body.append(rect(cursor, y, segment_w, height, color, stroke="#FFFFFF"))
-        if labels and segment_w >= 58:
-            body.append(text(cursor + segment_w / 2, y + height / 2 + 6, label, size=13, fill="#FFFFFF", weight=700))
-        cursor += segment_w
-    body.append(
-        f'<rect x="{x:.1f}" y="{y:.1f}" width="{width:.1f}" height="{height:.1f}" '
-        f'fill="none" stroke="#3F4852" stroke-width="1.5"/>'
-    )
+        seg_w = width * fraction
+        body.append(rect(cursor + 1, y, seg_w - 2, height, color))
+        if label and seg_w >= 44:
+            body.append(text(cursor + seg_w / 2, y + height / 2 + 5, label,
+                             size=13, fill=_ink_for(color), weight=600))
+        cursor += seg_w
+    body.append(rect(x, y, width, height, "none", stroke=BASELINE, stroke_width=1.2))
 
 
 def overview_diagram() -> None:
-    width, height = 1400, 830
-    body = [text(60, 50, "PriorityKV: application structure becomes a cache-allocation prior", size=30, anchor="start", weight=700)]
-    body.append(text(60, 84, "Original diagram; visual conventions follow token-strip workflows used by H2O, SnapKV, and KIVI", size=16, anchor="start", fill="#5E6873"))
+    width, height = 1300, 640
+    body: list[str] = []
 
-    body.append(text(70, 145, "Long agent trace", size=20, anchor="start", weight=700))
+    body.append(text(60, 42, "Long agent trace (known message roles)", size=16,
+                     anchor="start", weight=600, fill=INK))
     trace = [
-        ("System", 0.10, "#2F6B4F"),
-        ("Tool schema", 0.14, "#2673B8"),
-        ("Filler", 0.24, "#B7BDC5"),
-        ("Constraint", 0.13, "#C44E52"),
-        ("Filler", 0.20, "#B7BDC5"),
-        ("State", 0.09, "#8172B2"),
-        ("Recent", 0.10, "#D18B2C"),
+        ("System", 0.10, C_FULL),
+        ("Tool schema", 0.14, C_STRUCT),
+        ("Filler", 0.24, C_FILLER),
+        ("Constraint", 0.13, C_VIOLET),
+        ("Filler", 0.20, C_FILLER),
+        ("State", 0.09, C_AQUA),
+        ("Recent", 0.10, C_RAND),
     ]
-    token_strip(body, 70, 170, 1260, 58, trace)
-    body.append(text(70, 252, "Known message roles", size=15, anchor="start", fill="#4E5964"))
+    token_strip(body, 60, 56, 1180, 50, trace)
 
-    labeled_box(body, 80, 320, 300, 155, "Structural tagger",
-                ["role + schema markers", "sink = 16 tokens", "recent = 128 tokens"],
-                fill="#EFF6F2", stroke=COLORS["full"])
-    labeled_box(body, 550, 320, 300, 155, "Matched allocator",
-                ["same keep / INT4 budget", "protect protocol state", "demote filler first"],
-                fill="#EEF5FB", stroke=COLORS["structure"])
-    labeled_box(body, 1020, 320, 300, 155, "Paged KV cache",
-                ["hot pages: BF16", "cold pages: packed INT4", "16-token pages"],
-                fill="#F7F2FA", stroke=COLORS["e2e"])
-    body.append(arrow(380, 397, 550, 397))
-    body.append(arrow(850, 397, 1020, 397))
-    body.append(arrow(230, 228, 230, 320))
+    panel_box(body, 60, 190, 300, 130, "Structural tagger",
+              ["chat role + schema markers", "sink = first 16 tokens",
+               "recent = last 128 tokens"], tint=C_FULL)
+    panel_box(body, 500, 190, 300, 130, "Matched allocator",
+              ["same keep / INT4 budget as", "every baseline arm; protects",
+               "protocol state, demotes filler"], tint=C_STRUCT)
+    panel_box(body, 940, 190, 300, 130, "Paged KV cache",
+              ["16-token pages", "hot pages: BF16",
+               "cold pages: packed INT4"], tint=C_VIOLET)
+    body.append(arrow(210, 106, 210, 190))
+    body.append(arrow(360, 255, 500, 255))
+    body.append(arrow(800, 255, 940, 255))
 
-    body.append(text(70, 555, "Role-blind eviction", size=18, anchor="start", weight=700))
+    body.append(text(60, 396, "Role-blind eviction (sink + recent)", size=15,
+                     anchor="start", weight=600, fill=INK))
     role_blind = [
-        ("Sink", 0.10, "#737B86"),
-        ("Dropped", 0.70, "#E5E7EA"),
-        ("Recent", 0.20, "#737B86"),
+        ("Sink", 0.10, MUTED),
+        ("evicted middle", 0.70, "#EFEEEA"),
+        ("Recent", 0.20, MUTED),
     ]
-    token_strip(body, 70, 575, 540, 55, role_blind)
-    body.append(text(340, 658, "Agent-critical middle state can disappear", size=15, fill="#A33D42", weight=700))
+    token_strip(body, 60, 410, 540, 46, role_blind)
+    body.append(text(60, 486, "agent-critical middle state can be deleted",
+                     size=13.5, anchor="start", fill=SEC))
 
-    body.append(text(790, 555, "Structure-aware mixed cache", size=18, anchor="start", weight=700))
+    body.append(text(700, 396, "Structure-aware mixed cache", size=15,
+                     anchor="start", weight=600, fill=INK))
     mixed = [
-        ("BF16", 0.10, "#2F6B4F"),
-        ("BF16", 0.14, "#2673B8"),
-        ("INT4", 0.24, "#9DC3DF"),
-        ("BF16", 0.13, "#C44E52"),
-        ("INT4", 0.20, "#9DC3DF"),
-        ("BF16", 0.09, "#8172B2"),
-        ("BF16", 0.10, "#D18B2C"),
+        ("", 0.10, C_FULL),
+        ("BF16", 0.14, C_STRUCT),
+        ("INT4", 0.24, C_INT4),
+        ("BF16", 0.13, C_VIOLET),
+        ("INT4", 0.20, C_INT4),
+        ("", 0.09, C_AQUA),
+        ("", 0.10, C_RAND),
     ]
-    token_strip(body, 790, 575, 540, 55, mixed)
-    body.append(text(1060, 658, "All positions retained; precision follows role", size=15, fill="#245F91", weight=700))
+    token_strip(body, 700, 410, 540, 46, mixed)
+    body.append(text(700, 486, "all positions kept; filler demoted to INT4",
+                     size=13.5, anchor="start", fill=SEC))
 
-    body.append(line(60, 715, 1340, 715, color="#CED3D8"))
-    body.append(text(70, 755, "Eviction result", size=17, anchor="start", weight=700))
-    body.append(text(230, 755, "structure >> role-blind at matched keep", size=17, anchor="start", fill=COLORS["structure"]))
-    body.append(text(750, 755, "INT4 result", size=17, anchor="start", weight=700))
-    body.append(text(875, 755, "no quality gap at 75%; evaluate bytes + latency", size=17, anchor="start", fill=COLORS["full"]))
-    body.append(text(70, 800, "The tagger uses prompt metadata, not future attention or benchmark answers.", size=15, anchor="start", fill="#5E6873"))
-    write_figure("prioritykv_overview", svg_document(width, height, body, "PriorityKV overview"))
+    body.append(line(60, 560, 1240, 560, color=GRID))
+    body.append(text(60, 596,
+                     "Conceptual diagram (not measured data). The tagger uses prompt "
+                     "metadata only, never future attention or benchmark answers.",
+                     size=13.5, anchor="start", fill=MUTED))
+    write_figure("prioritykv_overview",
+                 svg_document(width, height, body, "PriorityKV overview"))
 
 
 def decode_diagram() -> None:
-    width, height = 1400, 760
-    body = [text(60, 50, "FlashInfer decode over heterogeneous KV pages", size=30, anchor="start", weight=700)]
-    body.append(text(60, 84, "Original dataflow diagram following the modular system convention used by FlashInfer and KIVI", size=16, anchor="start", fill="#5E6873"))
+    width, height = 1400, 560
+    body: list[str] = []
 
-    labeled_box(body, 65, 165, 250, 145, "Hot cache",
-                ["BF16 protected pages", "+ BF16 decode tail", "GPU resident"],
-                fill="#EFF6F2", stroke=COLORS["full"])
-    labeled_box(body, 65, 430, 250, 145, "Cold cache",
-                ["packed INT4 pages", "+ group scales", "smaller payload"],
-                fill="#EEF5FB", stroke=COLORS["structure"])
+    panel_box(body, 60, 100, 250, 120, "Hot cache",
+              ["BF16 protected pages", "+ BF16 decode tail", "GPU resident"],
+              tint=C_FULL)
+    panel_box(body, 60, 330, 250, 120, "Cold cache",
+              ["packed INT4 pages", "+ per-group scales", "smaller payload"],
+              tint=C_STRUCT)
 
-    labeled_box(body, 470, 430, 250, 145, "Cold scratch",
-                ["dequantize INT4", "to BF16 on GPU", "accepted limitation"],
-                fill="#FFF3EE", stroke=COLORS["tpot"])
-    body.append(arrow(315, 503, 470, 503))
+    panel_box(body, 460, 330, 250, 120, "Cold scratch",
+              ["dequantize INT4 to BF16", "full-layer, transient",
+               "limits peak; adds TPOT"],
+              tint=C_ACCENT, border=C_ACCENT, border_width=2.0)
+    panel_box(body, 460, 100, 250, 120, "FlashInfer attention A",
+              ["query × hot K/V", "partial output + LSE"], tint=None)
+    panel_box(body, 860, 330, 250, 120, "FlashInfer attention B",
+              ["query × cold K/V", "partial output + LSE"], tint=None)
+    panel_box(body, 860, 100, 250, 120, "LSE merge",
+              ["flashinfer.merge_state", "exact softmax over", "hot ∪ cold pages"],
+              tint=C_VIOLET)
+    panel_box(body, 1210, 100, 130, 120, "Decode",
+              ["next-token", "output"], tint=None)
 
-    labeled_box(body, 470, 165, 250, 145, "FI attention A",
-                ["query x hot K/V", "state O_hot", "LSE_hot"],
-                fill="#F2F4F6", stroke="#66717C")
-    labeled_box(body, 865, 430, 250, 145, "FI attention B",
-                ["query x cold K/V", "state O_cold", "LSE_cold"],
-                fill="#F2F4F6", stroke="#66717C")
-    body.append(arrow(315, 237, 470, 237))
-    body.append(arrow(720, 503, 865, 503))
+    body.append(arrow(310, 160, 460, 160))
+    body.append(arrow(310, 390, 460, 390))
+    body.append(arrow(710, 390, 860, 390))
+    body.append(arrow(710, 160, 860, 160))
+    body.append(arrow(985, 330, 985, 220))
+    body.append(arrow(1110, 160, 1210, 160))
 
-    labeled_box(body, 865, 165, 250, 145, "LSE merge",
-                ["flashinfer.merge_state", "combine two chunks", "max abs ~4.88e-4"],
-                fill="#F7F2FA", stroke=COLORS["e2e"])
-    body.append(arrow(720, 237, 865, 237))
-    body.append(arrow(990, 430, 990, 310))
-
-    labeled_box(body, 1205, 165, 150, 145, "Output",
-                ["attention", "state", "decode"],
-                fill="#F6F7F8", stroke="#4E5964")
-    body.append(arrow(1115, 237, 1205, 237))
-
-    body.append(line(60, 640, 1340, 640, color="#CED3D8"))
-    body.append(text(70, 683, "Payload win", size=17, anchor="start", weight=700))
-    body.append(text(205, 683, "0.72x measured", size=17, anchor="start", fill=COLORS["structure"]))
-    body.append(text(520, 683, "Peak limitation", size=17, anchor="start", weight=700))
-    body.append(text(680, 683, "BF16 scratch -> 0.87x peak", size=17, anchor="start", fill=COLORS["peak"]))
-    body.append(text(1030, 683, "TPOT cost", size=17, anchor="start", weight=700))
-    body.append(text(1145, 683, "~1.20x", size=17, anchor="start", fill=COLORS["tpot"]))
-    body.append(text(70, 728, "At most two homogeneous FlashInfer calls per layer; no full Hugging Face cache materialization.", size=15, anchor="start", fill="#5E6873"))
-    write_figure("flashinfer_decode_dataflow", svg_document(width, height, body, "PriorityKV FlashInfer decode dataflow"))
+    body.append(line(60, 490, 1340, 490, color=GRID))
+    body.append(text(60, 524,
+                     "Conceptual diagram (not measured data). At most two homogeneous "
+                     "FlashInfer calls per layer; no full Hugging Face cache is "
+                     "materialized.",
+                     size=13.5, anchor="start", fill=MUTED))
+    write_figure("flashinfer_decode_dataflow",
+                 svg_document(width, height, body,
+                              "PriorityKV FlashInfer decode dataflow"))
 
 
 def main() -> None:
