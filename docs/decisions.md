@@ -455,6 +455,15 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Why no GitHub push:** worker `git push` failed after first job → local commits diverged → perpetual `ff-only merge failed`. Scratch is truth; agent recovered `jobs/status/*.json` + `jobs/done/*.yaml`. Worker push now rebases once on reject; use `scripts/h200_force_push_scratch_jobs.sh` to ship log tails/summaries.
 - Claim discipline unchanged: eviction reliability + bytes/latency; soft-INT4 gap stays falsified.
 
+## 2026-07-19 — Gemma is required (no silent SKIP)
+
+- Prior `pub_c_…gpu5_r1` was **SKIP_NO_GEMMA** in ~9s — **not** a real Gemma run. Full
+  `jobs/results/*` never reached git (push failed); only scratch `.status` was verified.
+- Harness change: missing weights → **FAIL_NO_GEMMA exit 1** unless `--allow-skip`.
+- Requeued **`pub_c_gemma_reduced_gpu01_r2`** on GPUs **0,1**. H200 must have Gemma
+  weights (`$PRIORITYKV_MODELS/gemma-2-9b-it` or HF hub + accepted license + `HF_TOKEN`
+  in `.env`) **before** this job can PASS.
+
 ## 2026-07-19 — G4 FREEZE (middle-ground close)
 
 - **Status:** **G4 CLOSED** for the middle-ground definition of done.
