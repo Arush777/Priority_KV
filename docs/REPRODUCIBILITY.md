@@ -58,6 +58,12 @@ Generate all SVG and PDF figures with:
 uv run python scripts/make_publication_figures.py
 ```
 
+With TeX Live installed, build the paper from `paper/` with:
+
+```bash
+latexmk -pdf -interaction=nonstopmode -halt-on-error prioritykv.tex
+```
+
 The matched-keep sweep figure reads `docs/atlas_w4_structure_rows.jsonl`, whose rows retain
 the original H200 scratch result names. Results without tracked raw bundles are excluded
 from the public evidence table and manuscript claims.
