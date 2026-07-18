@@ -476,8 +476,9 @@ is not merely early-position retention.
   16-token page budgets, same fixed 14-example stress slice at every budget).
   Role-blind sink-and-recent scores $0.000$ at all three keep budgets; random
   retention improves with budget ($0.071 \to 0.429$); structure-aware
-  retention holds $0.643$; keep-all confirms $1.000$ wiring. The sweep is an
-  ablation over one slice, not three independent replications
+  retention holds $0.643$; keep-all confirms $1.000$ wiring. Whiskers are
+  Wilson 95\% intervals for $n{=}14$ and are wide by construction; the sweep
+  is an ablation over one slice, not three independent replications
   (Table~\ref{tab:eviction}).}
   \label{fig:sweep}
 \end{figure}
@@ -528,10 +529,11 @@ must not be pooled into a single ``compression quality'' claim.
   \caption{Measured lock-240 quality by context length (Qwen3-8B,
   \texttt{int4\_frac}${=}0.75$; $n{=}83/81/76$ at 8k/16k/32k). All arms are
   saturated at 8k and 16k; only the 32k stratum separates \fullkv{} (0.645)
-  from role-blind (0.618) and structure-aware (0.632) mixed INT4. Overall
-  means: 0.8875, 0.8792, 0.8833 ($n{=}240$). The arm differences correspond
-  to one or two examples and support a negative (no-separation) conclusion
-  only.}
+  from role-blind (0.618) and structure-aware (0.632) mixed INT4. Whiskers
+  are Wilson 95\% intervals; the overlapping 32k intervals visually support
+  the no-separation conclusion. Overall means: 0.8875, 0.8792, 0.8833
+  ($n{=}240$). The arm differences correspond to one or two examples and
+  support a negative conclusion only.}
   \label{fig:lock240}
 \end{figure}
 
@@ -659,8 +661,9 @@ into a serving scheduler before claiming capacity or throughput gains.
   peak-memory reduction and drives the measured TPOT regression.
 \item \textbf{No cross-run uncertainty.} Per-example timing medians reduce
   local noise, but canonical jobs were not repeated across independent
-  machine runs, and no confidence intervals are reported for the small
-  slices.
+  machine runs. Figure error bars are Wilson 95\% intervals for within-slice
+  binomial uncertainty only; they do not capture run-to-run or slice-to-slice
+  variance.
 \end{enumerate}
 
 \bench{} contains generated tool contracts and synthetic identifiers rather
