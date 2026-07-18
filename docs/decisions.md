@@ -401,6 +401,15 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   1×GPU; no 32k/vLLM this job. Sol also GO (wants FP8/32k later).
 - **Job:** `d4_latency_m3_gpu5_r1` — `--m3-gate` per-ctx pack/cold/e2e/TPOT.
 
+## 2026-07-18 — D4 M3 FAIL → M3b gate fix
+
+- **M3** `D4_M3_GATE_FAIL`: pack/cold/e2e OK; FI TPOT ~28ms stable; FullKV
+  steady ~23ms (M2b's 44ms was cold-start noise). Score 0.89@16k hits FullKV
+  too (bench artifact). Early EOS (~12 tok) undercut fixed-length TPOT.
+- **M3b:** no EOS stop in latency harness; score relative to FullKV;
+  `--tpot-gate-mult 1.25` / `--ttft-gate-mult 1.25`; job on free GPU 5
+  (not GPU 1 — COSMOS resident). Shim ≤1.0 TPOT is a later FI-plan milestone.
+
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
 
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
