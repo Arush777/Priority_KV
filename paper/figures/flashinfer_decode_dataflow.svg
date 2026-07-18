@@ -1,49 +1,56 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" role="img" aria-labelledby="title">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-labelledby="title">
 <title id="title">PriorityKV FlashInfer decode dataflow</title>
-<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#52514E"/></marker></defs>
-<rect x="0.0" y="0.0" width="1400.0" height="560.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
-<rect x="60.0" y="100.0" width="250.0" height="120.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="8.0"/>
-<rect x="60.0" y="100.0" width="250.0" height="120.0" fill="#008300" stroke="none" stroke-width="1" rx="8.0" fill-opacity="0.08"/>
-<text x="185.0" y="130.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="600" fill="#0B0B0B">Hot cache</text>
-<text x="185.0" y="156.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">BF16 protected pages</text>
-<text x="185.0" y="178.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">+ BF16 decode tail</text>
-<text x="185.0" y="200.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">GPU resident</text>
-<rect x="60.0" y="330.0" width="250.0" height="120.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="8.0"/>
-<rect x="60.0" y="330.0" width="250.0" height="120.0" fill="#2A78D6" stroke="none" stroke-width="1" rx="8.0" fill-opacity="0.08"/>
-<text x="185.0" y="360.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="600" fill="#0B0B0B">Cold cache</text>
-<text x="185.0" y="386.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">packed INT4 pages</text>
-<text x="185.0" y="408.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">+ per-group scales</text>
-<text x="185.0" y="430.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">smaller payload</text>
-<rect x="460.0" y="330.0" width="250.0" height="120.0" fill="#FFFFFF" stroke="#EB6834" stroke-width="2" rx="8.0"/>
-<rect x="460.0" y="330.0" width="250.0" height="120.0" fill="#EB6834" stroke="none" stroke-width="1" rx="8.0" fill-opacity="0.08"/>
-<text x="585.0" y="360.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="600" fill="#0B0B0B">Cold scratch</text>
-<text x="585.0" y="386.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">dequantize INT4 to BF16</text>
-<text x="585.0" y="408.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">full-layer, transient</text>
-<text x="585.0" y="430.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">limits peak; adds TPOT</text>
-<rect x="460.0" y="100.0" width="250.0" height="120.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="8.0"/>
-<text x="585.0" y="130.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="600" fill="#0B0B0B">FlashInfer attention A</text>
-<text x="585.0" y="156.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">query × hot K/V</text>
-<text x="585.0" y="178.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">partial output + LSE</text>
-<rect x="860.0" y="330.0" width="250.0" height="120.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="8.0"/>
-<text x="985.0" y="360.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="600" fill="#0B0B0B">FlashInfer attention B</text>
-<text x="985.0" y="386.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">query × cold K/V</text>
-<text x="985.0" y="408.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">partial output + LSE</text>
-<rect x="860.0" y="100.0" width="250.0" height="120.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="8.0"/>
-<rect x="860.0" y="100.0" width="250.0" height="120.0" fill="#4A3AA7" stroke="none" stroke-width="1" rx="8.0" fill-opacity="0.08"/>
-<text x="985.0" y="130.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="600" fill="#0B0B0B">LSE merge</text>
-<text x="985.0" y="156.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">flashinfer.merge_state</text>
-<text x="985.0" y="178.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">exact softmax over</text>
-<text x="985.0" y="200.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">hot ∪ cold pages</text>
-<rect x="1210.0" y="100.0" width="130.0" height="120.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="8.0"/>
-<text x="1275.0" y="130.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="600" fill="#0B0B0B">Decode</text>
-<text x="1275.0" y="156.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">next-token</text>
-<text x="1275.0" y="178.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">output</text>
-<line x1="310.0" y1="160.0" x2="460.0" y2="160.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#arrowhead)"/>
-<line x1="310.0" y1="390.0" x2="460.0" y2="390.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#arrowhead)"/>
-<line x1="710.0" y1="390.0" x2="860.0" y2="390.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#arrowhead)"/>
-<line x1="710.0" y1="160.0" x2="860.0" y2="160.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#arrowhead)"/>
-<line x1="985.0" y1="330.0" x2="985.0" y2="220.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#arrowhead)"/>
-<line x1="1110.0" y1="160.0" x2="1210.0" y2="160.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#arrowhead)"/>
-<line x1="60.0" y1="490.0" x2="1340.0" y2="490.0" stroke="#E1E0D9" stroke-width="1.0"/>
-<text x="60.0" y="524.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#898781">Conceptual diagram (not measured data). At most two homogeneous FlashInfer calls per layer; no full Hugging Face cache is materialized.</text>
+<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#4E5964"/></marker></defs>
+<rect x="0.0" y="0.0" width="1400.0" height="760.0" fill="#FFFFFF" stroke="none"/>
+<text x="60.0" y="50.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="30" font-weight="700" fill="#20252B">FlashInfer decode over heterogeneous KV pages</text>
+<text x="60.0" y="84.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="16" font-weight="400" fill="#5E6873">Original dataflow diagram following the modular system convention used by FlashInfer and KIVI</text>
+<rect x="65.0" y="165.0" width="250.0" height="145.0" rx="6" fill="#EFF6F2" stroke="#2F6B4F" stroke-width="2"/>
+<text x="190.0" y="199.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#20252B">Hot cache</text>
+<text x="190.0" y="231.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">BF16 protected pages</text>
+<text x="190.0" y="256.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">+ BF16 decode tail</text>
+<text x="190.0" y="281.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">GPU resident</text>
+<rect x="65.0" y="430.0" width="250.0" height="145.0" rx="6" fill="#EEF5FB" stroke="#2673B8" stroke-width="2"/>
+<text x="190.0" y="464.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#20252B">Cold cache</text>
+<text x="190.0" y="496.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">packed INT4 pages</text>
+<text x="190.0" y="521.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">+ group scales</text>
+<text x="190.0" y="546.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">smaller payload</text>
+<rect x="470.0" y="430.0" width="250.0" height="145.0" rx="6" fill="#FFF3EE" stroke="#CC6B35" stroke-width="2"/>
+<text x="595.0" y="464.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#20252B">Cold scratch</text>
+<text x="595.0" y="496.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">dequantize INT4</text>
+<text x="595.0" y="521.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">to BF16 on GPU</text>
+<text x="595.0" y="546.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">accepted limitation</text>
+<line x1="315.0" y1="503.0" x2="470.0" y2="503.0" stroke="#4E5964" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+<rect x="470.0" y="165.0" width="250.0" height="145.0" rx="6" fill="#F2F4F6" stroke="#66717C" stroke-width="2"/>
+<text x="595.0" y="199.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#20252B">FI attention A</text>
+<text x="595.0" y="231.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">query x hot K/V</text>
+<text x="595.0" y="256.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">state O_hot</text>
+<text x="595.0" y="281.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">LSE_hot</text>
+<rect x="865.0" y="430.0" width="250.0" height="145.0" rx="6" fill="#F2F4F6" stroke="#66717C" stroke-width="2"/>
+<text x="990.0" y="464.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#20252B">FI attention B</text>
+<text x="990.0" y="496.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">query x cold K/V</text>
+<text x="990.0" y="521.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">state O_cold</text>
+<text x="990.0" y="546.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">LSE_cold</text>
+<line x1="315.0" y1="237.0" x2="470.0" y2="237.0" stroke="#4E5964" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+<line x1="720.0" y1="503.0" x2="865.0" y2="503.0" stroke="#4E5964" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+<rect x="865.0" y="165.0" width="250.0" height="145.0" rx="6" fill="#F7F2FA" stroke="#8172B2" stroke-width="2"/>
+<text x="990.0" y="199.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#20252B">LSE merge</text>
+<text x="990.0" y="231.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">flashinfer.merge_state</text>
+<text x="990.0" y="256.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">combine two chunks</text>
+<text x="990.0" y="281.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">max abs ~4.88e-4</text>
+<line x1="720.0" y1="237.0" x2="865.0" y2="237.0" stroke="#4E5964" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+<line x1="990.0" y1="430.0" x2="990.0" y2="310.0" stroke="#4E5964" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+<rect x="1205.0" y="165.0" width="150.0" height="145.0" rx="6" fill="#F6F7F8" stroke="#4E5964" stroke-width="2"/>
+<text x="1280.0" y="199.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="20" font-weight="700" fill="#20252B">Output</text>
+<text x="1280.0" y="231.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">attention</text>
+<text x="1280.0" y="256.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">state</text>
+<text x="1280.0" y="281.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#3D4650">decode</text>
+<line x1="1115.0" y1="237.0" x2="1205.0" y2="237.0" stroke="#4E5964" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+<line x1="60.0" y1="640.0" x2="1340.0" y2="640.0" stroke="#CED3D8" stroke-width="1.5"/>
+<text x="70.0" y="683.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="700" fill="#20252B">Payload win</text>
+<text x="205.0" y="683.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="400" fill="#2673B8">0.72x measured</text>
+<text x="520.0" y="683.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="700" fill="#20252B">Peak limitation</text>
+<text x="680.0" y="683.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="400" fill="#C44E52">BF16 scratch -&gt; 0.87x peak</text>
+<text x="1030.0" y="683.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="700" fill="#20252B">TPOT cost</text>
+<text x="1145.0" y="683.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="17" font-weight="400" fill="#CC6B35">~1.20x</text>
+<text x="70.0" y="728.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#5E6873">At most two homogeneous FlashInfer calls per layer; no full Hugging Face cache materialization.</text>
 </svg>
