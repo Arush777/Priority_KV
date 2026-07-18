@@ -446,11 +446,11 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 ## 2026-07-19 — Publish-track reopen (GPU jobs overnight)
 
 - **Scope reopen:** arXiv-first publish plan after middle-ground G4.
-- **Enqueued (max 2 GPUs, pair 0,1 only):**
-  1. `pub_a_d4_fp8_compare_gpu01_r1` — FullKV vs vLLM FP8 vs structure-FI
-  2. `pub_b_guardrails_gpu01_r1` — guardrails + MATH subsample (after FP8)
-  3. `pub_c_gemma_reduced_gpu01_r1` — Gemma reduced or `SKIP_NO_GEMMA` (after guardrails)
-- Prior GPU-5 pending jobs cancelled; requeued on **0,1**.
+- **H200 scratch results (git push had failed; worker then ff-only stuck):**
+  1. `pub_a_d4_fp8_compare_gpu01_r1` → **D4_FP8_COMPARE_PASS** (exit=0, GPUs 0,1)
+  2. `pub_b_guardrails_gpu5_r1` → **GUARDRAILS_PUB_PASS** (exit=0; ran stale GPU-5 YAML before cancel landed)
+  3. `pub_c_gemma_reduced_gpu5_r1` → **SKIP_NO_GEMMA** (exit=0; acceptable)
+- **Ops:** H200 `git reset --hard origin/main` + restart `pkworker`. Cancelled redundant pending `pub_b/c_*gpu01*` so they do not re-run; leave `pub_a` pending so worker SKIP-archives and retries status push.
 - Claim discipline unchanged: eviction reliability + bytes/latency; soft-INT4 gap stays falsified.
 
 ## 2026-07-19 — G4 FREEZE (middle-ground close)
