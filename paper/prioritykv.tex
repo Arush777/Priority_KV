@@ -18,7 +18,9 @@
 \usepackage{bookmark}
 \urlstyle{same}
 
-\graphicspath{{figures/}}
+% Resolve figures whether the compile root is paper/ (arXiv, latexmk here)
+% or the repository root (Overleaf project with main doc paper/prioritykv.tex).
+\graphicspath{{figures/}{paper/figures/}{./}}
 
 \hypersetup{
   pdftitle={PriorityKV: A Measurement Study of Structure-Aware KV Retention
