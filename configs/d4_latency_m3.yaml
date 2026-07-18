@@ -1,0 +1,34 @@
+# D4 M3 latency matrix (Fable 2026-07-18): 8k+16k, n=9/ctx, repeats=3 median.
+# Arms: FullKV SDPA vs mixed FI uniform/structure @ int4_frac=0.75.
+# No 32k (max_model_len ceiling). vLLM FP8 deferred to D4b.
+manifest_id: d4_latency_m3
+rev: 1
+buried_state: false
+relocate_middle: true
+relocate_position: 0.5
+bench_manifest: data/prioritybench/manifests/w3_lock.json
+selection:
+  splits: [calibration]
+  context_lengths: [8000, 16000]
+  balance_per_context: true
+  n_tool_schema: 3
+  n_instruction_supersession: 3
+  n_multi_turn_state: 3
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 128
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 16384
+mixed:
+  int4_frac: 0.75
+  sink_tokens: 16
+  recent_window: 128
+  nbits: 4
+  group_size: 32
+  risk_fit_path: configs/linear_risk_fit.json

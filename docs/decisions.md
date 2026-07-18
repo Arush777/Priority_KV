@@ -387,10 +387,22 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   (pack 27s) — per-page launch tax.
 - **Council:** batch gather+quantize once/layer; keep pack≤200 cold≤100;
   relax e2e to ≤1.5× FullKV for M2b; don't ship uniform gate.
-- **M2b:** `build_from_hf_prefill_batched` (≤1 BF16 + ≤1 INT4 page/layer);
-  job `d4_latency_m2b_gpu5_r1`.
+## 2026-07-18 — D4 M2b PASS (batched pack)
+
+- **Job** `d4_latency_m2b_gpu5_r1`: **D4_M2_PASS** (~12s wall).
+- Structure: pack **32ms**, cold **13ms**, decode_ttft **28ms**, e2e **445ms**
+  vs FullKV e2e **437ms** (**1.016×**). TPOT **27 vs 44ms**. Scores 1.0.
+- Uniform similarly fixed (was 27s pack). Per-page loop was the failure mode.
+- **Next:** M3 larger latency matrix (council), then G4 freeze.
+
+## 2026-07-18 — D4 M3 matrix enqueued
+
+- **Council:** Fable GO — ctx {8k,16k}, n=9/ctx, repeats=3 median, 128 tok,
+  1×GPU; no 32k/vLLM this job. Sol also GO (wants FP8/32k later).
+- **Job:** `d4_latency_m3_gpu5_r1` — `--m3-gate` per-ctx pack/cold/e2e/TPOT.
 
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
+
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
   (vs CPU dense **0.000470**); CPU multicall oracle error `1.35e-9`.
   **PARITY_PASS.** The prior 0.085 error was entirely the LSE contract mismatch.

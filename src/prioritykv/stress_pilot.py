@@ -23,26 +23,41 @@ from prioritykv.fullkv_compare import PromptRow, resolve_model_path
 
 
 def select_stress_rows(bench: dict[str, Any], sel: dict[str, Any]) -> list[dict[str, Any]]:
-    """Pool calibration+validation; prefer multi_turn across 8k/16k."""
+    """Pool calibration+validation; prefer multi_turn across selected lengths.
+
+    If ``balance_per_context`` is true, take n_* per category **for each**
+    context length (M3 latency matrix).
+    """
     splits = set(sel.get("splits", ["calibration", "validation"]))
-    lengths = set(int(x) for x in sel.get("context_lengths", [8000, 16000]))
+    lengths = [int(x) for x in sel.get("context_lengths", [8000, 16000])]
+    length_set = set(lengths)
     pool = [
         e
         for e in bench["examples"]
-        if e["split"] in splits and int(e["context_length"]) in lengths
+        if e["split"] in splits and int(e["context_length"]) in length_set
     ]
-    tools = [e for e in pool if e["category"] == "tool_schema"]
-    supers = [e for e in pool if e["category"] == "instruction_supersession"]
-    multi = [e for e in pool if e["category"] == "multi_turn_state"]
-    # Prefer longer contexts within each list (16k before 8k).
-    multi.sort(key=lambda e: -int(e["context_length"]))
-    supers.sort(key=lambda e: -int(e["context_length"]))
-    tools.sort(key=lambda e: -int(e["context_length"]))
-    chosen = (
-        multi[: int(sel.get("n_multi_turn_state", 8))]
-        + supers[: int(sel.get("n_instruction_supersession", 4))]
-        + tools[: int(sel.get("n_tool_schema", 2))]
-    )
+    n_multi = int(sel.get("n_multi_turn_state", 8))
+    n_super = int(sel.get("n_instruction_supersession", 4))
+    n_tool = int(sel.get("n_tool_schema", 2))
+    balance = bool(sel.get("balance_per_context", False))
+
+    def _pick(pool_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        tools = [e for e in pool_rows if e["category"] == "tool_schema"]
+        supers = [e for e in pool_rows if e["category"] == "instruction_supersession"]
+        multi = [e for e in pool_rows if e["category"] == "multi_turn_state"]
+        multi.sort(key=lambda e: -int(e["context_length"]))
+        supers.sort(key=lambda e: -int(e["context_length"]))
+        tools.sort(key=lambda e: -int(e["context_length"]))
+        return multi[:n_multi] + supers[:n_super] + tools[:n_tool]
+
+    if balance:
+        chosen: list[dict[str, Any]] = []
+        for L in lengths:
+            sub = [e for e in pool if int(e["context_length"]) == L]
+            chosen.extend(_pick(sub))
+    else:
+        # Prefer longer contexts within each list (16k before 8k).
+        chosen = _pick(pool)
     if not chosen:
         raise ValueError("no stress examples matched selection")
     return chosen

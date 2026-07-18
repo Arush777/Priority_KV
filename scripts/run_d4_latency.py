@@ -57,6 +57,32 @@ def _mean(xs: list[float | None]) -> float | None:
     return sum(vals) / len(vals) if vals else None
 
 
+def _median(xs: list[float | None]) -> float | None:
+    vals = sorted(float(x) for x in xs if x is not None)
+    if not vals:
+        return None
+    mid = len(vals) // 2
+    if len(vals) % 2:
+        return vals[mid]
+    return 0.5 * (vals[mid - 1] + vals[mid])
+
+
+def _arm_summary(rs: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "n": len(rs),
+        "prefill_ms_mean": _mean([r.get("prefill_ms") for r in rs]),
+        "pack_ms_mean": _mean([r.get("pack_ms") for r in rs]),
+        "cold_scratch_ms_mean": _mean([r.get("cold_scratch_ms") for r in rs]),
+        "decode_ttft_ms_mean": _mean([r.get("decode_ttft_ms") for r in rs]),
+        "e2e_ttft_ms_mean": _mean([r.get("e2e_ttft_ms") for r in rs]),
+        "tpot_ms_mean": _mean([r.get("tpot_ms") for r in rs]),
+        "tokens_per_s_mean": _mean([r.get("tokens_per_s") for r in rs]),
+        "score_mean": _mean([r.get("score") for r in rs]),
+        "int4_tokens_mean": _mean([r.get("int4_tokens") for r in rs]),
+        "payload_bytes_mean": _mean([r.get("payload_bytes") for r in rs]),
+    }
+
+
 def _timed_decode_fullkv(model, tok, ids, *, max_new_tokens: int) -> dict[str, Any]:
     import torch
 
@@ -265,11 +291,15 @@ def main() -> int:
     ap.add_argument("--out-tag", default="m1_r1")
     ap.add_argument("--max-new-tokens", type=int, default=32)
     ap.add_argument("--warmup", type=int, default=1)
+    ap.add_argument("--repeats", type=int, default=1, help="Timed repeats/example; median timings")
     ap.add_argument("--ttft-gate-mult", type=float, default=3.0)
     ap.add_argument("--m2-gate", action="store_true", help="Apply Fable M2 pack/cold/e2e gates")
+    ap.add_argument("--m3-gate", action="store_true", help="Apply Fable M3 per-ctx gates")
     ap.add_argument("--pack-ms-max", type=float, default=200.0)
     ap.add_argument("--cold-ms-max", type=float, default=100.0)
     ap.add_argument("--e2e-gate-mult", type=float, default=1.15)
+    ap.add_argument("--pack-ms-max-16k", type=float, default=400.0)
+    ap.add_argument("--cold-ms-max-16k", type=float, default=200.0)
     args = ap.parse_args()
 
     scratch = Path(os.environ.get("PRIORITYKV_SCRATCH", ROOT / "runs"))
@@ -378,34 +408,67 @@ def main() -> int:
     rows_out: list[dict[str, Any]] = []
     torch.cuda.reset_peak_memory_stats(torch.device("cuda:0"))
     t_wall0 = time.time()
+    repeats = max(1, int(args.repeats))
+    timing_keys = (
+        "prefill_ms",
+        "pack_ms",
+        "cold_scratch_ms",
+        "decode_ttft_ms",
+        "e2e_ttft_ms",
+        "tpot_ms",
+        "tokens_per_s",
+        "ttft_ms",
+    )
+
+    def _run_arm(kind: str, *, policy: str | None = None) -> dict[str, Any]:
+        reps: list[dict[str, Any]] = []
+        for _ in range(repeats):
+            if kind == "fullkv":
+                reps.append(
+                    _timed_decode_fullkv(model, tok, ids, max_new_tokens=max_new)
+                )
+            else:
+                assert policy is not None
+                reps.append(
+                    _timed_decode_fi(
+                        model,
+                        tok,
+                        ids,
+                        roles=roles,
+                        plan_cfg=plan_cfg,
+                        policy=policy,
+                        int4_cfg=int4_cfg,
+                        max_new_tokens=max_new,
+                    )
+                )
+        out = dict(reps[-1])
+        for k in timing_keys:
+            out[k] = _median([r.get(k) for r in reps])
+        out["repeats"] = repeats
+        out["example_id"] = prompt.id
+        out["prompt_tokens"] = int(ids.numel())
+        out["context_length"] = int(getattr(ex, "context_length", 0) or 0)
+        if not out["context_length"]:
+            # Fallback: parse from example_id …__c8000__…
+            for part in str(prompt.id).split("__"):
+                if part.startswith("c") and part[1:].isdigit():
+                    out["context_length"] = int(part[1:])
+                    break
+        out["score"] = float(score_example(ex, out["text"]))
+        out["category"] = getattr(ex, "category", None)
+        return out
+
     for prompt, ex in zip(prompts, examples, strict=True):
         ids = _ids_for(prompt)
         roles = assign_token_roles(tok, prompt.messages, chat_kwargs=chat_kwargs)
 
-        full = _timed_decode_fullkv(model, tok, ids, max_new_tokens=max_new)
-        full["example_id"] = prompt.id
-        full["prompt_tokens"] = int(ids.numel())
-        full["score"] = float(score_example(ex, full["text"]))
+        full = _run_arm("fullkv")
         rows_out.append(full)
-
         for policy in ("uniform", "structure"):
-            fi = _timed_decode_fi(
-                model,
-                tok,
-                ids,
-                roles=roles,
-                plan_cfg=plan_cfg,
-                policy=policy,
-                int4_cfg=int4_cfg,
-                max_new_tokens=max_new,
-            )
-            fi["example_id"] = prompt.id
-            fi["prompt_tokens"] = int(ids.numel())
-            fi["score"] = float(score_example(ex, fi["text"]))
-            rows_out.append(fi)
+            rows_out.append(_run_arm("fi", policy=policy))
         print(
-            f"[d4/m1] {prompt.id} full_dec_ttft={full['decode_ttft_ms']:.1f}ms "
-            f"struct will follow in arms",
+            f"[d4] {prompt.id} ctx={full.get('context_length')} "
+            f"full_e2e={full.get('e2e_ttft_ms'):.1f}ms repeats={repeats}",
             flush=True,
         )
 
@@ -414,20 +477,17 @@ def main() -> int:
     for r in rows_out:
         by_arm.setdefault(r["arm"], []).append(r)
 
-    summary_arms = {}
-    for arm, rs in by_arm.items():
-        summary_arms[arm] = {
-            "n": len(rs),
-            "prefill_ms_mean": _mean([r.get("prefill_ms") for r in rs]),
-            "pack_ms_mean": _mean([r.get("pack_ms") for r in rs]),
-            "cold_scratch_ms_mean": _mean([r.get("cold_scratch_ms") for r in rs]),
-            "decode_ttft_ms_mean": _mean([r.get("decode_ttft_ms") for r in rs]),
-            "e2e_ttft_ms_mean": _mean([r.get("e2e_ttft_ms") for r in rs]),
-            "tpot_ms_mean": _mean([r.get("tpot_ms") for r in rs]),
-            "tokens_per_s_mean": _mean([r.get("tokens_per_s") for r in rs]),
-            "score_mean": _mean([r.get("score") for r in rs]),
-            "int4_tokens_mean": _mean([r.get("int4_tokens") for r in rs]),
-        }
+    summary_arms = {arm: _arm_summary(rs) for arm, rs in by_arm.items()}
+
+    # Per-context summaries (M3).
+    by_ctx: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    for r in rows_out:
+        ctx = str(int(r.get("context_length") or 0))
+        by_ctx.setdefault(ctx, {}).setdefault(r["arm"], []).append(r)
+    summary_by_ctx = {
+        ctx: {arm: _arm_summary(rs) for arm, rs in arms.items()}
+        for ctx, arms in by_ctx.items()
+    }
 
     full_dec = summary_arms.get("fullkv_sdpa", {}).get("decode_ttft_ms_mean")
     struct = summary_arms.get("mixed_structure_fi_shim", {})
@@ -436,16 +496,90 @@ def main() -> int:
     struct_e2e = struct.get("e2e_ttft_ms_mean")
     struct_pack = struct.get("pack_ms_mean")
     struct_cold = struct.get("cold_scratch_ms_mean")
+    struct_tpot = struct.get("tpot_ms_mean")
+    full_tpot = summary_arms.get("fullkv_sdpa", {}).get("tpot_ms_mean")
     no_mat = all(not r.get("used_materialize_hf_past") for r in rows_out)
     ttft_ratio = (struct_dec / full_dec) if full_dec and struct_dec else None
     e2e_ratio = (struct_e2e / full_e2e) if full_e2e and struct_e2e else None
+    tpot_ratio = (struct_tpot / full_tpot) if full_tpot and struct_tpot else None
     ttft_gate = (
         ttft_ratio is not None and ttft_ratio <= float(args.ttft_gate_mult)
     )
     m2_pack_ok = struct_pack is not None and struct_pack <= float(args.pack_ms_max)
     m2_cold_ok = struct_cold is not None and struct_cold <= float(args.cold_ms_max)
     m2_e2e_ok = e2e_ratio is not None and e2e_ratio <= float(args.e2e_gate_mult)
-    if args.m2_gate:
+
+    m3_ctx_gates: dict[str, Any] = {}
+    m3_all_ok = True
+    if args.m3_gate:
+        for ctx, arms in summary_by_ctx.items():
+            L = int(ctx)
+            pack_lim = float(args.pack_ms_max if L <= 8000 else args.pack_ms_max_16k)
+            cold_lim = float(args.cold_ms_max if L <= 8000 else args.cold_ms_max_16k)
+            full_c = arms.get("fullkv_sdpa", {})
+            st_c = arms.get("mixed_structure_fi_shim", {})
+            dec_r = (
+                (st_c.get("decode_ttft_ms_mean") / full_c.get("decode_ttft_ms_mean"))
+                if full_c.get("decode_ttft_ms_mean") and st_c.get("decode_ttft_ms_mean")
+                else None
+            )
+            e2e_r = (
+                (st_c.get("e2e_ttft_ms_mean") / full_c.get("e2e_ttft_ms_mean"))
+                if full_c.get("e2e_ttft_ms_mean") and st_c.get("e2e_ttft_ms_mean")
+                else None
+            )
+            tpot_r = (
+                (st_c.get("tpot_ms_mean") / full_c.get("tpot_ms_mean"))
+                if full_c.get("tpot_ms_mean") and st_c.get("tpot_ms_mean")
+                else None
+            )
+            pack_ok = st_c.get("pack_ms_mean") is not None and st_c["pack_ms_mean"] <= pack_lim
+            cold_ok = (
+                st_c.get("cold_scratch_ms_mean") is not None
+                and st_c["cold_scratch_ms_mean"] <= cold_lim
+            )
+            dec_ok = dec_r is not None and dec_r <= 1.1
+            e2e_ok = e2e_r is not None and e2e_r <= float(args.e2e_gate_mult)
+            tpot_ok = tpot_r is not None and tpot_r <= 1.0
+            score_ok = (st_c.get("score_mean") or 0) >= 0.99 and (
+                full_c.get("score_mean") or 0
+            ) >= 0.99
+            ctx_ok = bool(
+                pack_ok and cold_ok and dec_ok and e2e_ok and tpot_ok and score_ok
+            )
+            m3_all_ok = m3_all_ok and ctx_ok
+            m3_ctx_gates[ctx] = {
+                "pack_lim": pack_lim,
+                "cold_lim": cold_lim,
+                "pack_ok": pack_ok,
+                "cold_ok": cold_ok,
+                "decode_ttft_ratio": dec_r,
+                "e2e_ratio": e2e_r,
+                "tpot_ratio": tpot_r,
+                "decode_ok": dec_ok,
+                "e2e_ok": e2e_ok,
+                "tpot_ok": tpot_ok,
+                "score_ok": score_ok,
+                "pass": ctx_ok,
+                "structure": {
+                    "pack_ms": st_c.get("pack_ms_mean"),
+                    "cold_ms": st_c.get("cold_scratch_ms_mean"),
+                    "e2e_ms": st_c.get("e2e_ttft_ms_mean"),
+                    "tpot_ms": st_c.get("tpot_ms_mean"),
+                    "score": st_c.get("score_mean"),
+                },
+            }
+
+    if args.m3_gate:
+        if no_mat and m3_all_ok:
+            decision = "D4_M3_PASS"
+        elif no_mat:
+            decision = "D4_M3_GATE_FAIL"
+        else:
+            decision = "D4_M3_FAIL"
+        pass_ok = decision == "D4_M3_PASS"
+        job_name = "d4_latency_m3"
+    elif args.m2_gate:
         if no_mat and ttft_gate and m2_pack_ok and m2_cold_ok and m2_e2e_ok:
             decision = "D4_M2_PASS"
         elif no_mat and ttft_gate:
@@ -473,8 +607,10 @@ def main() -> int:
         "pass": pass_ok,
         "ttft_gate_mult": args.ttft_gate_mult,
         "m2_gate": bool(args.m2_gate),
+        "m3_gate": bool(args.m3_gate),
         "decode_ttft_ratio_structure_vs_full": ttft_ratio,
         "e2e_ttft_ratio_structure_vs_full": e2e_ratio,
+        "tpot_ratio_structure_vs_full": tpot_ratio,
         "m2": {
             "pack_ms_max": args.pack_ms_max,
             "cold_ms_max": args.cold_ms_max,
@@ -485,17 +621,20 @@ def main() -> int:
             "structure_pack_ms": struct_pack,
             "structure_cold_ms": struct_cold,
         },
+        "m3": {"ctx_gates": m3_ctx_gates, "all_ok": m3_all_ok if args.m3_gate else None},
         "n_examples": len(prompts),
         "max_new_tokens": max_new,
         "warmup": args.warmup,
+        "repeats": repeats,
         "arms": summary_arms,
+        "by_context": summary_by_ctx,
         "cuda_peak_bytes": peak,
         "device": torch.cuda.get_device_name(0),
         "seconds": round(time.time() - t_wall0, 3),
         "rows": rows_out,
         "note": (
-            "M2 GPU pack/dequant when past is CUDA; phases timed; "
-            "e2e_ttft = prefill+pack+cold+decode."
+            "M3: median over --repeats; e2e=prefill+pack+cold+decode; "
+            "batched GPU pack (M2b)."
         ),
     }
     out_path.write_text(json.dumps(result, indent=2, default=str) + "\n")
@@ -506,17 +645,20 @@ def main() -> int:
                 "pass": result["pass"],
                 "decode_ttft_ratio_structure_vs_full": ttft_ratio,
                 "e2e_ttft_ratio_structure_vs_full": e2e_ratio,
-                "m2": result["m2"],
-                "arms": {
-                    k: {
-                        "decode_ttft_ms_mean": v.get("decode_ttft_ms_mean"),
-                        "e2e_ttft_ms_mean": v.get("e2e_ttft_ms_mean"),
-                        "pack_ms_mean": v.get("pack_ms_mean"),
-                        "cold_scratch_ms_mean": v.get("cold_scratch_ms_mean"),
-                        "tpot_ms_mean": v.get("tpot_ms_mean"),
-                        "score_mean": v.get("score_mean"),
+                "tpot_ratio_structure_vs_full": tpot_ratio,
+                "m3": result["m3"],
+                "by_context": {
+                    ctx: {
+                        arm: {
+                            "e2e_ttft_ms_mean": v.get("e2e_ttft_ms_mean"),
+                            "pack_ms_mean": v.get("pack_ms_mean"),
+                            "cold_scratch_ms_mean": v.get("cold_scratch_ms_mean"),
+                            "tpot_ms_mean": v.get("tpot_ms_mean"),
+                            "score_mean": v.get("score_mean"),
+                        }
+                        for arm, v in arms.items()
                     }
-                    for k, v in summary_arms.items()
+                    for ctx, arms in summary_by_ctx.items()
                 },
                 "seconds": result["seconds"],
             },
