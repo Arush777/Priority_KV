@@ -4,14 +4,14 @@ rev: 1
 bench_manifest: data/prioritybench/manifests/w3_lock.json
 selection:
   splits: [calibration]
-  context_lengths: [4000]
+  context_lengths: [8000]
   n_tool_schema: 4
   n_instruction_supersession: 4
   n_multi_turn_state: 6
 model:
   hub_id: google/gemma-2-9b-it
   local_dirname: gemma-2-9b-it
-  # Gemma-2-9b-it context is 8192; 8k PriorityBench rows overflow after chat template.
+  # Bench only has 8k/16k/32k; Gemma max_pos=8192 — script truncates to prompt_budget.
 decode:
   max_new_tokens: 32
 keep_frac: 0.25
