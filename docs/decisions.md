@@ -469,6 +469,12 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   `pub_c_gemma_reduced_gpu01_r3`.
 - **Weights ready on H200:** `/data/anupam/scratch/models/gemma-2-9b-it` (config.json OK).
   Enqueued **`pub_c_gemma_reduced_gpu01_r3`** on GPUs **0,1**.
+- **Canonical Gemma result:** `pub_c_gemma_reduced_gpu01_r6` → **GEMMA_REDUCED_PASS**
+  (exit=0, on git). n=14 @ ~8144 tok (truncated to Gemma 8192). Means:
+  full **0.357** · uniform **0.000** · structure **0.143**. Structure ≥ uniform
+  (gate); structure still well below FullKV — secondary model signal only;
+  PriorityBench scorers are Qwen-oriented. r4 was invalid (full=0 overflow);
+  r5 empty selection (no 4k rows).
 
 ## 2026-07-19 — G4 FREEZE (middle-ground close)
 
