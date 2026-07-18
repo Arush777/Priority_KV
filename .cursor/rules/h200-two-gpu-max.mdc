@@ -1,0 +1,11 @@
+---
+description: H200 compute limits — max 2 GPUs, disk unconstrained
+alwaysApply: true
+---
+
+# H200 resource hard limits (PriorityKV)
+
+- **GPUs: maximum 2 at a time.** Never enqueue or run jobs with 3+ GPUs (`gpus: "5,6,7"` is forbidden). Prefer one dual-GPU job (`"0,1"` or `"5,6"`) or a single GPU. Shared box — do not hog.
+- **Disk / scratch: effectively unconstrained.** Prefer writing large logs and JSON under `$PRIORITYKV_SCRATCH` (`/data/anupam/scratch/prioritykv`); do not refuse work for disk concerns unless the filesystem is actually full.
+- Job YAMLs: `gpus` field must list at most two device IDs.
+- If a dual wave needs three context lengths (8k/16k/32k), use **2-GPU wave then sequential** — never three parallel GPUs.

@@ -4,15 +4,20 @@ Develop + enqueue jobs from the agent machine. On this host: sync env once, run 
 
 **Hard rule:** Do **not** run Cursor, Claude Code, Codex, or any coding agent on `dgre2`. Humans (or `pkworker`) only: `git pull`, `uv`/`sync.sh`, allowlisted `python scripts/*.py`. Agent IDEs stay on the laptop/CCC box; GPU work is queue-driven.
 
-## Two-GPU rule
+## Two-GPU rule (HARD)
 
-Shared box has 8× H200. We only use **two**. Default in `.env`:
+Shared box has 8× H200. **Maximum 2 GPUs at a time — never 3+.**  
+Default / freest pairs are often `0,1` or `5,6` (check `nvidia-smi`; friends may hold others).
 
 ```bash
-CUDA_VISIBLE_DEVICES=6,7
+CUDA_VISIBLE_DEVICES=0,1   # or 5,6 — at most TWO ids
 ```
 
-Change only if 6/7 are busy. All run scripts load this via `scripts/_env.sh`.
+Job YAMLs: `gpus` must list ≤2 device IDs. For 8k∥16k∥32k: dual-GPU wave then sequential — never three parallel GPUs.
+
+**Disk / scratch: unconstrained** for PriorityKV. Put large logs/JSON under `$PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv` (not home quota).
+
+Change only if your pair is busy. All run scripts load CUDA devices via `scripts/_env.sh` / job `gpus:`.
 
 ## Remote job worker (preferred)
 
