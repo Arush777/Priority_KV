@@ -1,0 +1,8 @@
+{
+  "decision": "FAIL_NO_GEMMA",
+  "pass": false,
+  "error": "You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-2-9b-it.\n403 Client Error. (Request ID: Root=1-6a5be99c-51c96fba07c5c77a388b786a;38deee39-0ba2-44d8-8bd4-b467ffee1454)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-2-9b-it/resolve/main/config.json.\nAccess to model google/gemma-2-9b-it is restricted and you are not in the authorized list. Visit https://huggingface.co/google/gemma-2-9b-it to ask for access.",
+  "hub_id": "google/gemma-2-9b-it",
+  "model_id_attempted": "google/gemma-2-9b-it",
+  "note": "Gemma required \u2014 accept HF license, set HF_TOKEN, or place weights under $PRIORITYKV_MODELS/gemma-2-9b-it (or HF hub cache)."
+}
