@@ -1,0 +1,114 @@
+{
+  "decision": "GEMMA_REDUCED_PASS",
+  "pass": true,
+  "hub_id": "google/gemma-2-9b-it",
+  "n": 14,
+  "keep_frac": 0.25,
+  "means": {
+    "full": 0.0,
+    "uniform": 0.0,
+    "structure": 0.5
+  },
+  "seconds": 62.576,
+  "rows": [
+    {
+      "example_id": "multi_turn_state.order_id.v2__c8000__s20281013",
+      "category": "multi_turn_state",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 1.0
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c8000__s20281114",
+      "category": "multi_turn_state",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 1.0
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c8000__s20610871__buried",
+      "category": "multi_turn_state",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 0.0
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c8000__s20610931__buried",
+      "category": "multi_turn_state",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 0.0
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c8000__s20611100__buried",
+      "category": "multi_turn_state",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 0.0
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c8000__s20561040",
+      "category": "multi_turn_state",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 1.0
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20271013",
+      "category": "instruction_supersession",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 1.0
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c8000__s20271370",
+      "category": "instruction_supersession",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 1.0
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20510811__buried",
+      "category": "instruction_supersession",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 1.0
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20511040__buried",
+      "category": "instruction_supersession",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 1.0
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20260804",
+      "category": "tool_schema",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 0.0
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c8000__s20260858",
+      "category": "tool_schema",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 0.0
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c8000__s20260959",
+      "category": "tool_schema",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 0.0
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c8000__s20261114",
+      "category": "tool_schema",
+      "full": 0.0,
+      "uniform": 0.0,
+      "structure": 0.0
+    }
+  ],
+  "note": "Reduced matched-keep on Gemma; PriorityBench scorers may be Qwen-tuned."
+}
