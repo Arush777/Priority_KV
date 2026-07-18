@@ -360,6 +360,17 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   Gate: mean `decode_ttft(structure) ≤ 3× decode_ttft(fullkv)` → `D4_M1_PASS`.
 - **Job:** `d4_latency_m1_gpu5_r1` on GPU 5. M3 big matrix NO-GO until M1 passes.
 
+## 2026-07-18 — D4 M1 PASS (warmup-corrected decode TTFT)
+
+- **Job** `d4_latency_m1_gpu5_r1`: **D4_M1_PASS** (exit=0, ~118s).
+- **decode_ttft:** FullKV **47.7ms** · structure **36.0ms** · uniform **41.6ms**
+  (structure/FullKV ratio **0.75** ≪ 3× gate). Prior 3.5–8s figures were
+  measurement artifacts (lazy cold + first FI call).
+- **TPOT:** FullKV ~49ms · FI ~32ms (still ahead).
+- **e2e still broken:** structure e2e ~13.3s = pack ~9.0s + cold_scratch ~3.9s
+  + decode; uniform worse (pack ~14.3s + cold ~7.2s). Sol/Fable M2 next:
+  GPU pack + kill full BF16 cold scratch before any M3 matrix / bytes claim.
+
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
   (vs CPU dense **0.000470**); CPU multicall oracle error `1.35e-9`.
