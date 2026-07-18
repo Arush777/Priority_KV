@@ -1,0 +1,15 @@
+{
+  "job_id": "pub_c_gemma_reduced_gpu01_r2",
+  "exit": 1,
+  "decision": "FAIL_NO_GEMMA",
+  "pass": false,
+  "log_scratch": "/data/anupam/scratch/prioritykv/logs/pub_c_gemma_reduced_gpu01_r2.log",
+  "log_bytes": 11121,
+  "shipped_full_log": true,
+  "truncated": false,
+  "log_tail_bytes": 524288,
+  "log_full_max_bytes": 2097152,
+  "has_summary": true,
+  "has_traceback": true,
+  "has_nvidia_smi": true
+}

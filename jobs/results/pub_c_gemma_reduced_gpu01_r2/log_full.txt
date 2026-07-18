@@ -1,0 +1,140 @@
+=== remote_worker job=pub_c_gemma_reduced_gpu01_r2 started=2026-07-18T21:01:06Z ===
+command=python scripts/run_gemma_reduced.py --config configs/gemma_reduced.yaml --out-tag gpu01_r2 --keep-frac 0.25 --max-new-tokens 32
+CUDA_VISIBLE_DEVICES=0,1
+CUDA_HOME=/usr/local/cuda
+TORCH_CUDA_ARCH_LIST=9.0
+PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
+cwd=/data/anupam/scratch/Priority_KV
+=== nvidia-smi before ===
+=== nvidia-smi 2026-07-18T21:01:05Z CUDA_VISIBLE_DEVICES=0,1 ===
+Sat Jul 18 21:01:05 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   29C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   28C    P0             75W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   38C    P0            276W /  700W |   59369MiB / 143771MiB |     67%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   28C    P0             76W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   28C    P0             75W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   30C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   31C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   38C    P0            294W /  700W |   24895MiB / 143771MiB |     83%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    7   N/A  N/A          942856      C   ...sh/era5_expts/venv/bin/python      24886MiB |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
+1, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+2, NVIDIA H200, 65 %, 59369 MiB, 143771 MiB, 37
+3, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+4, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+5, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 30
+6, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 31
+7, NVIDIA H200, 88 %, 24895 MiB, 143771 MiB, 40
+[gemma] loading google/gemma-2-9b-it
+{
+  "decision": "FAIL_NO_GEMMA",
+  "pass": false,
+  "error": "You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-2-9b-it.\n403 Client Error. (Request ID: Root=1-6a5be99c-51c96fba07c5c77a388b786a;38deee39-0ba2-44d8-8bd4-b467ffee1454)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-2-9b-it/resolve/main/config.json.\nAccess to model google/gemma-2-9b-it is restricted and you are not in the authorized list. Visit https://huggingface.co/google/gemma-2-9b-it to ask for access.",
+  "hub_id": "google/gemma-2-9b-it",
+  "model_id_attempted": "google/gemma-2-9b-it",
+  "note": "Gemma required \u2014 accept HF license, set HF_TOKEN, or place weights under $PRIORITYKV_MODELS/gemma-2-9b-it (or HF hub cache)."
+}
+out=/data/anupam/scratch/prioritykv/runs/gemma_reduced/gemma_reduced_gpu01_r2.json
+=== nvidia-smi after ===
+=== nvidia-smi 2026-07-18T21:01:17Z CUDA_VISIBLE_DEVICES=0,1 ===
+Sat Jul 18 21:01:17 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   29C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   28C    P0             75W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   37C    P0            266W /  700W |   59369MiB / 143771MiB |     67%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   28C    P0             76W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   28C    P0             76W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   30C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   31C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   42C    P0            433W /  700W |   24895MiB / 143771MiB |     88%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    7   N/A  N/A          942856      C   ...sh/era5_expts/venv/bin/python      24886MiB |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
+1, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+2, NVIDIA H200, 67 %, 59369 MiB, 143771 MiB, 38
+3, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+4, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+5, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 30
+6, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 31
+7, NVIDIA H200, 86 %, 24895 MiB, 143771 MiB, 42
+=== finished=2026-07-18T21:01:18Z exit=1 ===
