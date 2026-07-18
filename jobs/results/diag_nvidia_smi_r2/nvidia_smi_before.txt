@@ -1,0 +1,68 @@
+=== nvidia-smi 2026-07-18T15:43:00Z CUDA_VISIBLE_DEVICES=6,7 ===
+Sat Jul 18 15:43:00 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   29C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   28C    P0             75W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   40C    P0            276W /  700W |   59369MiB / 143771MiB |     91%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   31C    P0            117W /  700W |   45401MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   30C    P0            117W /  700W |   44687MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   34C    P0            119W /  700W |   44687MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   37C    P0            125W /  700W |   47213MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   53C    P0            693W /  700W |  125181MiB / 143771MiB |    100%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    3   N/A  N/A          539823      C   ray::PolicyModelActor                 38798MiB |
+|    3   N/A  N/A          540186      C   ray::ReferenceModelActor               6588MiB |
+|    4   N/A  N/A          540187      C   ray::PolicyModelActor                 38084MiB |
+|    4   N/A  N/A          540733      C   ray::ReferenceModelActor               6588MiB |
+|    5   N/A  N/A          540185      C   ray::PolicyModelActor                 38084MiB |
+|    5   N/A  N/A          540735      C   ray::ReferenceModelActor               6588MiB |
+|    6   N/A  N/A          540188      C   ray::PolicyModelActor                 40608MiB |
+|    6   N/A  N/A          540734      C   ray::ReferenceModelActor               6590MiB |
+|    7   N/A  N/A          540571      C   VLLM::EngineCore                      12517... |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
+1, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+2, NVIDIA H200, 64 %, 59369 MiB, 143771 MiB, 39
+3, NVIDIA H200, 0 %, 45401 MiB, 143771 MiB, 31
+4, NVIDIA H200, 0 %, 44687 MiB, 143771 MiB, 30
+5, NVIDIA H200, 0 %, 44687 MiB, 143771 MiB, 34
+6, NVIDIA H200, 0 %, 47213 MiB, 143771 MiB, 37
+7, NVIDIA H200, 100 %, 125181 MiB, 143771 MiB, 53
