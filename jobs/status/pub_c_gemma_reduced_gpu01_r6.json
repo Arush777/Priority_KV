@@ -1,0 +1,10 @@
+{
+  "job_id": "pub_c_gemma_reduced_gpu01_r6",
+  "exit": 0,
+  "finished_at": "2026-07-18T21:14:16Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/pub_c_gemma_reduced_gpu01_r6.log",
+  "job_yaml": "jobs/done/pub_c_gemma_reduced_gpu01_r6.yaml",
+  "decision": "GEMMA_REDUCED_PASS",
+  "pass": true,
+  "results_dir": "jobs/results/pub_c_gemma_reduced_gpu01_r6"
+}
