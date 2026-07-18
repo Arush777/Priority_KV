@@ -1,0 +1,10 @@
+{
+  "job_id": "w8b_fi_greedy_smoke_gpu5_r1",
+  "exit": 0,
+  "finished_at": "2026-07-18T16:34:46Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/w8b_fi_greedy_smoke_gpu5_r1.log",
+  "job_yaml": "jobs/done/w8b_fi_greedy_smoke_gpu5_r1.yaml",
+  "decision": "GREEDY_PASS",
+  "pass": true,
+  "results_dir": "jobs/results/w8b_fi_greedy_smoke_gpu5_r1"
+}
