@@ -1,0 +1,5 @@
+id: d4_latency_m1_gpu5_r1
+command: python scripts/run_d4_latency.py --config configs/d4_latency_micro.yaml --out-tag m1_gpu5_r1 --max-new-tokens 32 --warmup 1 --ttft-gate-mult 3.0
+gpus: "5"
+sync_cuda: false
+timeout_sec: 7200

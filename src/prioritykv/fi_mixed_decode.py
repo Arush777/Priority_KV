@@ -250,6 +250,16 @@ def _fill_cold_scratch(buf: LayerMixedBuffers, *, device: Any, dtype: Any) -> No
     buf.cold_scratch_valid = True
 
 
+def eager_prepare_decode(state: FiMixedDecodeState) -> None:
+    """Dequant/upload all cold scratches before the first timed decode step.
+
+    Fable M1: lazy first-call dequant was polluting TTFT; call this after pack
+    and *before* measuring first-token latency.
+    """
+    for buf in state.layers:
+        _fill_cold_scratch(buf, device=state.device, dtype=state.dtype)
+
+
 def fi_chunks_for_layer(
     state: FiMixedDecodeState,
     layer_idx: int,

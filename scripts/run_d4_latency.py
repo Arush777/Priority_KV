@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
-"""D4 microbench: TTFT / TPOT / peak mem for FullKV vs mixed FI-shim.
+"""D4 microbench M1: honest TTFT/TPOT with FI warmup + phase timing.
 
-H200: enqueue via jobs/pending. Prints out=… for worker result push.
+Fable 2026-07-18: prior TTFT mixed setup cost (lazy cold dequant / first FI call)
+into the first decode step. This harness:
+
+* times prefill / pack / cold_scratch / first_decode separately
+* e2e_ttft_ms = prefill + pack + cold_scratch + first_decode
+* decode_ttft_ms = first decode only (after eager_prepare_decode)
+* one untimed FI+FullKV warmup before measured examples
+* gate: mean decode_ttft(structure) <= 3× mean decode_ttft(fullkv)
+
+H200: jobs/pending. Prints out=… for worker push.
 """
 
 from __future__ import annotations
@@ -19,10 +28,14 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import prioritykv.cxx20_cuda_ext  # noqa: F401
 
+from prioritybench.scoring import score_example
+from prioritykv.baselines.buried_state import relocate_state_to_middle
 from prioritykv.baselines.keep_policy import assign_token_roles
+from prioritykv.bench_pilot import materialize_examples
+from prioritykv.fi_mixed_decode import eager_prepare_decode
 from prioritykv.fullkv_compare import PromptRow, _apply_chat, resolve_model_path
 from prioritykv.int4_kv import Int4KvConfig
-from prioritykv.mixed_kv import MixedPlanConfig
+from prioritykv.mixed_kv import MixedPlanConfig, plan_int4_mask
 from prioritykv.page_roles import PageRole
 from prioritykv.qwen3_fi_shim import (
     FiSeqLenCache,
@@ -30,9 +43,6 @@ from prioritykv.qwen3_fi_shim import (
     pack_prefill_to_fi_state,
 )
 from prioritykv.stress_pilot import select_stress_rows
-from prioritybench.scoring import score_example
-from prioritykv.baselines.buried_state import relocate_state_to_middle
-from prioritykv.bench_pilot import materialize_examples
 
 
 def _cuda_sync():
@@ -42,14 +52,12 @@ def _cuda_sync():
         torch.cuda.synchronize()
 
 
-def _timed_decode_fullkv(
-    model,
-    tok,
-    ids,
-    *,
-    max_new_tokens: int,
-) -> dict[str, Any]:
-    """Split-prefill FullKV SDPA; TTFT = first replay token, then TPOT."""
+def _mean(xs: list[float | None]) -> float | None:
+    vals = [float(x) for x in xs if x is not None]
+    return sum(vals) / len(vals) if vals else None
+
+
+def _timed_decode_fullkv(model, tok, ids, *, max_new_tokens: int) -> dict[str, Any]:
     import torch
 
     n = int(ids.numel())
@@ -105,13 +113,19 @@ def _timed_decode_fullkv(
             cur = torch.tensor([[nid]], device=device)
             if tok.eos_token_id is not None and nid == tok.eos_token_id:
                 break
-    ttft_ms = (t1 - t0) * 1000.0
+
+    prefill_ms = (t_pre1 - t_pre0) * 1000.0
+    decode_ttft_ms = (t1 - t0) * 1000.0
     tpot_ms = (sum(step_ms) / len(step_ms)) if step_ms else None
     return {
         "arm": "fullkv_sdpa",
-        "ttft_ms": ttft_ms,
+        "prefill_ms": prefill_ms,
+        "pack_ms": 0.0,
+        "cold_scratch_ms": 0.0,
+        "decode_ttft_ms": decode_ttft_ms,
+        "e2e_ttft_ms": prefill_ms + decode_ttft_ms,
+        "ttft_ms": decode_ttft_ms,  # alias: decode-only, comparable across arms
         "tpot_ms": tpot_ms,
-        "prefill_ms": (t_pre1 - t_pre0) * 1000.0,
         "n_new": len(gen),
         "tokens_per_s": (1000.0 / tpot_ms) if tpot_ms else None,
         "token_ids": gen,
@@ -143,9 +157,8 @@ def _timed_decode_fi(
             role_list = role_list[:cache_n]
         else:
             role_list = role_list + [PageRole.RECENT] * (cache_n - len(role_list))
-    from prioritykv.mixed_kv import plan_int4_mask
-
     mask = plan_int4_mask(role_list, plan_cfg, policy=policy)
+
     _cuda_sync()
     t_pre0 = time.perf_counter()
     with torch.no_grad():
@@ -156,6 +169,10 @@ def _timed_decode_fi(
             return_dict=True,
         )
         past = pre.past_key_values
+        _cuda_sync()
+        t_pre1 = time.perf_counter()
+
+        t_pack0 = time.perf_counter()
         packed, state = pack_prefill_to_fi_state(
             past,
             role_list,
@@ -166,7 +183,12 @@ def _timed_decode_fi(
             decode_tail_cap=max(max_new_tokens + 8, 64),
         )
         _cuda_sync()
-        t_pre1 = time.perf_counter()
+        t_pack1 = time.perf_counter()
+
+        t_cold0 = time.perf_counter()
+        eager_prepare_decode(state)
+        _cuda_sync()
+        t_cold1 = time.perf_counter()
 
         stub = FiSeqLenCache(state)
         attn = torch.ones(1, n, dtype=torch.long, device=device)
@@ -208,13 +230,21 @@ def _timed_decode_fi(
                     break
             used_mat = bool(ctx.used_materialize)
         state.assert_no_materialize_path(used_mat)
-    ttft_ms = (t1 - t0) * 1000.0
+
+    prefill_ms = (t_pre1 - t_pre0) * 1000.0
+    pack_ms = (t_pack1 - t_pack0) * 1000.0
+    cold_ms = (t_cold1 - t_cold0) * 1000.0
+    decode_ttft_ms = (t1 - t0) * 1000.0
     tpot_ms = (sum(step_ms) / len(step_ms)) if step_ms else None
     return {
         "arm": f"mixed_{policy}_fi_shim",
-        "ttft_ms": ttft_ms,
+        "prefill_ms": prefill_ms,
+        "pack_ms": pack_ms,
+        "cold_scratch_ms": cold_ms,
+        "decode_ttft_ms": decode_ttft_ms,
+        "e2e_ttft_ms": prefill_ms + pack_ms + cold_ms + decode_ttft_ms,
+        "ttft_ms": decode_ttft_ms,
         "tpot_ms": tpot_ms,
-        "prefill_pack_ms": (t_pre1 - t_pre0) * 1000.0,
         "n_new": len(gen),
         "tokens_per_s": (1000.0 / tpot_ms) if tpot_ms else None,
         "token_ids": gen,
@@ -231,10 +261,11 @@ def main() -> int:
     import yaml
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default=str(ROOT / "configs" / "w9_mixed_fi_decode.yaml"))
-    ap.add_argument("--out-tag", default="r1")
+    ap.add_argument("--config", default=str(ROOT / "configs" / "d4_latency_micro.yaml"))
+    ap.add_argument("--out-tag", default="m1_r1")
     ap.add_argument("--max-new-tokens", type=int, default=32)
     ap.add_argument("--warmup", type=int, default=1)
+    ap.add_argument("--ttft-gate-mult", type=float, default=3.0)
     args = ap.parse_args()
 
     scratch = Path(os.environ.get("PRIORITYKV_SCRATCH", ROOT / "runs"))
@@ -268,19 +299,20 @@ def main() -> int:
         msgs = list(ex.messages)
         if cfg.get("relocate_middle"):
             msgs = relocate_state_to_middle(
-                msgs, position=float(cfg.get("relocate_position", 0.5)), seed=hash(ex.example_id) % 10_000
+                msgs,
+                position=float(cfg.get("relocate_position", 0.5)),
+                seed=hash(ex.example_id) % 10_000,
             )
         prompts.append(PromptRow(id=ex.example_id, messages=msgs))
 
     model_path = resolve_model_path(cfg)
     mcfg = cfg.get("mixed", {})
+    risk = mcfg.get("risk_fit_path")
     plan_cfg = MixedPlanConfig(
         int4_frac=float(mcfg.get("int4_frac", 0.75)),
         sink_tokens=int(mcfg.get("sink_tokens", 16)),
         recent_window=int(mcfg.get("recent_window", 128)),
-        risk_fit_path=str(ROOT / mcfg["risk_fit_path"])
-        if mcfg.get("risk_fit_path")
-        else None,
+        risk_fit_path=str(ROOT / risk) if risk else None,
     )
     int4_cfg = Int4KvConfig(
         nbits=int(mcfg.get("nbits", 4)),
@@ -301,18 +333,7 @@ def main() -> int:
     model.eval()
     chat_kwargs = dict(qwen3_chat_template_kwargs())
 
-    # Warmup on first prompt (not scored into means).
-    if prompts and args.warmup > 0:
-        text = _apply_chat(tok, prompts[0].messages)
-        ids = tok(text, add_special_tokens=False, return_tensors="pt")["input_ids"][0].to(
-            model.device
-        )
-        _timed_decode_fullkv(model, tok, ids, max_new_tokens=min(8, max_new))
-
-    rows_out: list[dict[str, Any]] = []
-    torch.cuda.reset_peak_memory_stats(torch.device("cuda:0"))
-    t_wall0 = time.time()
-    for prompt, ex in zip(prompts, examples, strict=True):
+    def _ids_for(prompt: PromptRow):
         text = _apply_chat(tok, prompt.messages)
         ids = tok(text, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
         budget = int(cfg["vllm"]["max_model_len"]) - max_new - 8
@@ -320,7 +341,41 @@ def main() -> int:
             head = ids[: budget // 4]
             tail = ids[-(budget - int(head.numel())) :]
             ids = torch.cat([head, tail])
-        ids = ids.to(model.device)
+        return ids.to(model.device)
+
+    # Untimed warmup: FullKV + FI structure (JIT / cold scratch / kernels).
+    if prompts and args.warmup > 0:
+        print("[d4/m1] warmup FullKV + FI structure (untimed)…", flush=True)
+        w_ids = _ids_for(prompts[0])
+        w_roles = assign_token_roles(tok, prompts[0].messages, chat_kwargs=chat_kwargs)
+        _timed_decode_fullkv(model, tok, w_ids, max_new_tokens=min(8, max_new))
+        _timed_decode_fi(
+            model,
+            tok,
+            w_ids,
+            roles=w_roles,
+            plan_cfg=plan_cfg,
+            policy="structure",
+            int4_cfg=int4_cfg,
+            max_new_tokens=min(8, max_new),
+        )
+        _timed_decode_fi(
+            model,
+            tok,
+            w_ids,
+            roles=w_roles,
+            plan_cfg=plan_cfg,
+            policy="uniform",
+            int4_cfg=int4_cfg,
+            max_new_tokens=min(8, max_new),
+        )
+        print("[d4/m1] warmup done", flush=True)
+
+    rows_out: list[dict[str, Any]] = []
+    torch.cuda.reset_peak_memory_stats(torch.device("cuda:0"))
+    t_wall0 = time.time()
+    for prompt, ex in zip(prompts, examples, strict=True):
+        ids = _ids_for(prompt)
         roles = assign_token_roles(tok, prompt.messages, chat_kwargs=chat_kwargs)
 
         full = _timed_decode_fullkv(model, tok, ids, max_new_tokens=max_new)
@@ -345,8 +400,8 @@ def main() -> int:
             fi["score"] = float(score_example(ex, fi["text"]))
             rows_out.append(fi)
         print(
-            f"[d4] {prompt.id} full_ttft={full['ttft_ms']:.1f}ms "
-            f"full_tpot={full['tpot_ms']}",
+            f"[d4/m1] {prompt.id} full_dec_ttft={full['decode_ttft_ms']:.1f}ms "
+            f"struct will follow in arms",
             flush=True,
         )
 
@@ -355,42 +410,54 @@ def main() -> int:
     for r in rows_out:
         by_arm.setdefault(r["arm"], []).append(r)
 
-    def _mean(xs: list[float | None]) -> float | None:
-        vals = [float(x) for x in xs if x is not None]
-        return sum(vals) / len(vals) if vals else None
-
     summary_arms = {}
     for arm, rs in by_arm.items():
         summary_arms[arm] = {
             "n": len(rs),
-            "ttft_ms_mean": _mean([r.get("ttft_ms") for r in rs]),
+            "prefill_ms_mean": _mean([r.get("prefill_ms") for r in rs]),
+            "pack_ms_mean": _mean([r.get("pack_ms") for r in rs]),
+            "cold_scratch_ms_mean": _mean([r.get("cold_scratch_ms") for r in rs]),
+            "decode_ttft_ms_mean": _mean([r.get("decode_ttft_ms") for r in rs]),
+            "e2e_ttft_ms_mean": _mean([r.get("e2e_ttft_ms") for r in rs]),
             "tpot_ms_mean": _mean([r.get("tpot_ms") for r in rs]),
             "tokens_per_s_mean": _mean([r.get("tokens_per_s") for r in rs]),
             "score_mean": _mean([r.get("score") for r in rs]),
             "int4_tokens_mean": _mean([r.get("int4_tokens") for r in rs]),
         }
 
-    full_ttft = summary_arms.get("fullkv_sdpa", {}).get("ttft_ms_mean")
-    struct_ttft = summary_arms.get("mixed_structure_fi_shim", {}).get("ttft_ms_mean")
-    # Pass gate: ran cleanly + FI arms did not materialize + scores present.
+    full_dec = summary_arms.get("fullkv_sdpa", {}).get("decode_ttft_ms_mean")
+    struct_dec = summary_arms.get("mixed_structure_fi_shim", {}).get("decode_ttft_ms_mean")
     no_mat = all(not r.get("used_materialize_hf_past") for r in rows_out)
-    decision = "D4_MICRO_PASS" if no_mat and summary_arms else "D4_MICRO_FAIL"
+    ttft_ratio = (struct_dec / full_dec) if full_dec and struct_dec else None
+    ttft_gate = (
+        ttft_ratio is not None and ttft_ratio <= float(args.ttft_gate_mult)
+    )
+    if no_mat and ttft_gate:
+        decision = "D4_M1_PASS"
+    elif no_mat:
+        decision = "D4_M1_TTFT_GATE_FAIL"
+    else:
+        decision = "D4_M1_FAIL"
+
     result = {
-        "job": "d4_latency",
+        "job": "d4_latency_m1",
         "tag": args.out_tag,
         "decision": decision,
-        "pass": decision.endswith("PASS"),
+        "pass": decision == "D4_M1_PASS",
+        "ttft_gate_mult": args.ttft_gate_mult,
+        "decode_ttft_ratio_structure_vs_full": ttft_ratio,
         "n_examples": len(prompts),
         "max_new_tokens": max_new,
+        "warmup": args.warmup,
         "arms": summary_arms,
-        "ttft_speedup_structure_vs_full": (
-            (full_ttft / struct_ttft) if full_ttft and struct_ttft else None
-        ),
         "cuda_peak_bytes": peak,
         "device": torch.cuda.get_device_name(0),
         "seconds": round(time.time() - t_wall0, 3),
         "rows": rows_out,
-        "note": "Microbench on HF+FI-shim path; vLLM FP8 arm deferred to D4b.",
+        "note": (
+            "M1 harness: eager cold scratch + untimed FI warmup; "
+            "decode_ttft comparable; e2e_ttft includes prefill+pack+cold."
+        ),
     }
     out_path.write_text(json.dumps(result, indent=2, default=str) + "\n")
     print(
@@ -398,9 +465,18 @@ def main() -> int:
             {
                 "decision": decision,
                 "pass": result["pass"],
-                "arms": summary_arms,
-                "ttft_speedup_structure_vs_full": result["ttft_speedup_structure_vs_full"],
-                "cuda_peak_bytes": peak,
+                "decode_ttft_ratio_structure_vs_full": ttft_ratio,
+                "arms": {
+                    k: {
+                        "decode_ttft_ms_mean": v.get("decode_ttft_ms_mean"),
+                        "e2e_ttft_ms_mean": v.get("e2e_ttft_ms_mean"),
+                        "pack_ms_mean": v.get("pack_ms_mean"),
+                        "cold_scratch_ms_mean": v.get("cold_scratch_ms_mean"),
+                        "tpot_ms_mean": v.get("tpot_ms_mean"),
+                        "score_mean": v.get("score_mean"),
+                    }
+                    for k, v in summary_arms.items()
+                },
                 "seconds": result["seconds"],
             },
             indent=2,

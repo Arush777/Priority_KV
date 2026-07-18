@@ -350,6 +350,16 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **w9:** `mixed_kv_run` flashinfer path uses FI shim decode (no materialize); job `w9_mixed_fi_decode_gpu5_r1` on GPU 5 (full/uniform/structure @ 8k n=3).
 - **D4:** `d4_latency_micro_gpu5_r1` enqueued (TTFT/TPOT microbench on GPU 5).
 
+## 2026-07-18 — D4 M1 TTFT harness (Fable GO)
+
+- **Falsified claim from raw D4:** mixing first-call cold dequant / FI JIT into
+  `ttft_ms` (structure ~3.5s, uniform ~8s vs FullKV ~43ms). TPOT already better
+  on FI (~28 vs ~44ms). Do **not** publish those TTFT numbers.
+- **M1 fix:** `eager_prepare_decode` + untimed FullKV/FI warmup; report
+  `prefill_ms` / `pack_ms` / `cold_scratch_ms` / `decode_ttft_ms` / `e2e_ttft_ms`.
+  Gate: mean `decode_ttft(structure) ≤ 3× decode_ttft(fullkv)` → `D4_M1_PASS`.
+- **Job:** `d4_latency_m1_gpu5_r1` on GPU 5. M3 big matrix NO-GO until M1 passes.
+
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
   (vs CPU dense **0.000470**); CPU multicall oracle error `1.35e-9`.

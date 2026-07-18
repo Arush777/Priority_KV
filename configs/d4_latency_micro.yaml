@@ -1,5 +1,6 @@
-# D4 microbench: TTFT/TPOT FullKV SDPA vs mixed FI-shim (uniform + structure).
+# D4 microbench (M1 harness): phase-timed TTFT/TPOT FullKV SDPA vs mixed FI-shim.
 # Same 8k mid-context slice as w9 (n=3). vLLM FP8 deferred to D4b.
+# M1: eager cold scratch + untimed FI warmup; gate decode_ttft(structure) ≤ 3× FullKV.
 manifest_id: d4_latency_micro
 rev: 1
 buried_state: false
