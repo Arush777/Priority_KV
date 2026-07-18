@@ -1,0 +1,5 @@
+id: d4_latency_m3c_gpu56_r1
+command: python scripts/run_d4_latency_dual.py --config configs/d4_latency_m3.yaml --out-tag m3c_gpu56_r1 --max-new-tokens 128 --warmup 1 --repeats 3 --e2e-gate-mult 1.15 --ttft-gate-mult 1.25 --tpot-gate-mult 1.25 --pack-ms-max 200 --cold-ms-max 100 --pack-ms-max-16k 400 --cold-ms-max-16k 200
+gpus: "5,6"
+sync_cuda: false
+timeout_sec: 14400

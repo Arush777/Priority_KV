@@ -67,6 +67,18 @@ def _median(xs: list[float | None]) -> float | None:
     return 0.5 * (vals[mid - 1] + vals[mid])
 
 
+def _text_for_score(tok, token_ids: list[int], text: str) -> str:
+    """Score the answer prefix only — fixed-length TPOT decode continues past EOS."""
+    eos = getattr(tok, "eos_token_id", None)
+    if eos is not None and eos in token_ids:
+        cut = token_ids.index(eos)
+        return tok.decode(token_ids[:cut], skip_special_tokens=True)
+    # Qwen3 sometimes emits thinking end markers when forced past stop.
+    if "</think>" in text:
+        return text.split("</think>", 1)[0].strip()
+    return text
+
+
 def _arm_summary(rs: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "n": len(rs),
@@ -462,7 +474,9 @@ def main() -> int:
                 if part.startswith("c") and part[1:].isdigit():
                     out["context_length"] = int(part[1:])
                     break
-        out["score"] = float(score_example(ex, out["text"]))
+        out["score"] = float(
+            score_example(ex, _text_for_score(tok, list(out.get("token_ids") or []), out["text"]))
+        )
         out["category"] = getattr(ex, "category", None)
         return out
 
