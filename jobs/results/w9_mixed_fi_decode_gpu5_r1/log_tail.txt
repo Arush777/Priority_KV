@@ -1,0 +1,158 @@
+=== remote_worker job=w9_mixed_fi_decode_gpu5_r1 started=2026-07-18T16:38:11Z ===
+command=python scripts/run_mixed_serve.py --config configs/w9_mixed_fi_decode.yaml
+CUDA_VISIBLE_DEVICES=5
+CUDA_HOME=/usr/local/cuda
+TORCH_CUDA_ARCH_LIST=9.0
+PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
+cwd=/data/anupam/scratch/Priority_KV
+=== nvidia-smi before ===
+=== nvidia-smi 2026-07-18T16:38:10Z CUDA_VISIBLE_DEVICES=5 ===
+Sat Jul 18 16:38:10 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   32C    P0            123W /  700W |    2195MiB / 143771MiB |      4%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   30C    P0            129W /  700W |    2215MiB / 143771MiB |     20%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   39C    P0            284W /  700W |   59369MiB / 143771MiB |     96%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   31C    P0            131W /  700W |    2195MiB / 143771MiB |     39%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   30C    P0            120W /  700W |    2195MiB / 143771MiB |      1%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   30C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   29C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   28C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A          807791      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
+|    1   N/A  N/A          807792      C   ...upam/COSMOS/.venv/bin/python3       2206MiB |
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    3   N/A  N/A          807790      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
+|    4   N/A  N/A          806880      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 4 %, 2195 MiB, 143771 MiB, 32
+1, NVIDIA H200, 40 %, 2215 MiB, 143771 MiB, 31
+2, NVIDIA H200, 71 %, 59369 MiB, 143771 MiB, 39
+3, NVIDIA H200, 9 %, 2195 MiB, 143771 MiB, 31
+4, NVIDIA H200, 4 %, 2195 MiB, 143771 MiB, 30
+5, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 30
+6, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
+7, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:05,  6.06it/s]Loading weights:   1%|          | 2/399 [00:00<01:13,  5.37it/s]Loading weights:   4%|▍         | 17/399 [00:00<00:07, 49.12it/s]Loading weights:  10%|▉         | 38/399 [00:00<00:03, 95.86it/s]Loading weights:  15%|█▍        | 59/399 [00:00<00:02, 128.43it/s]Loading weights:  19%|█▉        | 76/399 [00:00<00:02, 140.71it/s]Loading weights:  24%|██▎       | 94/399 [00:00<00:02, 146.13it/s]Loading weights:  28%|██▊       | 113/399 [00:01<00:01, 156.52it/s]Loading weights:  33%|███▎      | 133/399 [00:01<00:01, 167.75it/s]Loading weights:  38%|███▊      | 151/399 [00:01<00:01, 162.18it/s]Loading weights:  42%|████▏     | 168/399 [00:01<00:01, 157.11it/s]Loading weights:  48%|████▊     | 192/399 [00:01<00:01, 169.64it/s]Loading weights:  54%|█████▎    | 214/399 [00:01<00:01, 177.13it/s]Loading weights:  59%|█████▉    | 235/399 [00:01<00:00, 183.13it/s]Loading weights:  64%|██████▎   | 254/399 [00:01<00:00, 182.74it/s]Loading weights:  68%|██████▊   | 273/399 [00:01<00:00, 175.77it/s]Loading weights:  73%|███████▎  | 291/399 [00:02<00:00, 169.51it/s]Loading weights:  77%|███████▋  | 309/399 [00:02<00:00, 163.19it/s]Loading weights:  82%|████████▏ | 329/399 [00:02<00:00, 172.31it/s]Loading weights:  87%|████████▋ | 347/399 [00:02<00:00, 167.59it/s]Loading weights:  92%|█████████▏| 368/399 [00:02<00:00, 176.63it/s]Loading weights:  97%|█████████▋| 389/399 [00:02<00:00, 182.61it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 152.08it/s]
+[mixed] policy=full degrade=int4 storage=packed attn=flashinfer int4_frac=0.75 nbits=4 sink=16 recent=128 n=3
+Mixed[full]:   0%|          | 0/3 [00:00<?, ?ex/s]Mixed[full]:   0%|          | 0/3 [00:01<?, ?ex/s, int4=0/10285]Mixed[full]:  33%|███▎      | 1/3 [00:01<00:02,  1.33s/ex, int4=0/10285]Mixed[full]:  33%|███▎      | 1/3 [00:03<00:02,  1.33s/ex, int4=0/10008]Mixed[full]:  67%|██████▋   | 2/3 [00:03<00:01,  1.71s/ex, int4=0/10008]Mixed[full]:  67%|██████▋   | 2/3 [00:05<00:01,  1.71s/ex, int4=0/10932]Mixed[full]: 100%|██████████| 3/3 [00:05<00:00,  1.85s/ex, int4=0/10932]Mixed[full]: 100%|██████████| 3/3 [00:05<00:00,  1.78s/ex, int4=0/10932]
+[mixed/full] finished 3
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:27,  4.55it/s]Loading weights:   1%|          | 2/399 [00:00<01:24,  4.72it/s]Loading weights:   4%|▍         | 17/399 [00:00<00:08, 44.96it/s]Loading weights:  10%|▉         | 38/399 [00:00<00:04, 89.49it/s]Loading weights:  15%|█▍        | 59/399 [00:00<00:02, 121.79it/s]Loading weights:  19%|█▉        | 76/399 [00:00<00:02, 133.77it/s]Loading weights:  24%|██▎       | 94/399 [00:00<00:02, 141.58it/s]Loading weights:  28%|██▊       | 113/399 [00:01<00:01, 152.71it/s]Loading weights:  33%|███▎      | 131/399 [00:01<00:01, 156.06it/s]Loading weights:  37%|███▋      | 149/399 [00:01<00:01, 156.47it/s]Loading weights:  43%|████▎     | 170/399 [00:01<00:01, 169.14it/s]Loading weights:  48%|████▊     | 191/399 [00:01<00:01, 175.46it/s]Loading weights:  52%|█████▏    | 209/399 [00:01<00:01, 174.23it/s]Loading weights:  57%|█████▋    | 227/399 [00:01<00:01, 167.54it/s]Loading weights:  62%|██████▏   | 247/399 [00:01<00:00, 166.75it/s]Loading weights:  67%|██████▋   | 269/399 [00:01<00:00, 178.57it/s]Loading weights:  72%|███████▏  | 288/399 [00:02<00:00, 158.43it/s]Loading weights:  78%|███████▊  | 313/399 [00:02<00:00, 175.77it/s]Loading weights:  84%|████████▎ | 334/399 [00:02<00:00, 180.35it/s]Loading weights:  88%|████████▊ | 353/399 [00:02<00:00, 180.95it/s]Loading weights:  93%|█████████▎| 372/399 [00:02<00:00, 175.59it/s]Loading weights:  98%|█████████▊| 390/399 [00:02<00:00, 175.12it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 147.97it/s]
+[mixed] policy=uniform degrade=int4 storage=packed attn=flashinfer int4_frac=0.75 nbits=4 sink=16 recent=128 n=3
+Mixed[uniform]:   0%|          | 0/3 [00:00<?, ?ex/s][mixed/uniform] fi_parity=PARITY_PASS pass=True
+Mixed[uniform]:   0%|          | 0/3 [00:24<?, ?ex/s, int4=7713/10285]Mixed[uniform]:  33%|███▎      | 1/3 [00:24<00:48, 24.34s/ex, int4=7713/10285][mixed/uniform] fi_parity=PARITY_PASS pass=True
+Mixed[uniform]:  33%|███▎      | 1/3 [00:49<00:48, 24.34s/ex, int4=7505/10008]Mixed[uniform]:  67%|██████▋   | 2/3 [00:49<00:25, 25.01s/ex, int4=7505/10008][mixed/uniform] fi_parity=PARITY_PASS pass=True
+Mixed[uniform]:  67%|██████▋   | 2/3 [01:13<00:25, 25.01s/ex, int4=8198/10932]Mixed[uniform]: 100%|██████████| 3/3 [01:13<00:00, 24.63s/ex, int4=8198/10932]Mixed[uniform]: 100%|██████████| 3/3 [01:13<00:00, 24.66s/ex, int4=8198/10932]
+[mixed/uniform] finished 3
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:14,  5.35it/s]Loading weights:   1%|          | 2/399 [00:00<01:18,  5.08it/s]Loading weights:   4%|▍         | 17/399 [00:00<00:08, 47.37it/s]Loading weights:  10%|▉         | 38/399 [00:00<00:03, 91.64it/s]Loading weights:  15%|█▍        | 58/399 [00:00<00:02, 121.10it/s]Loading weights:  19%|█▉        | 76/399 [00:00<00:02, 137.53it/s]Loading weights:  24%|██▎       | 94/399 [00:00<00:02, 144.60it/s]Loading weights:  29%|██▊       | 114/399 [00:01<00:01, 156.87it/s]Loading weights:  33%|███▎      | 133/399 [00:01<00:01, 164.26it/s]Loading weights:  38%|███▊      | 151/399 [00:01<00:01, 163.06it/s]Loading weights:  43%|████▎     | 170/399 [00:01<00:01, 168.06it/s]Loading weights:  48%|████▊     | 191/399 [00:01<00:01, 176.99it/s]Loading weights:  52%|█████▏    | 209/399 [00:01<00:01, 175.23it/s]Loading weights:  57%|█████▋    | 227/399 [00:01<00:01, 167.69it/s]Loading weights:  62%|██████▏   | 247/399 [00:01<00:00, 171.88it/s]Loading weights:  67%|██████▋   | 268/399 [00:01<00:00, 178.86it/s]Loading weights:  72%|███████▏  | 286/399 [00:02<00:00, 173.06it/s]Loading weights:  76%|███████▌  | 304/399 [00:02<00:00, 163.25it/s]Loading weights:  81%|████████  | 324/399 [00:02<00:00, 169.67it/s]Loading weights:  86%|████████▋ | 345/399 [00:02<00:00, 177.04it/s]Loading weights:  91%|█████████ | 363/399 [00:02<00:00, 175.43it/s]Loading weights:  95%|█████████▌| 381/399 [00:02<00:00, 171.21it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 149.81it/s]
+[mixed] policy=structure degrade=int4 storage=packed attn=flashinfer int4_frac=0.75 nbits=4 sink=16 recent=128 n=3
+Mixed[structure]:   0%|          | 0/3 [00:00<?, ?ex/s][mixed/structure] fi_parity=PARITY_PASS pass=True
+Mixed[structure]:   0%|          | 0/3 [00:12<?, ?ex/s, int4=7713/10285]Mixed[structure]:  33%|███▎      | 1/3 [00:12<00:25, 12.80s/ex, int4=7713/10285][mixed/structure] fi_parity=PARITY_PASS pass=True
+Mixed[structure]:  33%|███▎      | 1/3 [00:26<00:25, 12.80s/ex, int4=7505/10008]Mixed[structure]:  67%|██████▋   | 2/3 [00:26<00:13, 13.43s/ex, int4=7505/10008][mixed/structure] fi_parity=PARITY_PASS pass=True
+Mixed[structure]:  67%|██████▋   | 2/3 [00:41<00:13, 13.43s/ex, int4=8198/10932]Mixed[structure]: 100%|██████████| 3/3 [00:41<00:00, 14.30s/ex, int4=8198/10932]Mixed[structure]: 100%|██████████| 3/3 [00:41<00:00, 14.00s/ex, int4=8198/10932]
+[mixed/structure] finished 3
+n=3 full=1.0 int4_frac=0.75 out=/data/anupam/scratch/prioritykv/runs/mixed_serve/w9_mixed_fi_decode_r1.json
+  full       mean=1.000 d=+0.000 int4_real=0.00 cats[instruction_supersession:1.00 multi_turn_state:1.00 tool_schema:1.00]
+  uniform    mean=1.000 d=+0.000 int4_real=0.75 cats[instruction_supersession:1.00 multi_turn_state:1.00 tool_schema:1.00]
+  structure  mean=1.000 d=+0.000 int4_real=0.75 cats[instruction_supersession:1.00 multi_turn_state:1.00 tool_schema:1.00]
+=== nvidia-smi after ===
+=== nvidia-smi 2026-07-18T16:40:28Z CUDA_VISIBLE_DEVICES=5 ===
+Sat Jul 18 16:40:28 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   32C    P0            134W /  700W |    2195MiB / 143771MiB |     27%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   30C    P0            118W /  700W |    2215MiB / 143771MiB |      1%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   38C    P0            274W /  700W |   59369MiB / 143771MiB |     67%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   31C    P0            130W /  700W |    2195MiB / 143771MiB |     21%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   30C    P0            131W /  700W |    2195MiB / 143771MiB |     33%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   33C    P0            122W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   29C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   28C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A          807791      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
+|    1   N/A  N/A          807792      C   ...upam/COSMOS/.venv/bin/python3       2206MiB |
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    3   N/A  N/A          807790      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
+|    4   N/A  N/A          806880      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 31 %, 2195 MiB, 143771 MiB, 32
+1, NVIDIA H200, 4 %, 2215 MiB, 143771 MiB, 30
+2, NVIDIA H200, 97 %, 59369 MiB, 143771 MiB, 39
+3, NVIDIA H200, 39 %, 2195 MiB, 143771 MiB, 31
+4, NVIDIA H200, 39 %, 2195 MiB, 143771 MiB, 30
+5, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 33
+6, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
+7, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+=== finished=2026-07-18T16:40:29Z exit=0 ===
