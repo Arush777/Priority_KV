@@ -14,8 +14,7 @@ from prioritykv.fi_mixed_decode import (
 from prioritykv.flashinfer_multicall import require_head_dim
 from prioritykv.int4_kv import Int4KvConfig
 from prioritykv.packed_mixed_cache import ingest_synthetic_layer, page_manager_from_int4_mask
-from prioritykv.page_manager import PageManager, PageManagerConfig
-from prioritykv.page_roles import PageRole, StorageDtype
+from prioritykv.page_roles import PageRole
 from prioritykv.byte_model import ModelKvGeom
 
 

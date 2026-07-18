@@ -1,13 +1,10 @@
-# PriorityKV — FINAL RUN MANIFEST (science-core home)
-# Frozen: 2026-07-19. G4 middle-ground + D3 CLOSED + publish-track GPU jobs done.
+# PriorityKV frozen artifact manifest
+# Frozen: 2026-07-19.
 # Do not silently retune configs under these job IDs; bump rev + new job if re-running.
 
 schema_rev: 2
 freeze_id: SCIENCE_CORE_HOME_2026_07_19
 status: FROZEN_SCIENCE_CORE
-
-# Packaging still open (DeepMind track): arXiv submit, blog publish, upstream PR, outreach.
-# D3 close note: docs/D3_CLOSE.md (cold-scratch peak caveat accepted).
 
 model:
   hub_id: Qwen/Qwen3-8B
@@ -19,11 +16,19 @@ bench:
   sha256: fc44b966725738c94008ba61ce57ad7366169b9c0be73074f8161d909ccfae89
   n: 240
   categories: [tool_schema, instruction_supersession, multi_turn_state]
-  audit: docs/audit_w3.md
+  documentation: docs/DATASET.md
 
 hardware:
   host: dgre2 (H200)
   notes: Friend/COSMOS may share GPUs; canonical jobs used free/shared slots as logged.
+
+authors:
+  - name: Arush Sharma
+    affiliation: Indian Institute of Technology (Indian School of Mines) Dhanbad
+    order: 1
+  - name: Anupam Rawart
+    affiliation: Indian Institute of Technology Bombay
+    order: 2
 
 claim: |
   Uniform KV eviction / missing-state silently corrupts tool schemas and
@@ -79,18 +84,6 @@ canonical_jobs:
       uniform: 0.8792
       structure: 0.8833
 
-  publish_fp8_compare:
-    job_id: pub_a_d4_fp8_compare_gpu01_r1
-    decision: D4_FP8_COMPARE_PASS
-    script: scripts/run_d4_fp8_compare_dual.py
-    gpus: "0,1"
-
-  publish_guardrails:
-    job_id: pub_b_guardrails_gpu5_r1
-    decision: GUARDRAILS_PUB_PASS
-    script: scripts/run_guardrails_pub.py
-    gpus: "5"
-
   publish_gemma_reduced:
     job_id: pub_c_gemma_reduced_gpu01_r6
     decision: GEMMA_REDUCED_PASS
@@ -99,14 +92,10 @@ canonical_jobs:
     means: {full: 0.357, uniform: 0.0, structure: 0.143}
 
 repro:
-  clone: /data/anupam/scratch/Priority_KV
-  scratch: /data/anupam/scratch/prioritykv
-  worker: scripts/remote_worker.sh
-  d3_close: docs/D3_CLOSE.md
-
+  guide: docs/REPRODUCIBILITY.md
+  job_manifests: jobs/manifests
+  result_bundles: jobs/results
 deferred_out_of_scope:
   - Page-streamed INT4 attend without full-layer BF16 cold scratch (post-core)
   - LongBench / RULER full matrices
   - Nsight roofline (optional polish)
-  - Workshop CFP submit / blog go-live / upstream PR merge / outreach sends
-  - DeepMind interview prep (personal parallel track)

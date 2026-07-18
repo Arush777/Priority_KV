@@ -1,7 +1,0 @@
-{
-  "job_id": "w3_snapkv_attempt",
-  "exit": 0,
-  "finished_at": "2026-07-15T05:29:27Z",
-  "log": "/data/anupam/scratch/prioritykv/logs/w3_snapkv_attempt.log",
-  "job_yaml": "jobs/done/w3_snapkv_attempt.yaml"
-}

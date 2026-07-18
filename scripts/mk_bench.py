@@ -105,8 +105,6 @@ def main() -> int:
     counts = write_split_dirs(args.out_dir, examples)
     w2d_ids = set()
     if args.mode == "w3_lock":
-        from prioritybench.generate import generate_w2d_pilot
-
         w2d_ids = {ex.example_id for ex in generate_w2d_pilot()}
     manifest = {
         "master_seed": args.seed,

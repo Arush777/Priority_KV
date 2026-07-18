@@ -1,7 +1,0 @@
-{
-  "job_id": "w6h_mixed_serve_nbits2_replay_r1",
-  "exit": 0,
-  "finished_at": "2026-07-15T19:01:18Z",
-  "log": "/data/anupam/scratch/prioritykv/logs/w6h_mixed_serve_nbits2_replay_r1.log",
-  "job_yaml": "jobs/done/w6h_mixed_serve_nbits2_replay_r1.yaml"
-}

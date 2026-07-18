@@ -1,5 +1,0 @@
-id: w3_snapkv_attempt
-command: python scripts/run_snapkv_attempt.py
-gpus: "6,7"
-sync_cuda: false
-timeout_sec: 1800

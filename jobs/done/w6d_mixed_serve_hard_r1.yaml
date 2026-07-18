@@ -1,5 +1,0 @@
-id: w6d_mixed_serve_hard_r1
-command: python scripts/wait_gpu_and_run.py --min-free-gib 95 --num-gpus 1 --poll-sec 60 --timeout-sec 43200 -- python scripts/run_mixed_serve.py --config configs/w6_mixed_serve_hard.yaml
-gpus: "0,1,2,3,4,5,6,7"
-sync_cuda: false
-timeout_sec: 46800

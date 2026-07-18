@@ -59,8 +59,6 @@ def attend_pages_flashinfer(
         Sequences of ``(tk_i, num_kv_heads, head_dim)`` tensors (same dtype/device).
         Empty pages are skipped.
     """
-    import torch
-
     fi = fi or try_import_flashinfer()
     if fi is None:
         raise RuntimeError("flashinfer not installed")

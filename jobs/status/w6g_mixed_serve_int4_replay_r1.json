@@ -1,7 +1,0 @@
-{
-  "job_id": "w6g_mixed_serve_int4_replay_r1",
-  "exit": 0,
-  "finished_at": "2026-07-15T18:49:03Z",
-  "log": "/data/anupam/scratch/prioritykv/logs/w6g_mixed_serve_int4_replay_r1.log",
-  "job_yaml": "jobs/done/w6g_mixed_serve_int4_replay_r1.yaml"
-}

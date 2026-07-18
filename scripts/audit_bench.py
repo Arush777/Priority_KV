@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit a PriorityBench manifest → docs/audit_w3.md + SHA256 lock line."""
+"""Audit a PriorityBench manifest and write the frozen dataset report."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def main() -> int:
     ap.add_argument(
         "--out",
         type=Path,
-        default=ROOT / "docs" / "audit_w3.md",
+        default=ROOT / "docs" / "DATASET_AUDIT.md",
     )
     ap.add_argument(
         "--w2d-manifest",
@@ -157,7 +157,7 @@ def main() -> int:
         "  `tool_schema` may be 0 buried when W2d preserve already fills the quota.",
         "- Every example carries `meta.buried_state` for slice reporting.",
         "- Locked test examples must not be retuned after this SHA256 line is written",
-        "  to `docs/decisions.md`.",
+        "  to `FINAL_RUN_MANIFEST.yaml`.",
         "",
     ]
     if errors:

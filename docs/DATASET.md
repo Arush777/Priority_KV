@@ -2,7 +2,7 @@
 
 **Manifest:** `data/prioritybench/manifests/w3_lock.json`  
 **SHA256:** `fc44b966725738c94008ba61ce57ad7366169b9c0be73074f8161d909ccfae89`  
-**n = 240** · audit PASS (`docs/audit_w3.md`)  
+**n = 240** · deterministic audit PASS
 **Model pin for scoring runs:** Qwen3-8B @ `b968826d9c46dd6066d109eabc6255188de91218` (Gemma secondary is separate / reduced)
 
 This is **not** LongBench/RULER. It is a custom **agent-reliability** bench: long chat

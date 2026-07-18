@@ -7,7 +7,7 @@ tokenizer offsets from the pinned Qwen3 chat template.
 from __future__ import annotations
 
 import re
-from typing import Iterable, List, Mapping, Sequence
+from typing import List, Mapping, Sequence
 
 from prioritykv.page_roles import PageRole
 

@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use PriorityKV or PriorityBench-A, cite this software and the accompanying technical report."
+title: "PriorityKV: Structure-Aware KV Retention for Long Agent Traces"
+type: software
+authors:
+  - family-names: Sharma
+    given-names: Arush
+    affiliation: "Indian Institute of Technology (Indian School of Mines) Dhanbad"
+  - family-names: Rawart
+    given-names: Anupam
+    affiliation: "Indian Institute of Technology Bombay"
+repository-code: "https://github.com/Arush777/Priority_KV"
+url: "https://github.com/Arush777/Priority_KV"
+license: Apache-2.0
+version: 0.1.0
+date-released: 2026-07-19
+keywords:
+  - key-value cache
+  - large language models
+  - agent systems
+  - cache eviction
+  - quantization
+  - inference systems

@@ -1,127 +1,135 @@
-# PriorityKV-Agent
+# PriorityKV
 
-Structure-protected mixed-precision KV cache (BF16/INT4) for long multi-turn agent traces.
-Primary hardware: NVIDIA H200 (`dgre2`).
+Structure-aware KV retention and mixed BF16/INT4 storage for long language-model
+agent traces.
 
-**One-line point:** Uniform KV *eviction* silently breaks agent tool/instruction/state
-reliability; structure-aware retention fixes that at matched budgets. Soft INT4 does
-**not** open a PriorityBench quality gap — systems value is **packed bytes + honest latency**.
+**Arush Sharma** (IIT (ISM) Dhanbad), **Anupam Rawart** (IIT Bombay)
+Apache-2.0 | Python 3.11--3.12 | Primary evaluation: Qwen3-8B on NVIDIA H200
 
-**Science core: HOME** (`SCIENCE_CORE_HOME_2026_07_19`) · D3 **CLOSED**  
-→ Start here: [`RESULTS.md`](RESULTS.md) · dataset: [`docs/DATASET.md`](docs/DATASET.md) ·  
-freeze: [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) · next chat: [`docs/NEXT_CHAT_HANDOFF.md`](docs/NEXT_CHAT_HANDOFF.md)
+![PriorityKV system overview](paper/figures/prioritykv_overview.svg)
 
-Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200: [`docs/H200_SETUP.md`](docs/H200_SETUP.md) · Paper draft: [`paper/prioritykv_arxiv_draft.md`](paper/prioritykv_arxiv_draft.md)
+## Research question
 
-### Headline numbers (Qwen3-8B, H200)
+Agent traces contain tool schemas, superseding instructions, persistent identifiers, and
+ordinary dialogue. All of these tokens occupy the KV cache, but losing them has different
+behavioral consequences. PriorityKV asks whether application-visible message structure
+should influence which KV pages are retained or stored at high precision.
 
-| Evidence | Result |
+The frozen evidence supports three scoped conclusions:
+
+1. **Eviction:** role-blind sink-and-recent eviction destroys targeted agent state at
+   aggressive matched keep budgets; structure-aware retention preserves substantially
+   more of it.
+2. **Quantization:** assigning 75% of positions to soft INT4 does **not** create a
+   meaningful PriorityBench quality separation from FullKV. This hypothesis was
+   falsified.
+3. **Systems:** real packed storage reduces payload bytes, but the current BF16 cold
+   scratch limits peak savings and makes decode slower. Payload, peak, and latency are
+   reported separately.
+
+## Key results
+
+Qwen3-8B at revision `b968826d9c46dd6066d109eabc6255188de91218`, NVIDIA H200:
+
+| Experiment | Result |
 |---|---|
-| Lock-240 packed quality | full **0.888** · structure **0.883** · uniform **0.879** |
-| Matched keep_frac=0.25 (token) | uniform **0.0** · structure **1.0** |
-| Latency (structure-FI) | e2e ~**1.12×** FullKV · TPOT ~**1.2×** |
-| Payload / peak | payload ~**0.72×** · peak ~**0.87×** (cold-scratch caveat) |
-| Guardrails | Δ=**0** · FP8 compare **PASS** · Gemma reduced **PASS** |
+| Token eviction, 25% keep (`n=14`) | role-blind **0.000**, structure **1.000** |
+| Page eviction, 25% keep (`n=14`) | role-blind **0.000**, structure **0.643** |
+| Middle-relocated page state (`n=16`) | fixed prefix **0.125**, structure **0.688** |
+| Locked mixed quality (`n=240`) | FullKV **0.8875**, role-blind **0.8792**, structure **0.8833** |
+| Packed payload / modeled bytes | **0.719x / 0.473x** FullKV |
+| Peak allocated CUDA memory | **0.868x** FullKV |
+| E2E / TPOT at 8k--16k | **1.11--1.12x / 1.20--1.21x** FullKV |
 
----
+The positive eviction experiments are controlled stress slices, not a broad benchmark
+matrix. The lock-240 result is a negative quantization finding, not evidence that
+structure-aware INT4 improves quality.
 
-## Dual-machine workflow (read this first)
+![Matched keep-budget results](paper/figures/reliability_keep_sweep.svg)
 
-| Where | Role |
+## Artifacts
+
+| Artifact | Purpose |
 |---|---|
-| **Agent machine** (Cursor / IBM CCC) | Write code, CPU tests, push; enqueue `jobs/pending/*.yaml` |
-| **H200** (`anupam@dgre2`) | `git pull`, `uv`/`sync.sh --cuda`, `pkworker` · **max 2 GPUs** · no coding agents on box |
+| [`RESULTS.md`](RESULTS.md) | Canonical metrics and claim boundary |
+| [`docs/DATASET.md`](docs/DATASET.md) | PriorityBench-A tasks, strata, and generation |
+| [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) | Frozen model, benchmark, configs, and job IDs |
+| [`paper/prioritykv_manuscript.md`](paper/prioritykv_manuscript.md) | Technical report manuscript |
+| [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | Reproduction levels and commands |
+| [`docs/BLOG.md`](docs/BLOG.md) | Accessible research summary |
+| [`CITATION.cff`](CITATION.cff) | Citation metadata |
 
-```bash
-# H200
-./scripts/sync.sh --cuda
-export PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
-tmux new -s pkworker './scripts/remote_worker.sh'
+Main source modules:
 
-# Agent — pull job status
-./scripts/pull_job.sh --watch <job_id>
+```text
+src/prioritybench/    deterministic benchmark generator and scorers
+src/prioritykv/       roles, policies, packed cache, and FlashInfer decode
+configs/              frozen experiment configurations
+jobs/                 canonical H200 commands and result bundles
+tests/                CPU unit and contract tests
+paper/figures/        reproducibly generated SVG/PDF figures
 ```
 
-Job queue: [`jobs/README.md`](jobs/README.md) · H200 detail: [`docs/H200_SETUP.md`](docs/H200_SETUP.md)
+## Local reproduction
 
----
-
-## Results archive
-
-Full tables and history: [`RESULTS.md`](RESULTS.md) · narrative log: [`docs/decisions.md`](docs/decisions.md).
-
-Canonical job IDs live in [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml). Failed experiment jobs under `jobs/failed/` are kept for audit (e.g. early Gemma attempts) — they are **not** the claim.
-
----
-
-## Dev quickstart (agent box / CPU)
+Install the CPU development environment and run the complete local check:
 
 ```bash
-git clone git@github.com:Arush777/Priority_KV.git
+git clone https://github.com/Arush777/Priority_KV.git
 cd Priority_KV
 ./scripts/sync.sh
 ./scripts/check.sh
 ```
 
-Git author for pushes: `Arush777 <153831754+Arush777@users.noreply.github.com>`.
-
-Older handoff detail remains in [`docs/HANDOFF_W3_INT4.md`](docs/HANDOFF_W3_INT4.md).
-
----
-
-## Repo layout
-
-```
-src/prioritybench/   # PriorityBench-A generator + scorers
-src/prioritykv/      # page manager, INT4 path, keep policies, mixed-cache ref
-scripts/             # pilots, worker, fetch_results, audit
-jobs/                # pending/done/failed queue for H200 worker
-tests/               # CPU unit tests
-configs/             # frozen run YAMLs (w3_structured_paged, w3_int4_assert, …)
-data/prioritybench/  # manifests tracked; JSONL splits gitignored (rebuild with mk_bench)
-docs/                # plan, decisions, H200 setup, handoff
-```
----
-
-## Quick start
-
-**Agent machine**
+Regenerate and audit PriorityBench-A:
 
 ```bash
-cd /u/arushh/Arush/Priority_KV   # or your clone
-./scripts/sync.sh
-uv run pytest -q
+PYTHONPATH=src uv run python scripts/mk_bench.py --mode w3_lock
+PYTHONPATH=src uv run python scripts/audit_bench.py
 ```
 
-**H200**
+Regenerate all paper figures from tracked frozen artifacts:
 
 ```bash
-git clone git@github.com:Arush777/Priority_KV.git   # first time
-cd /data/anupam/scratch/Priority_KV                   # typical path
-git pull
+uv run python scripts/make_publication_figures.py
+```
+
+## GPU reproduction
+
+GPU dependencies are isolated from the CPU environment:
+
+```bash
 ./scripts/sync.sh --cuda
-# edit .env: REPO_ROOT, PRIORITYKV_SCRATCH, HF_*, CUDA_VISIBLE_DEVICES=6,7
-mkdir -p "$PRIORITYKV_SCRATCH/logs"
-tmux new -s pkworker './scripts/remote_worker.sh'   # poll jobs/pending
-
-# Or manual: uv run python scripts/mk_bench.py --mode w3_lock
+export PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
 ```
----
 
-## Collaborator / Cursor handoff
+Canonical commands and device assignments are indexed in
+[`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml). The H200 worker contract and result
+bundle format are documented in [`jobs/README.md`](jobs/README.md). Do not run GPU code on
+a login node; the original environment used at most two H200 GPUs per job.
 
-1. **[`RESULTS.md`](RESULTS.md)** — point of project + metrics (start here)
-2. [`docs/HANDOFF.md`](docs/HANDOFF.md) · [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml)
-3. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) · [`docs/decisions.md`](docs/decisions.md)
+## Scope and limitations
 
----
+- PriorityBench-A is synthetic and agent-specific; it is not LongBench or RULER.
+- The decisive matched-eviction runs contain 14--16 examples.
+- Qwen3-8B on H200 is the only complete model/device matrix.
+- The structure tagger is heuristic and misses some unmarked free-form state.
+- The current cold path expands INT4 pages into BF16 scratch before attention.
+- The latency study is single-request and does not measure serving throughput or tail
+  latency under concurrency.
 
-## Checklist (science core)
+See the manuscript for the full threats-to-validity discussion.
 
-- [x] PriorityBench-A lock-240 + audit
-- [x] Structure ≫ uniform matched-keep (token + page); buried scoped
-- [x] Soft INT4 quality gap falsified @ 0.75
-- [x] Packed BF16/INT4 + FI decode (D3 CLOSED; cold-scratch caveat)
-- [x] Lock-240 / latency M3c / peak-mem canonical jobs
-- [x] Publish GPU: FP8 compare · guardrails · Gemma reduced
-- [ ] arXiv submit · blog · upstream PR · outreach (DeepMind packaging)
+## Citation and license
+
+Citation metadata is available in [`CITATION.cff`](CITATION.cff).
+
+PriorityKV is licensed under the [Apache License 2.0](LICENSE). Model weights, benchmark
+dependencies, and third-party libraries retain their respective licenses. Author
+affiliations do not imply institutional endorsement.
+
+## Contributing
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before changing benchmark semantics, frozen
+claims, or canonical run configurations. Security reports should follow
+[`SECURITY.md`](SECURITY.md).

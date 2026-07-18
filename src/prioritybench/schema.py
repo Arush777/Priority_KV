@@ -1,6 +1,6 @@
 """Example schema for PriorityBench-A (240 examples, 3 categories).
 
-Locked construction rules live in docs/PRIORITYKV_IMPLEMENTATION_PLAN.md §3.2.
+Locked construction rules are documented in docs/DATASET.md.
 This module only defines the on-disk / in-memory contract for generators and scorers.
 """
 

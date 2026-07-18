@@ -104,7 +104,6 @@ def test_structure_risk_prefers_tool_over_other_when_budget_tight():
     idx_p2 = select_structure_risk_pages(n, roles, cfg, risk_cfg=risk)
     tool_q7 = sum(1 for i in idx_q7 if 240 <= int(i) < 320)
     tool_p2 = sum(1 for i in idx_p2 if 240 <= int(i) < 320)
-    other_q7 = sum(1 for i in idx_q7 if 80 <= int(i) < 160)
     other_p2 = sum(1 for i in idx_p2 if 80 <= int(i) < 160)
     assert tool_p2 >= tool_q7
     assert tool_p2 > other_p2 or tool_p2 >= 48

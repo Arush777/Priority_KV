@@ -1,7 +1,0 @@
-{
-  "job_id": "w7_fi_decode_smoke_r1",
-  "exit": 0,
-  "finished_at": "2026-07-17T12:45:50Z",
-  "log": "/data/anupam/scratch/prioritykv/logs/w7_fi_decode_smoke_r1.log",
-  "job_yaml": "jobs/done/w7_fi_decode_smoke_r1.yaml"
-}

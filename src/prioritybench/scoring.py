@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping
 
 from prioritybench.schema import Category, PriorityExample
 

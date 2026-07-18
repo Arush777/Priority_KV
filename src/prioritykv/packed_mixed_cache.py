@@ -80,8 +80,6 @@ class KvPagePayload:
         self, *, device: Any = None, dtype: Any = None
     ) -> Tuple[Any, Any]:
         """Return K/V (heads, tok, dim) on ``device`` (torch) or host numpy."""
-        import torch
-
         if self.dtype == StorageDtype.BF16:
             assert self.k_bf16 is not None and self.v_bf16 is not None
             if _is_torch(self.k_bf16):
@@ -95,6 +93,8 @@ class KvPagePayload:
             v = self.v_bf16.astype(np.float32, copy=False)
             if device is None or str(device) == "cpu":
                 return k, v
+            import torch
+
             dt = dtype or torch.float32
             return (
                 torch.from_numpy(np.ascontiguousarray(k)).to(device=device, dtype=dt),
@@ -117,6 +117,8 @@ class KvPagePayload:
         v = np.transpose(v, (0, 2, 1))
         if device is None or str(device) == "cpu":
             return k, v
+        import torch
+
         dt = dtype or torch.float32
         return (
             torch.from_numpy(np.ascontiguousarray(k)).to(device=device, dtype=dt),

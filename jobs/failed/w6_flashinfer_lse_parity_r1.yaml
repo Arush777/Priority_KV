@@ -1,5 +1,0 @@
-id: w6_flashinfer_lse_parity_r1
-command: python scripts/wait_gpu_and_run.py --min-free-gib 20 --num-gpus 1 --poll-sec 30 --timeout-sec 7200 -- python scripts/run_flashinfer_lse_parity.py
-gpus: "0,1,2,3,4,5,6,7"
-sync_cuda: false
-timeout_sec: 7800

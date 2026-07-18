@@ -1,105 +1,28 @@
-# H200 job queue
+# Experiment artifacts
 
-Queued GPU/CPU jobs for the H200 worker (`scripts/remote_worker.sh`).
-Agents never run on the H200 — only this queue + git + `uv`.
-
-## Control everything from the agent box
-
-```
-Agent / Cursor                          H200 pkworker
-─────────────────                       ─────────────────
-1. code + pytest
-2. jobs/pending/<id>.yaml
-3. git push  ─────────────────────────► 4. poll (~45s), pull, run
-                                        5. nvidia-smi before/after
-                                        6. copy summary + log_tail
-7. git pull / ./scripts/pull_job.sh ◄── 8. git push status+results
-```
-
-No SSH needed after **one** H200 worker restart onto this script.
+This directory contains the frozen commands and tracked result bundles used by the
+PriorityKV manuscript. It is an evidence archive, not a live job queue.
 
 ## Layout
 
-| Dir | Purpose |
+| Directory | Contents |
 |---|---|
-| `pending/` | New jobs (commit + push to enqueue) |
-| `running/` | Claimed by worker (gitignored; local only) |
-| `done/` | Finished with exit 0 |
-| `failed/` | Finished with non-zero exit |
-| `status/` | JSON: `exit`, `decision`, `pass`, `results_dir` |
-| `results/<id>/` | Debug bundle (see below) |
+| `manifests/` | Exact commands and GPU assignments for canonical H200 runs |
+| `results/<job_id>/` | Summary, logs, environment metadata, and GPU snapshots |
 
-### Debug bundle (`jobs/results/<id>/`)
+## Canonical runs
 
-| File | What |
+| Job ID | Measurement |
 |---|---|
-| `summary.json` | Job result JSON (`out=…` from the script) |
-| `log_full.txt` | **Full** stdout/stderr if log ≤ 2 MiB |
-| `log_tail.txt` | Last **512 KiB** always |
-| `log_head.txt` | First 64 KiB if log was truncated |
-| `traceback.txt` | Extracted Traceback / Error / FAIL lines |
-| `nvidia_smi_before.txt` / `nvidia_smi.txt` | GPU snapshot |
-| `meta.json` | Sizes + decision/pass flags |
+| `d4_latency_m3c_gpu56_r1` | 8k/16k end-to-end and per-token latency |
+| `mg_a_peak_mem_gpu5_r1` | Peak CUDA memory and packed payload bytes |
+| `mg_b_lock240_quality_gpu01_r1` | Locked 240-example Qwen3-8B quality |
+| `pub_c_gemma_reduced_gpu01_r6` | Reduced secondary-model stress check |
 
-Agent helper: `./scripts/pull_job.sh [--watch] <id>`
+Each `summary.json` is machine-readable. `meta.json` records bundle metadata,
+`nvidia_smi_before.txt` and `nvidia_smi.txt` capture device state, and log files preserve
+the original program output. The canonical decision and process exit code are recorded in
+the summary and manifest.
 
-## Job YAML schema
-
-```yaml
-id: w3_int4_assert_r1
-command: python scripts/run_pilot3.py --config configs/w3_int4_assert.yaml --modes int4_only
-gpus: "6,7"          # optional; default from .env
-sync_cuda: false     # true only when lockfile / gpu deps changed
-timeout_sec: 7200    # 0 = no timeout
-```
-
-Rules:
-
-- `command` must be `python scripts/<name>.py …` or `uv run python scripts/<name>.py …`
-- One job per file; filename should match `id`
-- Do **not** put secrets in job files
-- Scripts should print `out=/path/to/result.json` so the worker can ship `jobs/results/<id>/summary.json`
-
-## Agent loop (no H200 laptop)
-
-1. Implement + `uv run pytest` locally
-2. Add `jobs/pending/<id>.yaml`
-3. Commit + push (**author Arush777**)
-4. Wait / poll: `./scripts/pull_job.sh --watch <id>`
-5. Read `jobs/status/<id>.json` + `jobs/results/<id>/`
-
-GPU snapshot anytime:
-
-```yaml
-# jobs/pending/diag_nvidia_smi_r1.yaml
-id: diag_nvidia_smi_r1
-command: python scripts/diag_nvidia_smi.py --out-tag r1
-gpus: "6,7"
-timeout_sec: 120
-```
-
-## Worker knobs (H200 `.env`)
-
-```bash
-REMOTE_WORKER_POLL_SEC=45
-REMOTE_WORKER_BRANCH=main
-REMOTE_WORKER_PUSH_STATUS=1
-REMOTE_WORKER_PUSH_RESULTS=1   # ship jobs/results/* to git
-REMOTE_WORKER_LOG_TAIL_BYTES=524288      # 512 KiB tail
-REMOTE_WORKER_LOG_FULL_MAX_BYTES=2097152 # full log if ≤2 MiB
-```
-
-## One-time H200 install (do while you have SSH)
-
-```bash
-cd /data/anupam/scratch/Priority_KV
-tmux kill-session -t pkworker 2>/dev/null || true
-git fetch origin
-git reset --hard origin/main
-tmux new -d -s pkworker './scripts/remote_worker.sh'
-tmux ls
-# optional check:
-tmux capture-pane -t pkworker -p | tail -20
-```
-
-After that, leave H200 alone — control from git only.
+See [`../docs/REPRODUCIBILITY.md`](../docs/REPRODUCIBILITY.md) for environment setup,
+expected deviations, and the claim-to-artifact index.

@@ -1,7 +1,0 @@
-{
-  "job_id": "w6i_flashinfer_packed_parity_r1",
-  "exit": 0,
-  "finished_at": "2026-07-16T10:37:43Z",
-  "log": "/data/anupam/scratch/prioritykv/logs/w6i_flashinfer_packed_parity_r1.log",
-  "job_yaml": "jobs/done/w6i_flashinfer_packed_parity_r1.yaml"
-}
