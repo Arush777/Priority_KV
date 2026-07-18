@@ -302,12 +302,8 @@ Storage paths on H200: `$PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv` · 
 
 ## 11. Immediate next actions (execution queue)
 
-**Middle-ground close (2026-07-19) — active:**
+**Middle-ground close: COMPLETE (G4 2026-07-19).**  
+See [`FINAL_RUN_MANIFEST.yaml`](../FINAL_RUN_MANIFEST.yaml).
 
-1. H200 `mg_a_peak_mem_gpu5_r1` — peak CUDA mem + packed bytes (M3c slice).
-2. H200 `mg_b_lock240_quality_gpu567_r1` — lock-240 Full/uniform/structure @ 0.75
-   (triple GPU 8k∥16k∥32k, packed FI).
-3. Optional thin guardrails; then G4 freeze. **No** LongBench/RULER unless publishing.
-
-**Recently done:** D4 M3c PASS (`d4_latency_m3c_gpu56_r1`).
-**Do not:** grow D4 latency n; soft-INT4 severity hunts; reopen closed G2/G3 science.
+No further required jobs. Optional only if scope reopens: guardrails, LongBench,
+publish track.

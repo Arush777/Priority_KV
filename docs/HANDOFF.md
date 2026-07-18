@@ -56,7 +56,7 @@ A **structure-protected mixed BF16/INT4 paged cache**:
 | **G1** | Freeze baselines | **CLOSED** (SnapKV → DropKeep interim) |
 | **G2** | Structure ≥3pt or INT4 drop | **CLOSED path (b)** — matched keep |
 | **G3** | Q6/Q7/Q8/P2 ablations | **CLOSED (with honest negative)** |
-| **G4** | Freeze final run manifest | **Not started** |
+| **G4** | Freeze final run manifest | **CLOSED** — `FINAL_RUN_MANIFEST.yaml` (middle-ground 2026-07-19) |
 
 ### Reliability evidence (family A) — strong
 
@@ -135,14 +135,15 @@ A **structure-protected mixed BF16/INT4 paged cache**:
 ## 4. How far we are in the implementation
 
 ```
-Reliability story     ████████████████████░░░░  ~85%  (G0–G3 done; G4 freeze open)
-Bench + atlas (D1–D2) ████████████████████░░░░  ~90%
-Mixed backend (D3)    ████████████░░░░░░░░░░░░  ~60%  (pack+FI parity yes; FI decode no)
-Serving metrics (D4)  ░░░░░░░░░░░░░░░░░░░░░░░░   0%
-Publish (D5–D9)       ░░░░░░░░░░░░░░░░░░░░░░░░   0%
+Reliability story     ████████████████████████  100%  (G0–G4 closed; middle-ground)
+Packed FI serving     ███████████████████████░   ~95%  (shim decode; cold-scratch caveat)
+Serving metrics       ████████████████████████  100%  (M3c latency + peak-mem + lock-240)
+Publish track         ░░░░░░░░░░░░░░░░░░░░░░░░    0%  (explicitly out of scope)
 ```
 
-**One-line status:** the *science* half of the claim is largely closed and honest; the *shipping systems* half has packed storage + FlashInfer parity but not yet a decode path that attends packed pages without materializing, nor any D4 latency numbers.
+**One-line status:** Middle-ground **DONE** (G4). Reliability + packed serving metrics
+frozen in `FINAL_RUN_MANIFEST.yaml`. Soft-INT4 quality gap falsified; claim is
+eviction reliability + packed bytes + honest latency.
 
 ### Deliverable checklist
 
@@ -150,29 +151,23 @@ Publish (D5–D9)       ░░░░░░░░░░░░░░░░░░�
 |---|---|---|
 | D1 | PriorityBench-A | 🟢 Locked + audited |
 | D2 | Failure atlas | 🟢 Folded denser sweeps |
-| D3 | Mixed paged backend | 🟡 Pack + FI parity; SDPA materialize decode |
-| D4 | TTFT/TPOT/throughput/Nsight | ⬜ |
-| D5–D9 | PR / paper / blog / smoke / outreach | ⬜ |
+| D3 | Mixed paged backend | 🟢 Packed + FI shim decode (cold-scratch caveat) |
+| D4 | TTFT/TPOT + peak/payload | 🟢 M3c + `mg_a` + lock-240 |
+| D5–D9 | PR / paper / blog / outreach | ⬜ Out of middle-ground scope |
 | D10 | Pallas/TPU appendix | ⬜ conditional buffer |
+| G4 | Final run manifest | 🟢 `FINAL_RUN_MANIFEST.yaml` |
 
 ---
 
 ## 5. Next steps / still pending (priority order)
 
-**Active — middle-ground close (2026-07-19):** not LongBench/RULER; Qwen3-8B only.
+**Middle-ground close: DONE (G4 frozen 2026-07-19).**  
+Canonical artifacts + claim: [`FINAL_RUN_MANIFEST.yaml`](../FINAL_RUN_MANIFEST.yaml).
 
-1. **`mg_a_peak_mem_gpu5_r1`** — measured peak CUDA mem + packed payload bytes
-   (M3c-style slice; report peak vs payload; cold-scratch caveat).
-2. **`mg_b_lock240_quality_gpu567_r1`** — full PriorityBench lock-240 quality
-   FullKV / uniform / structure @ int4_frac=0.75 (packed FI; 8k∥16k∥32k).
-3. Optional thin guardrails only after (1)+(2). Then G4 freeze + `FINAL_RUN_MANIFEST.yaml`.
+Optional later (not required for this close): thin guardrails re-check; publish
+track; LongBench/RULER; Gemma.
 
-**Done systems slice:** D4 M3c PASS (`d4_latency_m3c_gpu56_r1`) — e2e≈FullKV,
-pack/cold cheap, TPOT ~1.2×, quality matched FullKV, packed bytes ~0.47×
-(scratch caveat).
-
-**Do not:** grow D4 latency n; full LongBench/RULER; soft-INT4 severity sweeps
-to hunt a quality gap; reopen G3 FixedHot uniqueness hunt.
+**Do not:** reopen soft-INT4 severity hunts; grow D4 latency n for optics.
 
 ---
 
@@ -180,13 +175,9 @@ to hunt a quality gap; reopen G3 FixedHot uniqueness hunt.
 
 | Blocker | Type | Severity | Notes |
 |---|---|---|---|
-| Lock-240 + peak-mem not yet on board | Measurement | **High** | Middle-ground jobs enqueued 2026-07-19 |
-| FI cold scratch ≈ BF16 peak | Systems honesty | Medium | Document; don't oversell peak VRAM |
-| P2 ≉ unique vs Q7 mid-context | Science (closed) | Low | Document as negative |
-| Uniform INT4 quality gap absent | Science (closed) | — | Pivot to reliability + bytes + latency |
-| Gemma / CFP / outreach | Process | Low | Deferred (not publishing track) |
-
-Nothing is currently blocked on H200 access, FlashInfer import, or bench integrity.
+| None for middle-ground close | — | — | G4 frozen |
+| FI cold scratch ≈ BF16 peak | Systems honesty | Low | Documented in peak-mem job |
+| Publish / LongBench / Gemma | Out of scope | — | Only if scope reopens |
 
 ---
 
