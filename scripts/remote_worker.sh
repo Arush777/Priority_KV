@@ -288,15 +288,25 @@ try_push_job_state() {
   if git diff --cached --quiet 2>/dev/null; then
     return 0
   fi
-  if git commit -m "worker: ${dest_dir} ${job_id}" >/dev/null 2>&1; then
-    if git push origin "HEAD:${BRANCH}" >/dev/null 2>&1; then
-      log "pushed status+results for ${job_id} → ${dest_dir}"
-    else
-      log "WARN: push failed for ${job_id} (scratch status still written)"
-    fi
-  else
+  if ! git commit -m "worker: ${dest_dir} ${job_id}" >/dev/null 2>&1; then
     log "WARN: commit failed for ${job_id}"
+    return 1
   fi
+  # Push; if rejected (non-ff), rebase onto origin once and retry.
+  if git push origin "HEAD:${BRANCH}" >/dev/null 2>&1; then
+    log "pushed status+results for ${job_id} → ${dest_dir}"
+    return 0
+  fi
+  log "WARN: push failed for ${job_id}; fetch+rebase once then retry"
+  git fetch origin "$BRANCH" --quiet || true
+  if git rebase "origin/${BRANCH}" >/dev/null 2>&1 \
+    && git push origin "HEAD:${BRANCH}" >/dev/null 2>&1; then
+    log "pushed status+results for ${job_id} → ${dest_dir} (after rebase)"
+    return 0
+  fi
+  log "WARN: push still failed for ${job_id} (scratch status still written; run h200_bootstrap)"
+  # Leave local commit; next bootstrap reset --hard will drop it — scratch remains source of truth.
+  return 1
 }
 
 run_one_job() {
@@ -339,6 +349,9 @@ run_one_job() {
     [[ "${prev_exit:-1}" != "0" ]] && dest=failed
     log "SKIP ${job_id}: already finished (exit=${prev_exit:-?}); archiving → ${dest}"
     mv "$running" "$ROOT/jobs/${dest}/${job_id}.yaml"
+    # Rebuild git-visible status/results from scratch so a prior failed push can land.
+    collect_job_results "$job_id" "${prev_exit:-1}" "$LOG_DIR/${job_id}.log"
+    write_status_files "$job_id" "${prev_exit:-1}" "$LOG_DIR/${job_id}.log" "jobs/${dest}/${job_id}.yaml"
     try_push_job_state "$job_id" "$dest"
     return
   fi

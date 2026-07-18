@@ -450,7 +450,9 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   1. `pub_a_d4_fp8_compare_gpu01_r1` → **D4_FP8_COMPARE_PASS** (exit=0, GPUs 0,1)
   2. `pub_b_guardrails_gpu5_r1` → **GUARDRAILS_PUB_PASS** (exit=0; ran stale GPU-5 YAML before cancel landed)
   3. `pub_c_gemma_reduced_gpu5_r1` → **SKIP_NO_GEMMA** (exit=0; acceptable)
-- **Ops:** H200 `git reset --hard origin/main` + restart `pkworker`. Cancelled redundant pending `pub_b/c_*gpu01*` so they do not re-run; leave `pub_a` pending so worker SKIP-archives and retries status push.
+- **Ops:** H200 `git reset --hard origin/main` + restart `pkworker`. Cancelled redundant pending `pub_b/c_*gpu01*` so they do not re-run.
+- **Why “fast”:** Gemma was `SKIP_NO_GEMMA` (~seconds). Guardrails ~4 min PASS. FP8 compare PASS. All exit=0 on scratch.
+- **Why no GitHub push:** worker `git push` failed after first job → local commits diverged → perpetual `ff-only merge failed`. Scratch is truth; agent recovered `jobs/status/*.json` + `jobs/done/*.yaml`. Worker push now rebases once on reject; use `scripts/h200_force_push_scratch_jobs.sh` to ship log tails/summaries.
 - Claim discipline unchanged: eviction reliability + bytes/latency; soft-INT4 gap stays falsified.
 
 ## 2026-07-19 — G4 FREEZE (middle-ground close)
