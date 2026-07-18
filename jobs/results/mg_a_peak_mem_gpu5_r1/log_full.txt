@@ -1,0 +1,224 @@
+=== remote_worker job=mg_a_peak_mem_gpu5_r1 started=2026-07-18T19:20:10Z ===
+command=python scripts/run_mg_peak_mem.py --config configs/mg_peak_mem.yaml --out-tag gpu5_r1 --max-new-tokens 32
+CUDA_VISIBLE_DEVICES=5
+CUDA_HOME=/usr/local/cuda
+TORCH_CUDA_ARCH_LIST=9.0
+PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
+cwd=/data/anupam/scratch/Priority_KV
+=== nvidia-smi before ===
+=== nvidia-smi 2026-07-18T19:20:09Z CUDA_VISIBLE_DEVICES=5 ===
+Sat Jul 18 19:20:09 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   33C    P0            130W /  700W |   34707MiB / 143771MiB |      1%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   30C    P0            123W /  700W |    6631MiB / 143771MiB |      7%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   39C    P0            283W /  700W |   59369MiB / 143771MiB |     48%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   31C    P0            127W /  700W |     927MiB / 143771MiB |      8%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   30C    P0            131W /  700W |    5147MiB / 143771MiB |      1%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   31C    P0             77W /  700W |       4MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   31C    P0             79W /  700W |       4MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   39C    P0            282W /  700W |   24895MiB / 143771MiB |     79%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A          873088      C   ...sh/era5_expts/venv/bin/python      29582MiB |
+|    0   N/A  N/A          908586      C   ...upam/COSMOS/.venv/bin/python3       5110MiB |
+|    1   N/A  N/A          902335      C   ...upam/COSMOS/.venv/bin/python3       6622MiB |
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    3   N/A  N/A          910891      C   ...upam/COSMOS/.venv/bin/python3        918MiB |
+|    4   N/A  N/A          907288      C   ...upam/COSMOS/.venv/bin/python3       5138MiB |
+|    7   N/A  N/A          880535      C   ...sh/era5_expts/venv/bin/python      24886MiB |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 1 %, 34707 MiB, 143771 MiB, 32
+1, NVIDIA H200, 7 %, 6631 MiB, 143771 MiB, 30
+2, NVIDIA H200, 83 %, 59369 MiB, 143771 MiB, 37
+3, NVIDIA H200, 27 %, 927 MiB, 143771 MiB, 31
+4, NVIDIA H200, 7 %, 5147 MiB, 143771 MiB, 30
+5, NVIDIA H200, 0 %, 4 MiB, 143771 MiB, 31
+6, NVIDIA H200, 0 %, 4 MiB, 143771 MiB, 31
+7, NVIDIA H200, 78 %, 24895 MiB, 143771 MiB, 38
+[peak_mem] loading /data/anupam/scratch/prioritykv/models/Qwen3-8B
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<03:04,  2.16it/s]Loading weights:   4%|▍         | 15/399 [00:00<00:11, 34.67it/s]Loading weights:   7%|▋         | 28/399 [00:00<00:06, 56.09it/s]Loading weights:  12%|█▏        | 48/399 [00:00<00:03, 89.09it/s]Loading weights:  15%|█▌        | 61/399 [00:00<00:03, 95.12it/s]Loading weights:  20%|██        | 81/399 [00:01<00:02, 117.81it/s]Loading weights:  24%|██▍       | 95/399 [00:01<00:02, 117.50it/s]Loading weights:  29%|██▊       | 114/399 [00:01<00:02, 132.12it/s]Loading weights:  32%|███▏      | 129/399 [00:01<00:02, 130.27it/s]Loading weights:  37%|███▋      | 147/399 [00:01<00:01, 137.64it/s]Loading weights:  41%|████      | 162/399 [00:01<00:01, 134.05it/s]Loading weights:  45%|████▍     | 179/399 [00:01<00:01, 136.98it/s]Loading weights:  48%|████▊     | 193/399 [00:01<00:01, 127.71it/s]Loading weights:  53%|█████▎    | 213/399 [00:01<00:01, 143.95it/s]Loading weights:  57%|█████▋    | 228/399 [00:02<00:01, 137.97it/s]Loading weights:  62%|██████▏   | 246/399 [00:02<00:01, 142.30it/s]Loading weights:  65%|██████▌   | 261/399 [00:02<00:01, 137.22it/s]Loading weights:  70%|██████▉   | 279/399 [00:02<00:00, 142.79it/s]Loading weights:  74%|███████▎  | 294/399 [00:02<00:00, 138.49it/s]Loading weights:  78%|███████▊  | 312/399 [00:02<00:00, 144.03it/s]Loading weights:  82%|████████▏ | 327/399 [00:02<00:00, 135.70it/s]Loading weights:  86%|████████▋ | 345/399 [00:02<00:00, 144.37it/s]Loading weights:  90%|█████████ | 360/399 [00:03<00:00, 138.29it/s]Loading weights:  95%|█████████▍| 378/399 [00:03<00:00, 144.18it/s]Loading weights:  98%|█████████▊| 393/399 [00:03<00:00, 139.86it/s]Loading weights: 100%|██████████| 399/399 [00:03<00:00, 121.65it/s]
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280804 full peak=21.15GB
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280804 uniform peak=19.11GB payload=1104.8MB comp=0.472706
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280804 structure peak=19.11GB payload=1104.8MB comp=0.472706
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280912 full peak=21.33GB
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280912 uniform peak=19.21GB payload=1145.4MB comp=0.472722
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280912 structure peak=19.21GB payload=1145.4MB comp=0.472722
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280959 full peak=21.33GB
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280959 uniform peak=19.21GB payload=1144.0MB comp=0.472624
+[peak_mem] multi_turn_state.order_id.v2__c8000__s20280959 structure peak=19.21GB payload=1144.0MB comp=0.472624
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20270912 full peak=21.03GB
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20270912 uniform peak=19.05GB payload=1076.9MB comp=0.472701
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20270912 structure peak=19.05GB payload=1076.9MB comp=0.472701
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20271013 full peak=20.96GB
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20271013 uniform peak=19.01GB payload=1060.6MB comp=0.472709
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20271013 structure peak=19.01GB payload=1060.6MB comp=0.472709
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20271114 full peak=21.33GB
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20271114 uniform peak=19.21GB payload=1146.0MB comp=0.472679
+[peak_mem] instruction_supersession.format_flip.v2__c8000__s20271114 structure peak=19.21GB payload=1146.0MB comp=0.472679
+[peak_mem] tool_schema.search_docs.v1__c8000__s20260804 full peak=21.38GB
+[peak_mem] tool_schema.search_docs.v1__c8000__s20260804 uniform peak=19.28GB payload=1158.5MB comp=0.472728
+[peak_mem] tool_schema.search_docs.v1__c8000__s20260804 structure peak=19.29GB payload=1158.5MB comp=0.472728
+[peak_mem] tool_schema.http_get.v1__c8000__s20260858 full peak=21.24GB
+[peak_mem] tool_schema.http_get.v1__c8000__s20260858 uniform peak=19.17GB payload=1125.6MB comp=0.472644
+[peak_mem] tool_schema.http_get.v1__c8000__s20260858 structure peak=19.17GB payload=1125.6MB comp=0.472644
+[peak_mem] tool_schema.read_file.v1__c8000__s20260959 full peak=21.28GB
+[peak_mem] tool_schema.read_file.v1__c8000__s20260959 uniform peak=19.19GB payload=1136.1MB comp=0.472709
+[peak_mem] tool_schema.read_file.v1__c8000__s20260959 structure peak=19.19GB payload=1136.1MB comp=0.472709
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280876 full peak=26.25GB
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280876 uniform peak=21.98GB payload=2296.4MB comp=0.472671
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280876 structure peak=21.98GB payload=2296.4MB comp=0.472671
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280923 full peak=25.75GB
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280923 uniform peak=21.70GB payload=2180.2MB comp=0.472697
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280923 structure peak=21.70GB payload=2180.2MB comp=0.472697
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280977 full peak=26.22GB
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280977 uniform peak=21.96GB payload=2289.7MB comp=0.472679
+[peak_mem] multi_turn_state.file_path.v2__c16000__s20280977 structure peak=21.96GB payload=2289.7MB comp=0.472679
+[peak_mem] instruction_supersession.language_flip.v2__c16000__s20270822 full peak=26.19GB
+[peak_mem] instruction_supersession.language_flip.v2__c16000__s20270822 uniform peak=21.95GB payload=2282.5MB comp=0.472665
+[peak_mem] instruction_supersession.language_flip.v2__c16000__s20270822 structure peak=21.95GB payload=2282.5MB comp=0.472665
+[peak_mem] instruction_supersession.format_flip.v2__c16000__s20270876 full peak=25.72GB
+[peak_mem] instruction_supersession.format_flip.v2__c16000__s20270876 uniform peak=21.68GB payload=2173.9MB comp=0.472675
+[peak_mem] instruction_supersession.format_flip.v2__c16000__s20270876 structure peak=21.69GB payload=2173.9MB comp=0.472675
+[peak_mem] instruction_supersession.format_flip.v2__c16000__s20270977 full peak=25.73GB
+[peak_mem] instruction_supersession.format_flip.v2__c16000__s20270977 uniform peak=21.69GB payload=2175.3MB comp=0.472682
+[peak_mem] instruction_supersession.format_flip.v2__c16000__s20270977 structure peak=21.69GB payload=2175.3MB comp=0.472682
+[peak_mem] tool_schema.send_email.v1__c16000__s20260923 full peak=26.18GB
+[peak_mem] tool_schema.send_email.v1__c16000__s20260923 uniform peak=21.94GB payload=2281.5MB comp=0.472681
+[peak_mem] tool_schema.send_email.v1__c16000__s20260923 structure peak=21.94GB payload=2281.5MB comp=0.472681
+[peak_mem] tool_schema.search_docs.v1__c16000__s20261078 full peak=26.16GB
+[peak_mem] tool_schema.search_docs.v1__c16000__s20261078 uniform peak=21.94GB payload=2275.2MB comp=0.472695
+[peak_mem] tool_schema.search_docs.v1__c16000__s20261078 structure peak=21.94GB payload=2275.2MB comp=0.472695
+[peak_mem] tool_schema.schedule_job.v1__c16000__s20261179 full peak=25.72GB
+[peak_mem] tool_schema.schedule_job.v1__c16000__s20261179 uniform peak=21.68GB payload=2172.2MB comp=0.472679
+[peak_mem] tool_schema.schedule_job.v1__c16000__s20261179 structure peak=21.68GB payload=2172.2MB comp=0.472679
+{
+  "decision": "MG_PEAK_MEM_PASS",
+  "pass": true,
+  "arms": {
+    "fullkv_sdpa": {
+      "peak_GB": 23.60817069511111,
+      "payload_MB": 0.0,
+      "payload_ratio_measured": null,
+      "compression_modeled": 1.0
+    },
+    "mixed_uniform_fi_shim": {
+      "peak_GB": 20.49641287111111,
+      "payload_MB": 1679.153152,
+      "payload_ratio_measured": 0.7187506525523705,
+      "compression_modeled": 0.47268588888888885
+    },
+    "mixed_structure_fi_shim": {
+      "peak_GB": 20.499351267555557,
+      "payload_MB": 1679.153152,
+      "payload_ratio_measured": 0.7187506525523705,
+      "compression_modeled": 0.47268588888888885
+    }
+  },
+  "structure_vs_fullkv_peak_ratio": 0.868315954348833,
+  "seconds": 103.625
+}
+out=/data/anupam/scratch/prioritykv/runs/mg_peak_mem/mg_peak_mem_gpu5_r1.json
+=== nvidia-smi after ===
+=== nvidia-smi 2026-07-18T19:22:03Z CUDA_VISIBLE_DEVICES=5 ===
+Sat Jul 18 19:22:03 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   33C    P0            150W /  700W |   34707MiB / 143771MiB |     25%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   32C    P0            151W /  700W |    6631MiB / 143771MiB |     12%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   38C    P0            281W /  700W |   59369MiB / 143771MiB |     67%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   31C    P0            130W /  700W |    2155MiB / 143771MiB |     37%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   31C    P0            153W /  700W |    6627MiB / 143771MiB |     23%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   39C    P0            126W /  700W |       4MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   32C    P0             79W /  700W |       4MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   39C    P0            281W /  700W |   24895MiB / 143771MiB |     78%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A          873088      C   ...sh/era5_expts/venv/bin/python      29582MiB |
+|    0   N/A  N/A          908586      C   ...upam/COSMOS/.venv/bin/python3       5110MiB |
+|    1   N/A  N/A          902335      C   ...upam/COSMOS/.venv/bin/python3       6622MiB |
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    3   N/A  N/A          910891      C   ...upam/COSMOS/.venv/bin/python3       2146MiB |
+|    4   N/A  N/A          907288      C   ...upam/COSMOS/.venv/bin/python3       6618MiB |
+|    7   N/A  N/A          880535      C   ...sh/era5_expts/venv/bin/python      24886MiB |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 19 %, 34707 MiB, 143771 MiB, 34
+1, NVIDIA H200, 46 %, 6631 MiB, 143771 MiB, 32
+2, NVIDIA H200, 60 %, 59369 MiB, 143771 MiB, 37
+3, NVIDIA H200, 6 %, 2155 MiB, 143771 MiB, 31
+4, NVIDIA H200, 33 %, 6627 MiB, 143771 MiB, 31
+5, NVIDIA H200, 0 %, 4 MiB, 143771 MiB, 39
+6, NVIDIA H200, 0 %, 4 MiB, 143771 MiB, 32
+7, NVIDIA H200, 80 %, 24895 MiB, 143771 MiB, 38
+=== finished=2026-07-18T19:22:04Z exit=0 ===
