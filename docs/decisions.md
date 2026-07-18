@@ -467,6 +467,8 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   `pub_a`/`pub_b` outs are real on scratch (`d4_fp8_compare_gpu01_r1.json`,
   `guardrails_pub_gpu5_r1.json`). Next: accept Gemma license + download, then
   `pub_c_gemma_reduced_gpu01_r3`.
+- **Weights ready on H200:** `/data/anupam/scratch/models/gemma-2-9b-it` (config.json OK).
+  Enqueued **`pub_c_gemma_reduced_gpu01_r3`** on GPUs **0,1**.
 
 ## 2026-07-19 — G4 FREEZE (middle-ground close)
 
