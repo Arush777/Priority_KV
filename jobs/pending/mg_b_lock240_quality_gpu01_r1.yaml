@@ -1,0 +1,5 @@
+id: mg_b_lock240_quality_gpu01_r1
+command: python scripts/run_mg_lock240_dual.py --config configs/mg_lock240_quality.yaml --out-tag gpu01_r1
+gpus: "0,1"
+sync_cuda: false
+timeout_sec: 86400
