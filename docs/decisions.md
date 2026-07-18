@@ -443,6 +443,15 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 - **Code:** `configs/mg_*.yaml`, `scripts/run_mg_peak_mem.py`,
   `scripts/run_mg_lock240_dual.py` (max 2 GPUs), `selection.all_matching`.
 
+## 2026-07-19 — Publish-track reopen (GPU jobs overnight)
+
+- **Scope reopen:** arXiv-first publish plan after middle-ground G4.
+- **Enqueued (max 2 GPUs, sequential worker):**
+  1. `pub_a_d4_fp8_compare_gpu01_r1` — FullKV vs vLLM FP8 vs structure-FI (GPUs 0,1)
+  2. `pub_b_guardrails_gpu5_r1` — FullKV vs structure-mixed guardrails + MATH-500 subsample (GPU 5)
+  3. `pub_c_gemma_reduced_gpu5_r1` — Gemma matched-keep reduced, or `SKIP_NO_GEMMA` (GPU 5)
+- Claim discipline unchanged: eviction reliability + bytes/latency; soft-INT4 gap stays falsified.
+
 ## 2026-07-19 — G4 FREEZE (middle-ground close)
 
 - **Status:** **G4 CLOSED** for the middle-ground definition of done.

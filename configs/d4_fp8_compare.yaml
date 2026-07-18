@@ -1,0 +1,35 @@
+# D4b: FullKV vs vLLM FP8 vs structure-FI systems compare (publish track).
+manifest_id: d4_fp8_compare
+rev: 1
+buried_state: false
+relocate_middle: true
+relocate_position: 0.5
+bench_manifest: data/prioritybench/manifests/w3_lock.json
+selection:
+  splits: [calibration]
+  context_lengths: [8000, 16000]
+  balance_per_context: true
+  n_tool_schema: 3
+  n_instruction_supersession: 3
+  n_multi_turn_state: 3
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.55
+  max_model_len: 16384
+fp8:
+  kv_cache_dtype: fp8
+  calculate_kv_scales: true
+mixed:
+  int4_frac: 0.75
+  sink_tokens: 16
+  recent_window: 128
+  nbits: 4
+  group_size: 32
+  risk_fit_path: configs/linear_risk_fit.json
