@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1150" height="600" viewBox="0 0 1150 600" role="img" aria-labelledby="t">
+<title id="t">Score vs matched keep budget</title>
+<defs><marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#52514E"/></marker></defs>
+<rect x="0.0" y="0.0" width="1150.0" height="600.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<line x1="104.0" y1="482.0" x2="914.0" y2="482.0" stroke="#E1E0D9" stroke-width="1.0"/>
+<text x="92.0" y="487.0" text-anchor="end" font-family="DejaVu Sans,Arial,sans-serif" font-size="14" font-weight="400" fill="#898781">0.0</text>
+<line x1="104.0" y1="399.0" x2="914.0" y2="399.0" stroke="#E1E0D9" stroke-width="1.0"/>
+<text x="92.0" y="404.0" text-anchor="end" font-family="DejaVu Sans,Arial,sans-serif" font-size="14" font-weight="400" fill="#898781">0.2</text>
+<line x1="104.0" y1="315.9" x2="914.0" y2="315.9" stroke="#E1E0D9" stroke-width="1.0"/>
+<text x="92.0" y="320.9" text-anchor="end" font-family="DejaVu Sans,Arial,sans-serif" font-size="14" font-weight="400" fill="#898781">0.4</text>
+<line x1="104.0" y1="232.9" x2="914.0" y2="232.9" stroke="#E1E0D9" stroke-width="1.0"/>
+<text x="92.0" y="237.9" text-anchor="end" font-family="DejaVu Sans,Arial,sans-serif" font-size="14" font-weight="400" fill="#898781">0.6</text>
+<line x1="104.0" y1="149.8" x2="914.0" y2="149.8" stroke="#E1E0D9" stroke-width="1.0"/>
+<text x="92.0" y="154.8" text-anchor="end" font-family="DejaVu Sans,Arial,sans-serif" font-size="14" font-weight="400" fill="#898781">0.8</text>
+<line x1="104.0" y1="66.8" x2="914.0" y2="66.8" stroke="#E1E0D9" stroke-width="1.0"/>
+<text x="92.0" y="71.8" text-anchor="end" font-family="DejaVu Sans,Arial,sans-serif" font-size="14" font-weight="400" fill="#898781">1.0</text>
+<line x1="104.0" y1="482.0" x2="914.0" y2="482.0" stroke="#C3C2B7" stroke-width="1.5"/>
+<text x="30" y="264.0" transform="rotate(-90 30 264.0)" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="16" fill="#52514E">PriorityBench score</text>
+<text x="239.0" y="512.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="16" font-weight="400" fill="#0B0B0B">15%</text>
+<text x="509.0" y="512.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="16" font-weight="400" fill="#0B0B0B">25%</text>
+<text x="779.0" y="512.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="16" font-weight="400" fill="#0B0B0B">35%</text>
+<text x="509.0" y="544.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#52514E">Keep budget k (fraction of prompt KV retained; matched across arms)</text>
+<path d="M223.0,66.8 L493.0,66.8 L763.0,66.8" fill="none" stroke="#008300" stroke-width="2.5" stroke-linejoin="round"/>
+<line x1="223.0" y1="156.2" x2="223.0" y2="66.8" stroke="#52514E" stroke-width="1.5"/>
+<line x1="219.0" y1="156.2" x2="227.0" y2="156.2" stroke="#52514E" stroke-width="1.5"/>
+<line x1="219.0" y1="66.8" x2="227.0" y2="66.8" stroke="#52514E" stroke-width="1.5"/>
+<line x1="493.0" y1="156.2" x2="493.0" y2="66.8" stroke="#52514E" stroke-width="1.5"/>
+<line x1="489.0" y1="156.2" x2="497.0" y2="156.2" stroke="#52514E" stroke-width="1.5"/>
+<line x1="489.0" y1="66.8" x2="497.0" y2="66.8" stroke="#52514E" stroke-width="1.5"/>
+<line x1="763.0" y1="156.2" x2="763.0" y2="66.8" stroke="#52514E" stroke-width="1.5"/>
+<line x1="759.0" y1="156.2" x2="767.0" y2="156.2" stroke="#52514E" stroke-width="1.5"/>
+<line x1="759.0" y1="66.8" x2="767.0" y2="66.8" stroke="#52514E" stroke-width="1.5"/>
+<rect x="216.0" y="59.8" width="14.0" height="14.0" fill="#008300" stroke="#FFFFFF" stroke-width="2"/>
+<rect x="486.0" y="59.8" width="14.0" height="14.0" fill="#008300" stroke="#FFFFFF" stroke-width="2"/>
+<rect x="756.0" y="59.8" width="14.0" height="14.0" fill="#008300" stroke="#FFFFFF" stroke-width="2"/>
+<line x1="775.0" y1="66.8" x2="789.0" y2="66.8" stroke="#008300" stroke-width="2.5"/>
+<text x="795.0" y="71.8" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#0B0B0B">Keep all  1.000</text>
+<path d="M234.0,215.1 L504.0,215.1 L774.0,215.1" fill="none" stroke="#2A78D6" stroke-width="2.5" stroke-linejoin="round"/>
+<line x1="234.0" y1="321.0" x2="234.0" y2="134.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="230.0" y1="321.0" x2="238.0" y2="321.0" stroke="#52514E" stroke-width="1.5"/>
+<line x1="230.0" y1="134.6" x2="238.0" y2="134.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="504.0" y1="321.0" x2="504.0" y2="134.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="500.0" y1="321.0" x2="508.0" y2="321.0" stroke="#52514E" stroke-width="1.5"/>
+<line x1="500.0" y1="134.6" x2="508.0" y2="134.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="774.0" y1="321.0" x2="774.0" y2="134.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="770.0" y1="321.0" x2="778.0" y2="321.0" stroke="#52514E" stroke-width="1.5"/>
+<line x1="770.0" y1="134.6" x2="778.0" y2="134.6" stroke="#52514E" stroke-width="1.5"/>
+<circle cx="234.0" cy="215.1" r="7.0" fill="#2A78D6" stroke="#FFFFFF" stroke-width="2"/>
+<circle cx="504.0" cy="215.1" r="7.0" fill="#2A78D6" stroke="#FFFFFF" stroke-width="2"/>
+<circle cx="774.0" cy="215.1" r="7.0" fill="#2A78D6" stroke="#FFFFFF" stroke-width="2"/>
+<line x1="786.0" y1="215.1" x2="800.0" y2="215.1" stroke="#2A78D6" stroke-width="2.5"/>
+<text x="806.0" y="220.1" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#0B0B0B">Structure  0.643</text>
+<path d="M245.0,452.3 L515.0,363.4 L785.0,304.0" fill="none" stroke="#EDA100" stroke-width="2.5" stroke-linejoin="round"/>
+<line x1="245.0" y1="476.7" x2="245.0" y2="351.3" stroke="#52514E" stroke-width="1.5"/>
+<line x1="241.0" y1="476.7" x2="249.0" y2="476.7" stroke="#52514E" stroke-width="1.5"/>
+<line x1="241.0" y1="351.3" x2="249.0" y2="351.3" stroke="#52514E" stroke-width="1.5"/>
+<line x1="515.0" y1="433.3" x2="515.0" y2="255.1" stroke="#52514E" stroke-width="1.5"/>
+<line x1="511.0" y1="433.3" x2="519.0" y2="433.3" stroke="#52514E" stroke-width="1.5"/>
+<line x1="511.0" y1="255.1" x2="519.0" y2="255.1" stroke="#52514E" stroke-width="1.5"/>
+<line x1="785.0" y1="393.2" x2="785.0" y2="202.1" stroke="#52514E" stroke-width="1.5"/>
+<line x1="781.0" y1="393.2" x2="789.0" y2="393.2" stroke="#52514E" stroke-width="1.5"/>
+<line x1="781.0" y1="202.1" x2="789.0" y2="202.1" stroke="#52514E" stroke-width="1.5"/>
+<polygon points="245.0,443.8 253.5,452.3 245.0,460.8 236.5,452.3" fill="#EDA100" stroke="#FFFFFF" stroke-width="2"/>
+<polygon points="515.0,354.9 523.5,363.4 515.0,371.9 506.5,363.4" fill="#EDA100" stroke="#FFFFFF" stroke-width="2"/>
+<polygon points="785.0,295.5 793.5,304.0 785.0,312.5 776.5,304.0" fill="#EDA100" stroke="#FFFFFF" stroke-width="2"/>
+<line x1="797.0" y1="304.0" x2="811.0" y2="304.0" stroke="#EDA100" stroke-width="2.5"/>
+<text x="817.0" y="309.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#0B0B0B">Random  0.429</text>
+<path d="M256.0,482.0 L526.0,482.0 L796.0,482.0" fill="none" stroke="#E87BA4" stroke-width="2.5" stroke-linejoin="round"/>
+<line x1="256.0" y1="482.0" x2="256.0" y2="392.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="252.0" y1="482.0" x2="260.0" y2="482.0" stroke="#52514E" stroke-width="1.5"/>
+<line x1="252.0" y1="392.6" x2="260.0" y2="392.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="526.0" y1="482.0" x2="526.0" y2="392.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="522.0" y1="482.0" x2="530.0" y2="482.0" stroke="#52514E" stroke-width="1.5"/>
+<line x1="522.0" y1="392.6" x2="530.0" y2="392.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="796.0" y1="482.0" x2="796.0" y2="392.6" stroke="#52514E" stroke-width="1.5"/>
+<line x1="792.0" y1="482.0" x2="800.0" y2="482.0" stroke="#52514E" stroke-width="1.5"/>
+<line x1="792.0" y1="392.6" x2="800.0" y2="392.6" stroke="#52514E" stroke-width="1.5"/>
+<polygon points="256.0,474.0 248.0,489.0 264.0,489.0" fill="#E87BA4" stroke="#FFFFFF" stroke-width="2"/>
+<polygon points="526.0,474.0 518.0,489.0 534.0,489.0" fill="#E87BA4" stroke="#FFFFFF" stroke-width="2"/>
+<polygon points="796.0,474.0 788.0,489.0 804.0,489.0" fill="#E87BA4" stroke="#FFFFFF" stroke-width="2"/>
+<line x1="808.0" y1="482.0" x2="822.0" y2="482.0" stroke="#E87BA4" stroke-width="2.5"/>
+<text x="828.0" y="487.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="400" fill="#0B0B0B">Role-blind  0.000</text>
+<text x="104.0" y="24.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#898781" font-style="italic">n = 14 per point; whiskers are Wilson 95% intervals</text>
+</svg>

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="700" viewBox="0 0 1380 700" role="img" aria-labelledby="t">
+<title id="t">PriorityKV overview</title>
+<defs><marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#52514E"/></marker></defs>
+<rect x="0.0" y="0.0" width="1380.0" height="700.0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<text x="60.0" y="42.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="16" font-weight="700" fill="#0B0B0B">Long agent trace (message roles known to the serving layer)</text>
+<rect x="61.0" y="56.0" width="124.0" height="50.0" fill="#008300" stroke="none" stroke-width="1"/>
+<text x="123.0" y="86.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">System</text>
+<rect x="187.0" y="56.0" width="174.4" height="50.0" fill="#2A78D6" stroke="none" stroke-width="1"/>
+<text x="274.2" y="86.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">Tool schema</text>
+<rect x="363.4" y="56.0" width="300.4" height="50.0" fill="#D8D7D2" stroke="none" stroke-width="1"/>
+<text x="513.6" y="86.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">Filler</text>
+<rect x="665.8" y="56.0" width="161.8" height="50.0" fill="#4A3AA7" stroke="none" stroke-width="1"/>
+<text x="746.7" y="86.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">Constraint</text>
+<rect x="829.6" y="56.0" width="250.0" height="50.0" fill="#D8D7D2" stroke="none" stroke-width="1"/>
+<text x="954.6" y="86.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">Filler</text>
+<rect x="1081.6" y="56.0" width="111.4" height="50.0" fill="#1BAF7A" stroke="none" stroke-width="1"/>
+<text x="1137.3" y="86.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">State</text>
+<rect x="1195.0" y="56.0" width="124.0" height="50.0" fill="#EDA100" stroke="none" stroke-width="1"/>
+<text x="1257.0" y="86.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">Recent</text>
+<rect x="60.0" y="56.0" width="1260.0" height="50.0" fill="none" stroke="#C3C2B7" stroke-width="1.2"/>
+<rect x="60.0" y="190.0" width="330.0" height="138.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="9"/>
+<path d="M60.0,224.0 L60.0,199.0 Q60.0,190.0 69.0,190.0 L381.0,190.0 Q390.0,190.0 390.0,199.0 L390.0,224.0 Z" fill="#008300" fill-opacity="0.16"/>
+<line x1="60.0" y1="224.0" x2="390.0" y2="224.0" stroke="#008300" stroke-width="2"/>
+<text x="225.0" y="213.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#0B0B0B">1 · Structural tagger</text>
+<text x="225.0" y="248.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">chat role + schema markers</text>
+<text x="225.0" y="270.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">sink = first 16 tokens</text>
+<text x="225.0" y="292.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">recent = last 128 tokens</text>
+<rect x="525.0" y="190.0" width="330.0" height="138.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="9"/>
+<path d="M525.0,224.0 L525.0,199.0 Q525.0,190.0 534.0,190.0 L846.0,190.0 Q855.0,190.0 855.0,199.0 L855.0,224.0 Z" fill="#2A78D6" fill-opacity="0.16"/>
+<line x1="525.0" y1="224.0" x2="855.0" y2="224.0" stroke="#2A78D6" stroke-width="2"/>
+<text x="690.0" y="213.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#0B0B0B">2 · Matched allocator</text>
+<text x="690.0" y="248.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">identical keep / INT4 budget in</text>
+<text x="690.0" y="270.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">every arm; protects protocol</text>
+<text x="690.0" y="292.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">state, demotes filler first</text>
+<rect x="990.0" y="190.0" width="330.0" height="138.0" fill="#FFFFFF" stroke="#C3C2B7" stroke-width="1.5" rx="9"/>
+<path d="M990.0,224.0 L990.0,199.0 Q990.0,190.0 999.0,190.0 L1311.0,190.0 Q1320.0,190.0 1320.0,199.0 L1320.0,224.0 Z" fill="#4A3AA7" fill-opacity="0.16"/>
+<line x1="990.0" y1="224.0" x2="1320.0" y2="224.0" stroke="#4A3AA7" stroke-width="2"/>
+<text x="1155.0" y="213.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="16.5" font-weight="700" fill="#0B0B0B">3 · Paged KV cache</text>
+<text x="1155.0" y="248.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">16-token pages</text>
+<text x="1155.0" y="270.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">hot pages: BF16</text>
+<text x="1155.0" y="292.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E">cold pages: packed INT4 + scales</text>
+<line x1="225.0" y1="106.0" x2="225.0" y2="190.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#ah)"/>
+<line x1="390.0" y1="259.0" x2="525.0" y2="259.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#ah)"/>
+<line x1="855.0" y1="259.0" x2="990.0" y2="259.0" stroke="#52514E" stroke-width="2.0" marker-end="url(#ah)"/>
+<text x="60.0" y="408.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="700" fill="#0B0B0B">Role-blind eviction (sink + recent)</text>
+<rect x="61.0" y="422.0" width="54.0" height="46.0" fill="#898781" stroke="none" stroke-width="1"/>
+<text x="88.0" y="450.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">Sink</text>
+<rect x="117.0" y="422.0" width="390.0" height="46.0" fill="#EFEEEA" stroke="none" stroke-width="1"/>
+<text x="312.0" y="450.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">evicted middle</text>
+<rect x="509.0" y="422.0" width="110.0" height="46.0" fill="#898781" stroke="none" stroke-width="1"/>
+<text x="564.0" y="450.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">Recent</text>
+<rect x="60.0" y="422.0" width="560.0" height="46.0" fill="none" stroke="#C3C2B7" stroke-width="1.2"/>
+<text x="60.0" y="498.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E" font-style="italic">agent-critical middle state can be deleted</text>
+<text x="760.0" y="408.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="15" font-weight="700" fill="#0B0B0B">Structure-aware mixed-precision cache</text>
+<rect x="761.0" y="422.0" width="54.0" height="46.0" fill="#008300" stroke="none" stroke-width="1"/>
+<rect x="817.0" y="422.0" width="76.4" height="46.0" fill="#2A78D6" stroke="none" stroke-width="1"/>
+<text x="855.2" y="450.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">BF16</text>
+<rect x="895.4" y="422.0" width="132.4" height="46.0" fill="#9EC5F4" stroke="none" stroke-width="1"/>
+<text x="961.6" y="450.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">INT4</text>
+<rect x="1029.8" y="422.0" width="70.8" height="46.0" fill="#4A3AA7" stroke="none" stroke-width="1"/>
+<text x="1065.2" y="450.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">BF16</text>
+<rect x="1102.6" y="422.0" width="110.0" height="46.0" fill="#9EC5F4" stroke="none" stroke-width="1"/>
+<text x="1157.6" y="450.0" text-anchor="middle" font-family="DejaVu Sans,Arial,sans-serif" font-size="13" font-weight="600" fill="#0B0B0B">INT4</text>
+<rect x="1214.6" y="422.0" width="48.4" height="46.0" fill="#1BAF7A" stroke="none" stroke-width="1"/>
+<rect x="1265.0" y="422.0" width="54.0" height="46.0" fill="#EDA100" stroke="none" stroke-width="1"/>
+<rect x="760.0" y="422.0" width="560.0" height="46.0" fill="none" stroke="#C3C2B7" stroke-width="1.2"/>
+<text x="760.0" y="498.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#52514E" font-style="italic">every position kept; precision follows role</text>
+<line x1="60.0" y1="560.0" x2="1320.0" y2="560.0" stroke="#E1E0D9" stroke-width="1.0"/>
+<text x="60.0" y="596.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="14" font-weight="400" fill="#52514E">Under a matched budget the arms differ only in which pages they protect (eviction) or demote (mixed precision).</text>
+<text x="60.0" y="636.0" text-anchor="start" font-family="DejaVu Sans,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#898781" font-style="italic">Conceptual diagram, not measured data. The tagger reads prompt metadata only — never future attention or benchmark answers.</text>
+</svg>

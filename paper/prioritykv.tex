@@ -139,7 +139,7 @@ tests, not as a broad benchmark matrix.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{prioritykv_overview.pdf}
+  \includegraphics[width=\linewidth]{fig_overview.pdf}
   \caption{Conceptual overview of PriorityKV (illustration, not measured
   data). An agent trace arrives with known message roles (top strip). A
   structural tagger maps spans to page roles and protects a 16-token sink and
@@ -358,7 +358,7 @@ attention is future systems work.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{flashinfer_decode_dataflow.pdf}
+  \includegraphics[width=\linewidth]{fig_decode_dataflow.pdf}
   \caption{Conceptual dataflow of the mixed-precision decode path
   (illustration, not measured data). Hot BF16 pages and the decode tail feed
   one FlashInfer attention call; cold packed INT4 pages are first dequantized
@@ -471,13 +471,15 @@ is not merely early-position retention.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{reliability_keep_sweep.pdf}
-  \caption{Measured page-granularity eviction sweep (Qwen3-8B, matched
-  16-token page budgets, same fixed 14-example stress slice at every budget).
-  Role-blind sink-and-recent scores $0.000$ at all three keep budgets; random
-  retention improves with budget ($0.071 \to 0.429$); structure-aware
-  retention holds $0.643$; keep-all confirms $1.000$ wiring. The sweep is an
-  ablation over one slice, not three independent replications
+  \includegraphics[width=\linewidth]{fig_keep_budget_curve.pdf}
+  \caption{Measured score versus matched keep budget $k$ for
+  page-granularity eviction (Qwen3-8B, 16-token pages, same fixed
+  14-example stress slice at every budget). Role-blind sink-and-recent stays
+  at $0.000$ across budgets; random retention climbs with budget
+  ($0.071 \to 0.429$); structure-aware retention holds a $0.643$ plateau;
+  keep-all confirms $1.000$ wiring. Whiskers are Wilson 95\% intervals for
+  $n{=}14$ and points are dodged horizontally for legibility. The sweep is
+  an ablation over one slice, not three independent replications
   (Table~\ref{tab:eviction}).}
   \label{fig:sweep}
 \end{figure}
@@ -524,14 +526,16 @@ must not be pooled into a single ``compression quality'' claim.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{lock240_quality_by_length.pdf}
+  \includegraphics[width=\linewidth]{fig_quality_by_context.pdf}
   \caption{Measured lock-240 quality by context length (Qwen3-8B,
-  \texttt{int4\_frac}${=}0.75$; $n{=}83/81/76$ at 8k/16k/32k). All arms are
-  saturated at 8k and 16k; only the 32k stratum separates \fullkv{} (0.645)
-  from role-blind (0.618) and structure-aware (0.632) mixed INT4. Overall
-  means: 0.8875, 0.8792, 0.8833 ($n{=}240$). The arm differences correspond
-  to one or two examples and support a negative (no-separation) conclusion
-  only.}
+  \texttt{int4\_frac}${=}0.75$; $n{=}83/81/76$ at 8k/16k/32k; y-axis starts
+  at 0.45). All three arms are saturated at $1.000$ for 8k and 16k; only the
+  32k stratum separates \fullkv{} (0.645) from role-blind (0.618) and
+  structure-aware (0.632) mixed INT4, and the Wilson 95\% intervals of the
+  three arms overlap there, visually supporting the no-separation
+  conclusion. Points are dodged horizontally for legibility. Overall means:
+  0.8875, 0.8792, 0.8833 ($n{=}240$); the arm differences correspond to one
+  or two examples.}
   \label{fig:lock240}
 \end{figure}
 
@@ -583,16 +587,17 @@ inflated by the BF16 cold scratch of Section~\ref{sec:method-decode}.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{systems_tradeoff.pdf}
-  \caption{Measured systems tradeoff for the structure-aware mixed cache
-  relative to \fullkv{} on H200 (18-example slices; dashed line marks
-  \fullkv{} parity). Left: the modeled compression ratio ($0.473\times$),
-  measured payload including scale metadata ($0.719\times$), and peak
-  allocated CUDA memory ($0.868\times$) are three distinct quantities; the
-  payload-to-peak gap is caused by the INT4-to-BF16 cold-attention scratch.
-  Right: end-to-end latency is $1.113$--$1.118\times$ and time per output
-  token is $1.200$--$1.215\times$ \fullkv{}---a measured cost, reported as
-  such.}
+  \includegraphics[width=\linewidth]{fig_systems_ratios.pdf}
+  \caption{Measured systems ratios for the structure-aware mixed cache,
+  normalized to \fullkv{} on H200 (18-example slices; the dashed vertical
+  line marks \fullkv{} parity). The three memory ratios are distinct
+  quantities that must not be substituted for one another: modeled bytes
+  ($0.473\times$) are the idealized 4-bit ceiling, measured payload
+  including scale metadata is $0.719\times$, and peak allocated CUDA memory
+  is $0.868\times$; the payload-to-peak gap is caused by the INT4-to-BF16
+  cold-attention scratch. End-to-end latency ($1.113$--$1.118\times$) and
+  time per output token ($1.200$--$1.215\times$) sit right of parity---a
+  measured cost, reported as such.}
   \label{fig:systems}
 \end{figure}
 
@@ -659,8 +664,9 @@ into a serving scheduler before claiming capacity or throughput gains.
   peak-memory reduction and drives the measured TPOT regression.
 \item \textbf{No cross-run uncertainty.} Per-example timing medians reduce
   local noise, but canonical jobs were not repeated across independent
-  machine runs, and no confidence intervals are reported for the small
-  slices.
+  machine runs. Figure whiskers are Wilson 95\% intervals for within-slice
+  binomial uncertainty only; they do not capture run-to-run or
+  slice-to-slice variance.
 \end{enumerate}
 
 \bench{} contains generated tool contracts and synthetic identifiers rather
