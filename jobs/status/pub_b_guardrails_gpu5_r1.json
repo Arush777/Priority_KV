@@ -1,0 +1,11 @@
+{
+  "job_id": "pub_b_guardrails_gpu5_r1",
+  "exit": 0,
+  "finished_at": "2026-07-18T20:38:26Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/pub_b_guardrails_gpu5_r1.log",
+  "job_yaml": "jobs/done/pub_b_guardrails_gpu5_r1.yaml",
+  "decision": "GUARDRAILS_PUB_PASS",
+  "pass": true,
+  "results_dir": "jobs/results/pub_b_guardrails_gpu5_r1",
+  "note": "Recovered from H200 scratch after worker push failed; ran stale gpu5 YAML before cancel landed."
+}

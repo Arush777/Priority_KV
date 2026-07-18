@@ -487,3 +487,16 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   uniform eviction / missing-state stress), and move the mixed-dtype systems
   claim to **packed bytes + TTFT/TPOT/throughput**. A real packed backend, not
   another fake-quant quality sweep, is the next blocker.
+
+## 2026-07-18 — Overnight ops closeout (publish-track)
+
+- **Terminal:** all three publish jobs accepted without requeue.
+  | Job | State | Decision | pass | Status commit notes |
+  |---|---|---|---|---|
+  | `pub_a_d4_fp8_compare_gpu01_r1` | done | `D4_FP8_COMPARE_PASS` | true | exit=0 @ 20:33Z GPUs 0,1 |
+  | `pub_b_guardrails_gpu5_r1` | done | `GUARDRAILS_PUB_PASS` | true | exit=0 @ 20:38Z; stale GPU-5 YAML |
+  | `pub_c_gemma_reduced_gpu5_r1` | done | `SKIP_NO_GEMMA` | null | exit=0 @ 20:39Z; acceptable |
+- **Root cause of missing git status:** H200 worker push failed (ff-only divergence); recovered status JSON + done YAMLs committed from scratch notes.
+- **pkworker:** human already reset `--hard` + restart (per prior note). Agent box has no SSH (`Permission denied`).
+- **Cancelled:** redundant `pub_b/c_*gpu01_r1` pending (no rerun).
+- **Open:** full `jobs/results/<id>/` bundles not in git (scratch only); optional later `fetch_results` when SSH works.
