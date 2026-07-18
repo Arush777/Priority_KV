@@ -54,7 +54,8 @@ structure-aware INT4 improves quality.
 | [`RESULTS.md`](RESULTS.md) | Canonical metrics and claim boundary |
 | [`docs/DATASET.md`](docs/DATASET.md) | PriorityBench-A tasks, strata, and generation |
 | [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) | Frozen model, benchmark, configs, and job IDs |
-| [`paper/prioritykv_manuscript.md`](paper/prioritykv_manuscript.md) | Technical report manuscript |
+| [`paper/prioritykv.tex`](paper/prioritykv.tex) | Standalone arXiv source |
+| [`paper/prioritykv_manuscript.md`](paper/prioritykv_manuscript.md) | Readable source manuscript |
 | [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | Reproduction levels and commands |
 | [`docs/BLOG.md`](docs/BLOG.md) | Accessible research summary |
 | [`CITATION.cff`](CITATION.cff) | Citation metadata |
