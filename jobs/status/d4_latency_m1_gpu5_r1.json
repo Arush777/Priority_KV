@@ -1,0 +1,10 @@
+{
+  "job_id": "d4_latency_m1_gpu5_r1",
+  "exit": 0,
+  "finished_at": "2026-07-18T17:03:10Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/d4_latency_m1_gpu5_r1.log",
+  "job_yaml": "jobs/done/d4_latency_m1_gpu5_r1.yaml",
+  "decision": "D4_M1_PASS",
+  "pass": true,
+  "results_dir": "jobs/results/d4_latency_m1_gpu5_r1"
+}

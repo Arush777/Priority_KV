@@ -1,0 +1,9 @@
+{
+  "job_id": "d4_latency_m1_gpu5_r1",
+  "exit": 0,
+  "decision": "D4_M1_PASS",
+  "pass": true,
+  "log_scratch": "/data/anupam/scratch/prioritykv/logs/d4_latency_m1_gpu5_r1.log",
+  "has_summary": true,
+  "has_nvidia_smi": true
+}
