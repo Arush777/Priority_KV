@@ -1,0 +1,5 @@
+id: pub_c_gemma_reduced_gpu01_r6
+command: python scripts/run_gemma_reduced.py --config configs/gemma_reduced.yaml --out-tag gpu01_r6 --keep-frac 0.25 --max-new-tokens 32
+gpus: "0,1"
+sync_cuda: false
+timeout_sec: 14400

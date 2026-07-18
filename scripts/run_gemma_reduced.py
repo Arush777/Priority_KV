@@ -156,7 +156,7 @@ def main() -> int:
     bench = json.loads((ROOT / cfg.get("bench_manifest", "data/prioritybench/manifests/w3_lock.json")).read_text())
     rows = select_stress_rows(bench, cfg.get("selection") or {
         "splits": ["calibration"],
-        "context_lengths": [4000],
+        "context_lengths": [8000],
         "n_tool_schema": 4,
         "n_instruction_supersession": 4,
         "n_multi_turn_state": 6,
@@ -175,28 +175,6 @@ def main() -> int:
         tail = prompt_budget - sink
         return torch.cat([ids[:sink], ids[-tail:]], dim=0)
 
-    def _gen(messages, keep_idx):
-        import torch
-        # Apply chat; then drop tokens not in keep_idx (prompt-level keep)
-        text = _apply_gemma_chat(tok, messages)
-        ids = tok(text, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
-        ids = _fit_ids(ids)
-        n = int(ids.numel())
-        if keep_idx is not None:
-            idx = torch.as_tensor([i for i in keep_idx if 0 <= int(i) < n], dtype=torch.long)
-            if idx.numel() == 0:
-                idx = torch.arange(n, dtype=torch.long)
-            ids = ids.index_select(0, idx)
-            ids = _fit_ids(ids)
-        ids = ids.to(model.device)
-        with torch.no_grad():
-            out = model.generate(
-                ids.unsqueeze(0),
-                max_new_tokens=args.max_new_tokens,
-                do_sample=False,
-            )
-        return tok.decode(out[0, ids.numel() :], skip_special_tokens=True)
-
     from prioritybench.scoring import score_example
 
     # Gemma: no Qwen chat kwargs; roles via folded messages
@@ -205,18 +183,44 @@ def main() -> int:
     detail = []
     for ex in examples:
         msgs = _fold_system_for_gemma(list(ex.messages))
-        try:
-            roles = assign_token_roles(tok, msgs, chat_kwargs=chat_kwargs)
-        except Exception:
-            roles = [PageRole.FILLER] * 512
         text = _apply_gemma_chat(tok, msgs)
-        n = len(tok(text, add_special_tokens=False)["input_ids"])
+        ids0 = tok(text, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
+        ids0 = _fit_ids(ids0)
+        n = int(ids0.numel())
+        # Rebuild a single-user message from fitted tokens so role assign stays aligned.
+        fitted_text = tok.decode(ids0, skip_special_tokens=False)
+        try:
+            roles = assign_token_roles(
+                tok,
+                [{"role": "user", "content": fitted_text}],
+                chat_kwargs=chat_kwargs,
+            )
+        except Exception:
+            roles = [PageRole.FILLER] * n
         roles = list(roles)[:n] + [PageRole.RECENT] * max(0, n - len(roles))
         u_idx = select_uniform(n, keep_cfg)
         s_idx = select_structure(n, roles, keep_cfg)
-        full_txt = _gen(msgs, None)
-        uni_txt = _gen(msgs, u_idx.tolist())
-        str_txt = _gen(msgs, s_idx.tolist())
+
+        def _gen_from_ids(base_ids, keep_idx):
+            import torch
+            ids = base_ids
+            if keep_idx is not None:
+                idx = torch.as_tensor([i for i in keep_idx if 0 <= int(i) < int(ids.numel())], dtype=torch.long)
+                if idx.numel() == 0:
+                    idx = torch.arange(int(ids.numel()), dtype=torch.long)
+                ids = ids.index_select(0, idx)
+            ids = ids.to(model.device)
+            with torch.no_grad():
+                out = model.generate(
+                    ids.unsqueeze(0),
+                    max_new_tokens=args.max_new_tokens,
+                    do_sample=False,
+                )
+            return tok.decode(out[0, ids.numel() :], skip_special_tokens=True)
+
+        full_txt = _gen_from_ids(ids0, None)
+        uni_txt = _gen_from_ids(ids0, u_idx.tolist())
+        str_txt = _gen_from_ids(ids0, s_idx.tolist())
         detail.append(
             {
                 "example_id": ex.example_id,
@@ -224,10 +228,11 @@ def main() -> int:
                 "full": float(score_example(ex, full_txt)),
                 "uniform": float(score_example(ex, uni_txt)),
                 "structure": float(score_example(ex, str_txt)),
+                "prompt_tokens": n,
             }
         )
         print(
-            f"[gemma] {ex.example_id} full={detail[-1]['full']} "
+            f"[gemma] {ex.example_id} n={n} full={detail[-1]['full']} "
             f"uni={detail[-1]['uniform']} str={detail[-1]['structure']}",
             flush=True,
         )
