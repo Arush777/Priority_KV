@@ -371,6 +371,15 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   + decode; uniform worse (pack ~14.3s + cold ~7.2s). Sol/Fable M2 next:
   GPU pack + kill full BF16 cold scratch before any M3 matrix / bytes claim.
 
+## 2026-07-18 — D4 M2 GPU pack/dequant (auto-loop)
+
+- **Council:** Fable+Sol — attack pack+cold before M3; 1×GPU; torch groupwise
+  quant/dequant on device (no custom CUDA). Gate: pack≤200ms, cold≤100ms,
+  e2e≤1.15× FullKV.
+- **Code:** `int4_path` torch ops; `build_from_hf_prefill(prefer_gpu)`; FI cold
+  scratch dequants on device.
+- **Job:** `d4_latency_m2_gpu5_r1` on free GPU 5.
+
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
   (vs CPU dense **0.000470**); CPU multicall oracle error `1.35e-9`.
