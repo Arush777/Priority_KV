@@ -10,8 +10,8 @@ positions leave BF16 tensors and live as INT4 codes + scales until materialize.
 ``degrade="zero"`` zeroes demoted K/V in-place (planner/wiring stress).
 
 ``attn_backend="flashinfer"`` gates FlashInfer page-multicall + ``merge_state``
-parity over the packed cache into the serve path (decode still SDPA on
-materialized KV until a full attention monkeypatch lands).
+parity over the packed cache, then Stage-1b Qwen3 FI-shim decode (no
+``materialize_hf_past``). ``attn_backend="sdpa"`` still materializes for SDPA.
 
 Decode tokens stay BF16. Meta reports realized INT4 fraction + payload bytes.
 """
@@ -158,10 +158,8 @@ def run_transformers_mixed_kv(
 
     ``attn_backend``:
       - ``sdpa`` (default): Transformers SDPA on materialized KV.
-      - ``flashinfer``: after packing, run FlashInfer page-multicall parity on
-        the packed cache (merge_state), then decode via SDPA materialize.
-        Generation still uses SDPA until a full attention monkeypatch lands;
-        FI is gated into the serve path as a hard parity check over packed pages.
+      - ``flashinfer``: pack → FI parity gate → Qwen3 FI-shim greedy decode
+        (no ``materialize_hf_past``).
     """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -257,6 +255,149 @@ def run_transformers_mixed_kv(
                 mask = plan_int4_mask(roles, plan_cfg, policy=policy, risk_cfg=risk_cfg)
                 int4_realized = int(mask.sum())
                 if storage_mode == "packed" and degrade == "int4":
+                    if backend == "flashinfer":
+                        # Stage-1b path: pack → FiMixedDecodeState → FI shim decode.
+                        # Never call materialize_hf_past.
+                        from prioritykv.flashinfer_multicall import (
+                            verify_packed_cache_flashinfer,
+                        )
+                        from prioritykv.qwen3_fi_shim import (
+                            FiSeqLenCache,
+                            fi_shim_context,
+                            pack_prefill_to_fi_state,
+                        )
+
+                        packed, fi_state = pack_prefill_to_fi_state(
+                            past,
+                            roles,
+                            mask,
+                            device=model.device,
+                            dtype=torch.bfloat16,
+                            int4_cfg=int4_cfg,
+                            decode_tail_cap=max(max_new_tokens + 8, 64),
+                        )
+                        packed_meta = {
+                            "storage": "packed",
+                            "attn_backend": "flashinfer_fi_shim",
+                            "n_pages": len(packed.page_manager.pages),
+                            "payload_bytes": packed.payload_bytes(),
+                            "realized_bytes": packed.realized_bytes(),
+                            "fullkv_bf16_bytes": packed.fullkv_bf16_bytes(),
+                            "compression_ratio": round(packed.compression_ratio(), 6),
+                            "int4_tokens_pages": packed.dtype_token_counts()[
+                                StorageDtype.INT4
+                            ],
+                            "used_materialize_hf_past": False,
+                        }
+                        if fi_parity_every > 0 and i % fi_parity_every == 0:
+                            fi_res = verify_packed_cache_flashinfer(packed)
+                            packed_meta["fi_parity"] = {
+                                "decision": fi_res.get("decision"),
+                                "pass": fi_res.get("pass"),
+                                "layers": [
+                                    {
+                                        "layer": r.get("layer"),
+                                        "decision": r.get("decision"),
+                                        "err": r.get(
+                                            "fi_multicall_vs_fi_dense_max_abs"
+                                        ),
+                                    }
+                                    for r in fi_res.get("layers", [])
+                                ],
+                            }
+                            print(
+                                f"[mixed/{policy}] fi_parity={fi_res.get('decision')} "
+                                f"pass={fi_res.get('pass')}",
+                                flush=True,
+                            )
+                            if fi_require_pass and fi_res.get("pass") is False:
+                                raise RuntimeError(
+                                    f"FlashInfer packed parity failed: {fi_res}"
+                                )
+
+                        stub = FiSeqLenCache(fi_state)
+                        attn = torch.ones(1, n, dtype=torch.long, device=model.device)
+                        with fi_shim_context(fi_state) as ctx:
+                            replay = model(
+                                input_ids=ids[-1:].view(1, 1),
+                                attention_mask=attn,
+                                past_key_values=stub,
+                                use_cache=True,
+                                return_dict=True,
+                            )
+                            next_id = int(
+                                torch.argmax(replay.logits[:, -1, :], dim=-1).item()
+                            )
+                            gen_ids = [next_id]
+                            cur = torch.tensor([[next_id]], device=model.device)
+                            for _ in range(max_new_tokens - 1):
+                                attn = torch.cat(
+                                    [
+                                        attn,
+                                        torch.ones(
+                                            (1, 1), device=model.device, dtype=attn.dtype
+                                        ),
+                                    ],
+                                    dim=1,
+                                )
+                                step = model(
+                                    input_ids=cur,
+                                    attention_mask=attn,
+                                    past_key_values=stub,
+                                    use_cache=True,
+                                    return_dict=True,
+                                )
+                                nid = int(
+                                    torch.argmax(step.logits[:, -1, :], dim=-1).item()
+                                )
+                                gen_ids.append(nid)
+                                cur = torch.tensor([[nid]], device=model.device)
+                                if (
+                                    tok.eos_token_id is not None
+                                    and nid == tok.eos_token_id
+                                ):
+                                    break
+                            packed_meta["used_materialize_hf_past"] = bool(
+                                ctx.used_materialize
+                            )
+                        fi_state.assert_no_materialize_path(
+                            bool(packed_meta["used_materialize_hf_past"])
+                        )
+                        new_text = tok.decode(gen_ids, skip_special_tokens=True)
+                        meta = {
+                            "mode": f"mixed_{policy}",
+                            "policy": policy,
+                            "degrade": degrade,
+                            "storage": packed_meta.get("storage", "packed"),
+                            "attn_backend": "flashinfer_fi_shim",
+                            "nbits": int(int4_cfg.nbits),
+                            "prompt_tokens": n,
+                            "cache_tokens_degraded": cache_n,
+                            "int4_tokens": int4_realized,
+                            "int4_frac_realized": (int4_realized / cache_n)
+                            if cache_n
+                            else 0.0,
+                            "first_token_from_degraded_cache": True,
+                            "preview": new_text[:120],
+                            "seconds": time.time() - t0,
+                            **{
+                                k: v
+                                for k, v in packed_meta.items()
+                                if k not in ("storage", "attn_backend")
+                            },
+                        }
+                        out.append((new_text, gen_ids, meta))
+                        if tqdm is None:
+                            print(
+                                f"[mixed/{policy}] {i + 1}/{len(prompts)} "
+                                f"int4={int4_realized}/{n} storage=packed "
+                                f"attn=flashinfer_fi_shim {meta['seconds']:.1f}s",
+                                flush=True,
+                            )
+                        elif hasattr(iterator, "set_postfix"):
+                            iterator.set_postfix(int4=f"{int4_realized}/{n}")
+                        continue
+
                     past, packed = apply_packed_int4_to_hf_past(
                         past,
                         roles,
