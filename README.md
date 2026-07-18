@@ -8,7 +8,8 @@ reliability; structure-aware retention fixes that at matched budgets. Soft INT4 
 **not** open a PriorityBench quality gap — systems value is **packed bytes + honest latency**.
 
 **Science core: HOME** (`SCIENCE_CORE_HOME_2026_07_19`) · D3 **CLOSED**  
-→ Start here: [`RESULTS.md`](RESULTS.md) · freeze: [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) · D3: [`docs/D3_CLOSE.md`](docs/D3_CLOSE.md)
+→ Start here: [`RESULTS.md`](RESULTS.md) · dataset: [`docs/DATASET.md`](docs/DATASET.md) ·  
+freeze: [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) · next chat: [`docs/NEXT_CHAT_HANDOFF.md`](docs/NEXT_CHAT_HANDOFF.md)
 
 Plan: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) · Decisions: [`docs/decisions.md`](docs/decisions.md) · H200: [`docs/H200_SETUP.md`](docs/H200_SETUP.md) · Paper draft: [`paper/prioritykv_arxiv_draft.md`](paper/prioritykv_arxiv_draft.md)
 
