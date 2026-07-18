@@ -410,6 +410,13 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   `--tpot-gate-mult 1.25` / `--ttft-gate-mult 1.25`; job on free GPU 5
   (not GPU 1 — COSMOS resident). Shim ≤1.0 TPOT is a later FI-plan milestone.
 
+## 2026-07-18 — D4 M3b dual FAIL → M3c score prefix
+
+- **Dual** `d4_latency_m3b_gpu56_r1`: latency OK (pack/cold/e2e/tpot gates);
+  16k PASS; 8k FAIL only `score_ok` (FullKV 1.0 vs FI 0.89 on one http_get —
+  post-EOS `</think>` trash after correct JSON polluted scoring).
+- **M3c:** score on EOS/`</think>` prefix only; re-run dual GPUs 5+6.
+
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
 
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
