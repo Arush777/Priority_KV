@@ -1,0 +1,5 @@
+id: mg_a_peak_mem_gpu5_r1
+command: python scripts/run_mg_peak_mem.py --config configs/mg_peak_mem.yaml --out-tag gpu5_r1 --max-new-tokens 32
+gpus: "5"
+sync_cuda: false
+timeout_sec: 14400

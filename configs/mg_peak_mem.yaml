@@ -1,0 +1,38 @@
+# Middle-ground: measured peak CUDA mem + packed payload bytes (M3c-style slice).
+# Not a latency gate — report peak_allocated vs payload_bytes vs FullKV BF16 model.
+manifest_id: mg_peak_mem
+rev: 1
+buried_state: false
+relocate_middle: true
+relocate_position: 0.5
+bench_manifest: data/prioritybench/manifests/w3_lock.json
+selection:
+  splits: [calibration, validation]
+  context_lengths: [8000, 16000]
+  balance_per_context: true
+  n_tool_schema: 3
+  n_instruction_supersession: 3
+  n_multi_turn_state: 3
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 32
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 16384
+mixed:
+  int4_frac: 0.75
+  sink_tokens: 16
+  recent_window: 128
+  nbits: 4
+  group_size: 32
+  storage: packed
+  attn_backend: flashinfer
+  fi_parity_every: 0
+  fi_require_pass: false
+  risk_fit_path: configs/linear_risk_fit.json
+  policies: [full, uniform, structure]

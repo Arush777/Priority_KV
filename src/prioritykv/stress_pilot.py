@@ -25,8 +25,9 @@ from prioritykv.fullkv_compare import PromptRow, resolve_model_path
 def select_stress_rows(bench: dict[str, Any], sel: dict[str, Any]) -> list[dict[str, Any]]:
     """Pool calibration+validation; prefer multi_turn across selected lengths.
 
-    If ``balance_per_context`` is true, take n_* per category **for each**
-    context length (M3 latency matrix).
+    If ``all_matching`` is true, return the full filtered pool (PriorityBench
+    lock-240). If ``balance_per_context`` is true, take n_* per category
+    **for each** context length (M3 latency matrix).
     """
     splits = set(sel.get("splits", ["calibration", "validation"]))
     lengths = [int(x) for x in sel.get("context_lengths", [8000, 16000])]
@@ -36,6 +37,11 @@ def select_stress_rows(bench: dict[str, Any], sel: dict[str, Any]) -> list[dict[
         for e in bench["examples"]
         if e["split"] in splits and int(e["context_length"]) in length_set
     ]
+    if bool(sel.get("all_matching", False)):
+        if not pool:
+            raise ValueError("no stress examples matched selection")
+        return list(pool)
+
     n_multi = int(sel.get("n_multi_turn_state", 8))
     n_super = int(sel.get("n_instruction_supersession", 4))
     n_tool = int(sel.get("n_tool_schema", 2))
