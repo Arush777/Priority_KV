@@ -430,13 +430,15 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 
 - **Scope (locked):** finish original PriorityKV claim on Qwen3-8B only.
   1. PriorityBench lock-240 quality: FullKV / uniform / structure @ int4_frac=0.75
-     (packed FI shim) — job `mg_b_lock240_quality_gpu567_r1` (8k∥16k∥32k).
+     (packed FI shim) — job `mg_b_lock240_quality_gpu56_r1` (**max 2 GPUs**:
+     8k∥16k then 32k). Cancelled prior 3-GPU enqueue.
   2. Measured peak CUDA mem + packed payload bytes — job `mg_a_peak_mem_gpu5_r1`
-     (M3c-style n=18; report both peak and payload; cold-scratch caveat).
+     (**DONE** `MG_PEAK_MEM_PASS`: structure peak ~20.5 GB vs FullKV ~23.6 GB;
+     measured payload ~0.72×; modeled ~0.47×).
   3. Optional thin guardrails later; **do not** rescale D4 latency n; **do not**
      full LongBench/RULER unless publishing.
 - **Code:** `configs/mg_*.yaml`, `scripts/run_mg_peak_mem.py`,
-  `scripts/run_mg_lock240_triple.py`, `selection.all_matching` in stress_pilot.
+  `scripts/run_mg_lock240_dual.py` (max 2 GPUs), `selection.all_matching`.
 
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
 
