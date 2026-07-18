@@ -22,6 +22,14 @@
 % or the repository root (Overleaf project with main doc paper/prioritykv.tex).
 \graphicspath{{figures/}{paper/figures/}{./}}
 
+% Keep floats close to the text that references them.
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.6}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.85}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{5}
+
 \hypersetup{
   pdftitle={PriorityKV: A Measurement Study of Structure-Aware KV Retention
     and Mixed-Precision Storage for Long Agent Traces},
@@ -139,7 +147,14 @@ check reproduces the Qwen results in absolute terms. The decisive eviction
 slices contain 14--16 examples each and are reported as controlled stress
 tests, not as a broad benchmark matrix.
 
-\begin{figure}[t]
+Figure~\ref{fig:overview} summarizes the system. The diagram follows the
+token-strip and left-to-right cache-workflow conventions common in H2O
+\cite{zhang2023h2o}, SnapKV \cite{li2024snapkv}, and KIVI \cite{liu2024kivi},
+but depicts PriorityKV's distinct input signal and allocation policy: unlike
+attention-derived selection, PriorityKV begins from message-role metadata
+already present in the trace.
+
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{fig_overview.pdf}
   \caption{Conceptual overview of PriorityKV (illustration, not measured
@@ -154,13 +169,6 @@ tests, not as a broad benchmark matrix.
   uses prompt metadata only---never future attention or benchmark answers.}
   \label{fig:overview}
 \end{figure}
-
-Figure~\ref{fig:overview} summarizes the system. The diagram follows the
-token-strip and left-to-right cache-workflow conventions common in H2O
-\cite{zhang2023h2o}, SnapKV \cite{li2024snapkv}, and KIVI \cite{liu2024kivi},
-but depicts PriorityKV's distinct input signal and allocation policy: unlike
-attention-derived selection, PriorityKV begins from message-role metadata
-already present in the trace.
 
 \section{Related Work}\label{sec:related}
 
@@ -211,7 +219,7 @@ relevant state early, adds benign filler, and ends with a request whose
 correct answer depends on that state. Scoring is programmatic (0/1 per
 example) and does not use an LLM-as-judge.
 
-\begin{table}[t]
+\begin{table}[!htbp]
   \centering
   \caption{The three \bench{} task categories (80 examples each). Every
   scorer is deterministic; a slice score is the mean of per-example 0/1
@@ -358,7 +366,7 @@ both the payload-versus-peak gap and the TPOT regression in
 Section~\ref{sec:results-systems}. Direct fused or page-streamed INT4
 attention is future systems work.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{fig_decode_dataflow.pdf}
   \caption{Conceptual dataflow of the mixed-precision decode path
@@ -383,7 +391,7 @@ frozen configurations, job IDs, and pass/fail decisions. The evaluation
 families answer different questions and have deliberately different sizes
 (Table~\ref{tab:families}).
 
-\begin{table}[t]
+\begin{table}[!htbp]
   \centering
   \caption{Evaluation families. The decisive eviction slices are small by
   design (controlled stress tests); the 240-example lock measures mixed
@@ -430,7 +438,7 @@ structure arm reaches $0.643$ (9/14) and stays on that plateau across the
 15--35\% budget sweep, while the random control climbs from $0.071$ to
 $0.429$ as the budget grows.
 
-\begin{table}[t]
+\begin{table}[!htbp]
   \centering
   \caption{Matched-budget eviction stress on Qwen3-8B. All arms in a row
   receive the same budget; ``---'' means the control was not run in that
@@ -471,7 +479,7 @@ multi-turn state. Third, middle relocation separates structure ($0.688$,
 11/16) from the fixed-prefix control ($0.125$, 2/16), showing that the effect
 is not merely early-position retention.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{fig_keep_budget_curve.pdf}
   \caption{Measured score versus matched keep budget $k$ for
@@ -496,7 +504,7 @@ aggregate success on this benchmark; we do not interpret that difference as
 evidence of a structure-aware quantization quality advantage. This is the
 falsification of our starting hypothesis, and we report it as such.
 
-\begin{table}[t]
+\begin{table}[!htbp]
   \centering
   \caption{Locked 240-example quality at matched INT4 budget
   (\texttt{int4\_frac}${=}0.75$; realized fraction $0.750$), Qwen3-8B.
@@ -526,7 +534,7 @@ an INT4 \emph{approximation} of 75\% of positions is far less destructive
 than \emph{evicting} those positions, which is why eviction and quantization
 must not be pooled into a single ``compression quality'' claim.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{fig_quality_by_context.pdf}
   \caption{Measured lock-240 quality by context length (Qwen3-8B,
@@ -547,7 +555,7 @@ must not be pooled into a single ``compression quality'' claim.
 Table~\ref{tab:latency} reports the phase-separated latency measurement and
 Figure~\ref{fig:systems} summarizes the memory and latency ratios together.
 
-\begin{table}[t]
+\begin{table}[!htbp]
   \centering
   \caption{Single-request latency on H200 (Qwen3-8B; 128 generated tokens;
   greedy; median of three repeats; 9 examples per stratum). \fullkv{} runs
@@ -587,7 +595,7 @@ payload ratio is what the packed storage actually holds (including scale
 metadata), and the peak ratio is what the allocator actually experienced,
 inflated by the BF16 cold scratch of Section~\ref{sec:method-decode}.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\linewidth]{fig_systems_ratios.pdf}
   \caption{Measured systems ratios for the structure-aware mixed cache,
@@ -688,7 +696,7 @@ storage, quantization, page management, and FlashInfer state logic; and
 \texttt{FINAL\_RUN\_MANIFEST.yaml} as the claim and artifact index.
 Table~\ref{tab:jobs} maps each headline claim to its tracked result bundle.
 
-\begin{table}[t]
+\begin{table}[!htbp]
   \centering
   \caption{Claim-to-artifact index. Each job ID names a tracked bundle under
   \texttt{jobs/results/} containing the machine-readable summary, logs, and
