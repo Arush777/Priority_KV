@@ -138,12 +138,12 @@ A **structure-protected mixed BF16/INT4 paged cache**:
 Reliability story     ████████████████████████  100%  (G0–G4 closed; middle-ground)
 Packed FI serving     ███████████████████████░   ~95%  (shim decode; cold-scratch caveat)
 Serving metrics       ████████████████████████  100%  (M3c latency + peak-mem + lock-240)
-Publish track         ░░░░░░░░░░░░░░░░░░░░░░░░    0%  (explicitly out of scope)
+Publish track         ████████████████████░░░░   ~80%  (GPU jobs done; packaging open)
 ```
 
-**One-line status:** Middle-ground **DONE** (G4). Reliability + packed serving metrics
-frozen in `FINAL_RUN_MANIFEST.yaml`. Soft-INT4 quality gap falsified; claim is
-eviction reliability + packed bytes + honest latency.
+**One-line status:** Science core **HOME** (`SCIENCE_CORE_HOME_2026_07_19`). D3 **CLOSED**
+with cold-scratch caveat. Soft-INT4 quality gap falsified; claim is eviction
+reliability + packed bytes + honest latency. DeepMind track remaining = paper/blog/PR/outreach.
 
 ### Deliverable checklist
 
