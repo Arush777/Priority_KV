@@ -1,0 +1,5 @@
+id: diag_nvidia_smi_r6
+command: python scripts/diag_nvidia_smi.py --out-tag r6
+gpus: "5"
+sync_cuda: false
+timeout_sec: 120
