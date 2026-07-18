@@ -27,7 +27,21 @@ No SSH needed after **one** H200 worker restart onto this script.
 | `done/` | Finished with exit 0 |
 | `failed/` | Finished with non-zero exit |
 | `status/` | JSON: `exit`, `decision`, `pass`, `results_dir` |
-| `results/<id>/` | `summary.json`, `log_tail.txt`, `nvidia_smi*.txt`, `meta.json` |
+| `results/<id>/` | Debug bundle (see below) |
+
+### Debug bundle (`jobs/results/<id>/`)
+
+| File | What |
+|---|---|
+| `summary.json` | Job result JSON (`out=…` from the script) |
+| `log_full.txt` | **Full** stdout/stderr if log ≤ 2 MiB |
+| `log_tail.txt` | Last **512 KiB** always |
+| `log_head.txt` | First 64 KiB if log was truncated |
+| `traceback.txt` | Extracted Traceback / Error / FAIL lines |
+| `nvidia_smi_before.txt` / `nvidia_smi.txt` | GPU snapshot |
+| `meta.json` | Sizes + decision/pass flags |
+
+Agent helper: `./scripts/pull_job.sh [--watch] <id>`
 
 ## Job YAML schema
 
@@ -71,7 +85,8 @@ REMOTE_WORKER_POLL_SEC=45
 REMOTE_WORKER_BRANCH=main
 REMOTE_WORKER_PUSH_STATUS=1
 REMOTE_WORKER_PUSH_RESULTS=1   # ship jobs/results/* to git
-REMOTE_WORKER_LOG_TAIL_BYTES=65536
+REMOTE_WORKER_LOG_TAIL_BYTES=524288      # 512 KiB tail
+REMOTE_WORKER_LOG_FULL_MAX_BYTES=2097152 # full log if ≤2 MiB
 ```
 
 ## One-time H200 install (do while you have SSH)

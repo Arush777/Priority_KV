@@ -13,11 +13,17 @@ POLL_SEC="${REMOTE_WORKER_POLL_SEC:-45}"
 BRANCH="${REMOTE_WORKER_BRANCH:-main}"
 PUSH_STATUS="${REMOTE_WORKER_PUSH_STATUS:-1}"
 PUSH_RESULTS="${REMOTE_WORKER_PUSH_RESULTS:-1}"
-LOG_TAIL_BYTES="${REMOTE_WORKER_LOG_TAIL_BYTES:-65536}"
 SCRATCH="${PRIORITYKV_SCRATCH:-$ROOT/../prioritykv}"
 LOG_DIR="$SCRATCH/logs"
 STATUS_DIR="$ROOT/jobs/status"
 RESULTS_DIR="$ROOT/jobs/results"
+# Debug artifacts shipped to git (agent-visible without SSH).
+LOG_TAIL_BYTES="${REMOTE_WORKER_LOG_TAIL_BYTES:-524288}"          # last 512 KiB always
+LOG_HEAD_BYTES="${REMOTE_WORKER_LOG_HEAD_BYTES:-65536}"            # first 64 KiB when truncated
+LOG_FULL_MAX_BYTES="${REMOTE_WORKER_LOG_FULL_MAX_BYTES:-2097152}"  # ship full log if ≤2 MiB
+WORKER_SCRIPT="$ROOT/scripts/remote_worker.sh"
+WORKER_MTIME_FILE="${REMOTE_WORKER_MTIME_FILE:-$SCRATCH/.pkworker_mtime}"
+
 
 mkdir -p "$LOG_DIR" \
   "$ROOT/jobs/pending" "$ROOT/jobs/running" "$ROOT/jobs/done" \
@@ -64,6 +70,28 @@ sync_repo() {
   fi
 }
 
+# After git pull updates this script, re-exec so new debug/push logic applies
+# without needing an H200 login to restart tmux.
+maybe_reload_worker() {
+  local mt
+  if [[ ! -f "$WORKER_SCRIPT" ]]; then
+    return 0
+  fi
+  mt="$(stat -c %Y "$WORKER_SCRIPT" 2>/dev/null || stat -f %m "$WORKER_SCRIPT" 2>/dev/null || echo 0)"
+  mkdir -p "$(dirname "$WORKER_MTIME_FILE")"
+  if [[ ! -f "$WORKER_MTIME_FILE" ]]; then
+    echo "$mt" >"$WORKER_MTIME_FILE"
+    return 0
+  fi
+  local prev
+  prev="$(cat "$WORKER_MTIME_FILE" 2>/dev/null || echo 0)"
+  if [[ "$mt" != "$prev" ]]; then
+    echo "$mt" >"$WORKER_MTIME_FILE"
+    log "remote_worker.sh updated on disk — re-exec to load new version"
+    exec bash "$WORKER_SCRIPT"
+  fi
+}
+
 capture_nvidia_smi() {
   local out_file="$1"
   {
@@ -79,18 +107,61 @@ capture_nvidia_smi() {
   } >"$out_file" 2>&1 || true
 }
 
-# Build jobs/results/<id>/ from scratch log + optional out= JSON.
+# Build jobs/results/<id>/ from scratch log + optional out= JSON (debug bundle).
 collect_job_results() {
   local job_id="$1" exit_code="$2" log_path="$3"
   local dest="$RESULTS_DIR/${job_id}"
   mkdir -p "$dest"
 
+  local log_bytes=0 truncated=false shipped_full=false
   if [[ -f "$log_path" ]]; then
-    # Portable tail-by-bytes: prefer tail -c, else last 400 lines.
-    if tail -c "$LOG_TAIL_BYTES" "$log_path" >"$dest/log_tail.txt" 2>/dev/null; then
-      :
+    log_bytes="$(wc -c <"$log_path" | tr -d ' ')"
+    # Always ship a generous tail for debugging.
+    if ! tail -c "$LOG_TAIL_BYTES" "$log_path" >"$dest/log_tail.txt" 2>/dev/null; then
+      tail -n 2000 "$log_path" >"$dest/log_tail.txt" 2>/dev/null || true
+    fi
+    # Ship full log when small enough; else also ship head for startup context.
+    if [[ "$log_bytes" -le "$LOG_FULL_MAX_BYTES" ]]; then
+      cp -f "$log_path" "$dest/log_full.txt" 2>/dev/null || true
+      shipped_full=true
     else
-      tail -n 400 "$log_path" >"$dest/log_tail.txt" 2>/dev/null || true
+      truncated=true
+      if ! head -c "$LOG_HEAD_BYTES" "$log_path" >"$dest/log_head.txt" 2>/dev/null; then
+        head -n 400 "$log_path" >"$dest/log_head.txt" 2>/dev/null || true
+      fi
+      {
+        echo "NOTE: full scratch log is ${log_bytes} bytes (>${LOG_FULL_MAX_BYTES})."
+        echo "Shipped log_head.txt (${LOG_HEAD_BYTES}B) + log_tail.txt (${LOG_TAIL_BYTES}B)."
+        echo "scratch=${log_path}"
+      } >"$dest/LOG_TRUNCATED.txt"
+    fi
+    # Extract Python / CUDA failure fingerprints for quick agent triage.
+    if command -v python3 >/dev/null 2>&1; then
+      python3 - "$log_path" "$dest/traceback.txt" <<'PY' || true
+import re, sys
+src, dst = sys.argv[1], sys.argv[2]
+text = open(src, errors="replace").read()
+chunks = []
+# Last Traceback block
+matches = list(re.finditer(r"(?ms)^Traceback \(most recent call last\):.*?(?=^\S|\Z)", text))
+if matches:
+    chunks.append(matches[-1].group(0).strip())
+# Error / assert lines
+for pat in (
+    r"(?m)^(RuntimeError|ValueError|TypeError|AssertionError|CUDA error|torch\.[A-Za-z]+Error).*$",
+    r"(?m)^.*\b(FAIL_|PARITY_FAIL|GREEDY_PASS|SKIP_NO_|rejected:).*$",
+    r"(?m)^out=.*$",
+):
+    hits = re.findall(pat, text)
+    if hits:
+        if isinstance(hits[0], tuple):
+            hits = [h[0] if isinstance(h, tuple) else h for h in hits]
+        chunks.append("\n".join(hits[-40:]))
+open(dst, "w").write("\n\n----\n\n".join(chunks) if chunks else "(no traceback / error fingerprints found)\n")
+PY
+    else
+      grep -nE 'Traceback|Error|FAIL_|rejected:|^out=' "$log_path" | tail -n 200 \
+        >"$dest/traceback.txt" 2>/dev/null || true
     fi
   fi
 
@@ -103,11 +174,10 @@ collect_job_results() {
     cp -f "$out_path" "$dest/summary.json" 2>/dev/null || true
   fi
 
-  # Enrich a small meta.json for git (always).
   local decision="" pass=""
   if [[ -f "$dest/summary.json" ]] && command -v python3 >/dev/null 2>&1; then
-    decision="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("decision",""))' "$dest/summary.json" 2>/dev/null || true)"
-    pass="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("pass",""))' "$dest/summary.json" 2>/dev/null || true)"
+    decision="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("decision","") or "")' "$dest/summary.json" 2>/dev/null || true)"
+    pass="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("" if d.get("pass",None) is None else d.get("pass"))' "$dest/summary.json" 2>/dev/null || true)"
   fi
 
   cat >"$dest/meta.json" <<EOF
@@ -118,7 +188,13 @@ collect_job_results() {
   "pass": $(python3 -c 'import json,sys; v=sys.argv[1];
 print("null" if v=="" else ("true" if v in ("True","true","1") else ("false" if v in ("False","false","0") else json.dumps(v))))' "$pass" 2>/dev/null || echo null),
   "log_scratch": "${log_path}",
+  "log_bytes": ${log_bytes},
+  "shipped_full_log": ${shipped_full},
+  "truncated": ${truncated},
+  "log_tail_bytes": ${LOG_TAIL_BYTES},
+  "log_full_max_bytes": ${LOG_FULL_MAX_BYTES},
   "has_summary": $([[ -f "$dest/summary.json" ]] && echo true || echo false),
+  "has_traceback": $([[ -f "$dest/traceback.txt" ]] && echo true || echo false),
   "has_nvidia_smi": $([[ -f "$dest/nvidia_smi.txt" ]] && echo true || echo false)
 }
 EOF
@@ -350,10 +426,16 @@ run_one_job() {
   log "END ${job_id}: exit=${exit_code} → jobs/${dest}/"
 }
 
-log "starting poll=${POLL_SEC}s branch=${BRANCH} scratch=${SCRATCH} push_status=${PUSH_STATUS} push_results=${PUSH_RESULTS}"
+log "starting poll=${POLL_SEC}s branch=${BRANCH} scratch=${SCRATCH} push_status=${PUSH_STATUS} push_results=${PUSH_RESULTS} log_full_max=${LOG_FULL_MAX_BYTES}"
+
+# Seed mtime so first tick does not immediately re-exec.
+mkdir -p "$(dirname "$WORKER_MTIME_FILE")"
+stat -c %Y "$WORKER_SCRIPT" 2>/dev/null >"$WORKER_MTIME_FILE" || \
+  stat -f %m "$WORKER_SCRIPT" 2>/dev/null >"$WORKER_MTIME_FILE" || true
 
 while true; do
   sync_repo || log "WARN: sync_repo failed"
+  maybe_reload_worker
 
   shopt -s nullglob
   pending_files=("$ROOT"/jobs/pending/*.yaml)
