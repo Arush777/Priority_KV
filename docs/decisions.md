@@ -430,8 +430,11 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
 
 - **Scope (locked):** finish original PriorityKV claim on Qwen3-8B only.
   1. PriorityBench lock-240 quality: FullKV / uniform / structure @ int4_frac=0.75
-     (packed FI shim) — job `mg_b_lock240_quality_gpu01_r1` (**max 2 GPUs
-     0,1** shared; 8k∥16k then 32k). Prior 5,6 / 5,6,7 enqueues cancelled.
+     (packed FI shim) — job `mg_b_lock240_quality_gpu01_r1` **MG_LOCK240_PASS**
+     (~23 min wall, GPUs 0∥1). n=240 · full **0.888** · uniform **0.879**
+     (Δ−0.008) · structure **0.883** (Δ−0.004) · int4_real=0.75.
+     By ctx: 8k/16k all **1.000**; 32k full 0.645 / uniform 0.618 / structure 0.632
+     (structure slightly above uniform; both near FullKV — no soft-INT4 quality gap).
   2. Measured peak CUDA mem + packed payload bytes — job `mg_a_peak_mem_gpu5_r1`
      (**DONE** `MG_PEAK_MEM_PASS`: structure peak ~20.5 GB vs FullKV ~23.6 GB;
      measured payload ~0.72×; modeled ~0.47×).
@@ -439,6 +442,21 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
      full LongBench/RULER unless publishing.
 - **Code:** `configs/mg_*.yaml`, `scripts/run_mg_peak_mem.py`,
   `scripts/run_mg_lock240_dual.py` (max 2 GPUs), `selection.all_matching`.
+
+## 2026-07-19 — G4 FREEZE (middle-ground close)
+
+- **Status:** **G4 CLOSED** for the middle-ground definition of done.
+- **Manifest:** [`FINAL_RUN_MANIFEST.yaml`](../FINAL_RUN_MANIFEST.yaml)
+  (`freeze_id: G4_MIDDLE_GROUND_2026_07_19`).
+- **Canonical jobs pinned:**
+  - Reliability (family A): prior matched-keep / zero-degrade artifacts
+  - Latency: `d4_latency_m3c_gpu56_r1` (`D4_M3_PASS`)
+  - Peak/payload: `mg_a_peak_mem_gpu5_r1` (`MG_PEAK_MEM_PASS`)
+  - Lock-240 quality: `mg_b_lock240_quality_gpu01_r1` (`MG_LOCK240_PASS`)
+- **Deferred (explicit, not blockers):** thin guardrail re-run; LongBench/RULER;
+  paper/blog/outreach/Gemma; FP8 latency bake-off.
+- **Read:** project point = agent-KV *reliability under eviction* + *honest packed
+  serving metrics* — not a soft-INT4 accuracy win on PriorityBench.
 
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
 
