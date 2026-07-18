@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Reduced Gemma matched-keep: structure vs uniform (publish secondary).
 
-If Gemma weights/license unavailable → SKIP_NO_GEMMA (non-blocking for paper).
+Default: missing weights → exit 1 (FAIL_NO_GEMMA). Pass --allow-skip only if
+SKIP_NO_GEMMA is explicitly acceptable for the paper track.
 """
 
 from __future__ import annotations
@@ -58,6 +59,11 @@ def main() -> int:
     ap.add_argument("--out-tag", default="r1")
     ap.add_argument("--keep-frac", type=float, default=0.25)
     ap.add_argument("--max-new-tokens", type=int, default=32)
+    ap.add_argument(
+        "--allow-skip",
+        action="store_true",
+        help="If set, missing Gemma weights → SKIP_NO_GEMMA exit 0. Default: FAIL_NO_GEMMA exit 1.",
+    )
     args = ap.parse_args()
 
     scratch = Path(os.environ.get("PRIORITYKV_SCRATCH", ROOT / "runs"))
@@ -96,17 +102,24 @@ def main() -> int:
         )
         model.eval()
     except Exception as exc:  # noqa: BLE001
+        decision = "SKIP_NO_GEMMA" if args.allow_skip else "FAIL_NO_GEMMA"
         result = {
-            "decision": "SKIP_NO_GEMMA",
-            "pass": None,
+            "decision": decision,
+            "pass": False if not args.allow_skip else None,
             "error": str(exc),
             "hub_id": gcfg["hub_id"],
-            "note": "License/weights unavailable — non-blocking for publish track.",
+            "model_id_attempted": model_id,
+            "note": (
+                "License/weights unavailable."
+                if args.allow_skip
+                else "Gemma required — accept HF license, set HF_TOKEN, or place weights under "
+                "$PRIORITYKV_MODELS/gemma-2-9b-it (or HF hub cache)."
+            ),
         }
         out_path.write_text(json.dumps(result, indent=2) + "\n")
         print(json.dumps(result, indent=2))
         print(f"out={out_path}")
-        return 0  # skip is success for worker
+        return 0 if args.allow_skip else 1
 
     bench = json.loads((ROOT / cfg.get("bench_manifest", "data/prioritybench/manifests/w3_lock.json")).read_text())
     rows = select_stress_rows(bench, cfg.get("selection") or {
