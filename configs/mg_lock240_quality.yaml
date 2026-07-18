@@ -1,0 +1,37 @@
+# Middle-ground: full PriorityBench lock-240 quality at matched int4_frac=0.75.
+# Arms: FullKV / uniform / structure via packed FlashInfer FI-shim decode.
+# Shard by PRIORITYKV_ONLY_CONTEXT_LENGTH={8000,16000,32000} (triple runner).
+manifest_id: mg_lock240_quality
+rev: 1
+buried_state: false
+relocate_middle: true
+relocate_position: 0.5
+bench_manifest: data/prioritybench/manifests/w3_lock.json
+selection:
+  all_matching: true
+  splits: [calibration, validation, test]
+  context_lengths: [8000, 16000, 32000]
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.65
+  max_model_len: 34816
+mixed:
+  int4_frac: 0.75
+  sink_tokens: 16
+  recent_window: 128
+  nbits: 4
+  group_size: 32
+  storage: packed
+  attn_backend: flashinfer
+  # Parity already proven on smaller runs; skip per-step check on lock-240.
+  fi_parity_every: 0
+  fi_require_pass: false
+  risk_fit_path: configs/linear_risk_fit.json
+  policies: [full, uniform, structure]

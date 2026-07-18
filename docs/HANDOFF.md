@@ -159,24 +159,20 @@ Publish (D5–D9)       ░░░░░░░░░░░░░░░░░░�
 
 ## 5. Next steps / still pending (priority order)
 
-1. **FlashInfer decode without full materialize**  
-   Today: pack → dequant materialize → SDPA.  
-   Needed: attend packed pages (coalesced BF16/INT4) inside the model forward (attention hook / custom cache), keep decode KV as a BF16 tail.
+**Active — middle-ground close (2026-07-19):** not LongBench/RULER; Qwen3-8B only.
 
-2. **D4 systems measurements on H200**  
-   TTFT, TPOT, tokens/s, peak memory vs FullKV and vLLM FP8 at equal PriorityBench quality (or reliability-at-parity reframe).
+1. **`mg_a_peak_mem_gpu5_r1`** — measured peak CUDA mem + packed payload bytes
+   (M3c-style slice; report peak vs payload; cold-scratch caveat).
+2. **`mg_b_lock240_quality_gpu567_r1`** — full PriorityBench lock-240 quality
+   FullKV / uniform / structure @ int4_frac=0.75 (packed FI; 8k∥16k∥32k).
+3. Optional thin guardrails only after (1)+(2). Then G4 freeze + `FINAL_RUN_MANIFEST.yaml`.
 
-3. **G4 + `FINAL_RUN_MANIFEST.yaml`**  
-   Freeze IDs, configs, seeds, artifact paths for the paper.
+**Done systems slice:** D4 M3c PASS (`d4_latency_m3c_gpu56_r1`) — e2e≈FullKV,
+pack/cold cheap, TPOT ~1.2×, quality matched FullKV, packed bytes ~0.47×
+(scratch caveat).
 
-4. **Publish track**  
-   Workshop CFP → draft (D6); upstream PR to FlashInfer / vLLM / HF as appropriate (D5); blog + repro (D7); outreach log (D9).
-
-5. **Gemma secondary (reduced)**  
-   Google-ecosystem hook; only after D3/D4 are credible.
-
-6. **Do not**  
-   Re-open soft-INT4 severity sweeps on PriorityBench-A to hunt a quality gap.
+**Do not:** grow D4 latency n; full LongBench/RULER; soft-INT4 severity sweeps
+to hunt a quality gap; reopen G3 FixedHot uniqueness hunt.
 
 ---
 
@@ -184,12 +180,11 @@ Publish (D5–D9)       ░░░░░░░░░░░░░░░░░░�
 
 | Blocker | Type | Severity | Notes |
 |---|---|---|---|
-| **No FI-backed decode path** | Systems build | **High** | Parity green; attention still SDPA on materialized KV |
-| **No D4 latency/throughput numbers** | Measurement | **High** | Blocks systems half of the headline |
-| Pack path CPU-heavy for long ctx | Perf / eng | Medium | `build_from_hf_prefill` copies layers to numpy; fine for correctness, not for D4 |
-| P2 ≉ unique vs Q7 mid-context | Science (closed) | Low | Document as negative; do not overclaim predictor |
-| Uniform INT4 quality gap absent | Science (closed) | — | Pivot away; not a code blocker |
-| Gemma / CFP / outreach not started | Process | Medium | Parallelizable once D4 exists |
+| Lock-240 + peak-mem not yet on board | Measurement | **High** | Middle-ground jobs enqueued 2026-07-19 |
+| FI cold scratch ≈ BF16 peak | Systems honesty | Medium | Document; don't oversell peak VRAM |
+| P2 ≉ unique vs Q7 mid-context | Science (closed) | Low | Document as negative |
+| Uniform INT4 quality gap absent | Science (closed) | — | Pivot to reliability + bytes + latency |
+| Gemma / CFP / outreach | Process | Low | Deferred (not publishing track) |
 
 Nothing is currently blocked on H200 access, FlashInfer import, or bench integrity.
 

@@ -31,8 +31,21 @@ from prioritykv.stress_pilot import select_stress_rows
 def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str, Any]:
     root = config_path.resolve().parents[1]
     cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    # Triple-GPU parent can restrict shard via env (same contract as D4 dual).
+    only_ctx = os.environ.get("PRIORITYKV_ONLY_CONTEXT_LENGTH")
+    if only_ctx:
+        cfg = dict(cfg)
+        sel = dict(cfg.get("selection") or {})
+        sel["context_lengths"] = [int(only_ctx)]
+        cfg["selection"] = sel
+        print(f"[mixed_serve] ONLY_CONTEXT_LENGTH={only_ctx}", flush=True)
     bench = json.loads((root / cfg["bench_manifest"]).read_text(encoding="utf-8"))
     rows = select_stress_rows(bench, cfg["selection"])
+    print(
+        f"[mixed_serve] selected n={len(rows)} "
+        f"contexts={sorted({int(r['context_length']) for r in rows})}",
+        flush=True,
+    )
     examples = materialize_examples(rows, data_root=root / "data" / "prioritybench")
 
     use_buried = bool(cfg.get("buried_state", False))

@@ -302,8 +302,12 @@ Storage paths on H200: `$PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv` · 
 
 ## 11. Immediate next actions (execution queue)
 
-1. ~~H200 Q2 INT4 assert~~ **DONE** (`w3_int4_assert_r4`).
-2. ~~Guardrails + G2 denser sweeps~~ **DONE**.
-3. **H200:** `w5_p2_structure_risk_r1` — Q7 vs P2 vs uniform at keep_frac=0.25.
-4. Wire fuller P2 mixed BF16/INT4 serving path once keep ablation reads positive (or document negative).
-5. FlashInfer CUDA (W5–6) · pick D6 CFP · Gemma license note.
+**Middle-ground close (2026-07-19) — active:**
+
+1. H200 `mg_a_peak_mem_gpu5_r1` — peak CUDA mem + packed bytes (M3c slice).
+2. H200 `mg_b_lock240_quality_gpu567_r1` — lock-240 Full/uniform/structure @ 0.75
+   (triple GPU 8k∥16k∥32k, packed FI).
+3. Optional thin guardrails; then G4 freeze. **No** LongBench/RULER unless publishing.
+
+**Recently done:** D4 M3c PASS (`d4_latency_m3c_gpu56_r1`).
+**Do not:** grow D4 latency n; soft-INT4 severity hunts; reopen closed G2/G3 science.

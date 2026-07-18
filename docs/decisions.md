@@ -417,6 +417,27 @@ Fable (senior RE review) confirmed this freeze with two job-4 corrections (fract
   post-EOS `</think>` trash after correct JSON polluted scoring).
 - **M3c:** score on EOS/`</think>` prefix only; re-run dual GPUs 5+6.
 
+## 2026-07-18 — D4 M3c PASS (dual GPU matrix)
+
+- **Job** `d4_latency_m3c_gpu56_r1`: **D4_M3_PASS** (~6 min wall, GPUs 5∥6).
+- **8k structure:** pack 35 ms · cold 14 ms · e2e **1.12×** · tpot **1.20×** · score 1.0
+- **16k structure:** pack 48 ms · cold 20 ms · e2e **1.11×** · tpot **1.21×** ·
+  score 0.89 (= FullKV; bench artifact, not compression).
+- Honest systems claim ready for G4 freeze: e2e≈parity, pack/cold cheap,
+  TPOT ~1.2× FullKV (FI shim overhead), quality matched to FullKV.
+
+## 2026-07-19 — Middle-ground close (not LongBench)
+
+- **Scope (locked):** finish original PriorityKV claim on Qwen3-8B only.
+  1. PriorityBench lock-240 quality: FullKV / uniform / structure @ int4_frac=0.75
+     (packed FI shim) — job `mg_b_lock240_quality_gpu567_r1` (8k∥16k∥32k).
+  2. Measured peak CUDA mem + packed payload bytes — job `mg_a_peak_mem_gpu5_r1`
+     (M3c-style n=18; report both peak and payload; cold-scratch caveat).
+  3. Optional thin guardrails later; **do not** rescale D4 latency n; **do not**
+     full LongBench/RULER unless publishing.
+- **Code:** `configs/mg_*.yaml`, `scripts/run_mg_peak_mem.py`,
+  `scripts/run_mg_lock240_triple.py`, `selection.all_matching` in stress_pilot.
+
 - **FlashInfer r3 (`w6e_flashinfer_lse_parity_r3`, exit=0):**
 
   `flashinfer.merge_state` gives multicall vs FI-dense max abs **0.000488**
