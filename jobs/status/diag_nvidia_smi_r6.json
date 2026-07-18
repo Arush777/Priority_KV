@@ -1,0 +1,10 @@
+{
+  "job_id": "diag_nvidia_smi_r6",
+  "exit": 0,
+  "finished_at": "2026-07-18T17:08:58Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/diag_nvidia_smi_r6.log",
+  "job_yaml": "jobs/done/diag_nvidia_smi_r6.yaml",
+  "decision": "OK",
+  "pass": true,
+  "results_dir": "jobs/results/diag_nvidia_smi_r6"
+}
