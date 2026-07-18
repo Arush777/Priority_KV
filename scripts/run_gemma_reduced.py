@@ -156,7 +156,7 @@ def main() -> int:
     bench = json.loads((ROOT / cfg.get("bench_manifest", "data/prioritybench/manifests/w3_lock.json")).read_text())
     rows = select_stress_rows(bench, cfg.get("selection") or {
         "splits": ["calibration"],
-        "context_lengths": [8000],
+        "context_lengths": [4000],
         "n_tool_schema": 4,
         "n_instruction_supersession": 4,
         "n_multi_turn_state": 6,
