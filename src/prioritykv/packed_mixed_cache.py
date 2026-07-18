@@ -469,6 +469,120 @@ def build_from_hf_prefill(
     return cache
 
 
+def build_from_hf_prefill_batched(
+    past: Any,
+    int4_mask: np.ndarray,
+    *,
+    geom: ModelKvGeom = QWEN3_8B_KV,
+    int4_cfg: Optional[Int4KvConfig] = None,
+) -> PackedMixedCache:
+    """M2b: one gather + one INT4 quant per layer (no per-page Python loop).
+
+    Hot tokens are gathered into a single BF16 page; cold tokens into a single
+    INT4 page. Token *order within each chunk* is gather order (fine for decode
+    attention over already-RoPE'd keys). Byte accounting uses the two pages.
+    """
+    import torch
+
+    cfg = int4_cfg or Int4KvConfig()
+    mask_np = np.asarray(int4_mask, dtype=bool).reshape(-1)
+    n = int(mask_np.size)
+    hot_n = int((~mask_np).sum())
+    cold_n = int(mask_np.sum())
+    if hot_n + cold_n != n:
+        raise ValueError("int4_mask must cover every token")
+
+    n_layers = _num_hf_layers(past)
+    k0, _ = _layer_tensors_from_hf_torch(past, 0)
+    if k0.dim() == 4:
+        k0 = k0[0]
+    geom = ModelKvGeom(
+        num_layers=n_layers,
+        num_kv_heads=int(k0.shape[0]),
+        head_dim=int(k0.shape[2]),
+    )
+    pm = PageManager(
+        PageManagerConfig(page_tokens=max(n, 1), budget_frac=1.0, geom=geom)
+    )
+    pm.pages.clear()
+    pm._next_id = 0
+    if hot_n:
+        pm.pages.append(
+            Page(
+                page_id=pm._next_id,
+                start_token=0,
+                n_tokens=hot_n,
+                role=PageRole.RECENT,
+                dtype=StorageDtype.BF16,
+            )
+        )
+        pm._next_id += 1
+    if cold_n:
+        pm.pages.append(
+            Page(
+                page_id=pm._next_id,
+                start_token=hot_n,
+                n_tokens=cold_n,
+                role=PageRole.FILLER,
+                dtype=StorageDtype.INT4,
+            )
+        )
+        pm._next_id += 1
+
+    cache = PackedMixedCache(page_manager=pm, geom=geom, int4_cfg=cfg)
+    cache._head_shape = (geom.num_kv_heads, geom.head_dim)
+
+    # Mask on same device as KV for index_select.
+    device = k0.device
+    mask_t = torch.as_tensor(mask_np, device=device)
+    hot_idx = torch.nonzero(~mask_t, as_tuple=False).flatten()
+    cold_idx = torch.nonzero(mask_t, as_tuple=False).flatten()
+
+    for li in range(n_layers):
+        k_full, v_full = _layer_tensors_from_hf_torch(past, li)
+        if k_full.dim() == 4:
+            k_full, v_full = k_full[0], v_full[0]
+        if int(k_full.shape[1]) != n:
+            raise ValueError(
+                f"layer {li} seq {k_full.shape[1]} != mask len {n}"
+            )
+        layer = PackedMixedLayer()
+        page_i = 0
+        if hot_n:
+            meta = pm.pages[page_i]
+            page_i += 1
+            k_hot = k_full.index_select(1, hot_idx).contiguous()
+            v_hot = v_full.index_select(1, hot_idx).contiguous()
+            layer.pages.append(
+                KvPagePayload(
+                    meta=meta,
+                    dtype=StorageDtype.BF16,
+                    n_tokens=hot_n,
+                    num_kv_heads=int(k_hot.shape[0]),
+                    head_dim=int(k_hot.shape[2]),
+                    k_bf16=k_hot,
+                    v_bf16=v_hot,
+                )
+            )
+        if cold_n:
+            meta = pm.pages[page_i]
+            k_cold = k_full.index_select(1, cold_idx).contiguous()
+            v_cold = v_full.index_select(1, cold_idx).contiguous()
+            payload = KvPagePayload(
+                meta=meta,
+                dtype=StorageDtype.BF16,
+                n_tokens=cold_n,
+                num_kv_heads=int(k_cold.shape[0]),
+                head_dim=int(k_cold.shape[2]),
+                k_bf16=k_cold,
+                v_bf16=v_cold,
+            )
+            payload.demote_to_int4(cfg)
+            layer.pages.append(payload)
+        cache.layers.append(layer)
+    return cache
+
+
 def apply_packed_int4_to_hf_past(
     past: Any,
     roles: Sequence[PageRole],
