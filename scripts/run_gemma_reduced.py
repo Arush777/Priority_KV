@@ -163,16 +163,31 @@ def main() -> int:
     })
     examples = materialize_examples(rows, data_root=ROOT / "data" / "prioritybench")
     keep_cfg = KeepPolicyConfig(keep_frac=args.keep_frac, sink_tokens=16, force_recent=64)
+    max_pos = int(getattr(model.config, "max_position_embeddings", 8192) or 8192)
+    prompt_budget = max(256, max_pos - int(args.max_new_tokens) - 16)
+    print(f"[gemma] max_pos={max_pos} prompt_budget={prompt_budget} n={len(examples)}", flush=True)
+
+    def _fit_ids(ids):
+        import torch
+        if int(ids.numel()) <= prompt_budget:
+            return ids
+        sink = min(256, prompt_budget // 4)
+        tail = prompt_budget - sink
+        return torch.cat([ids[:sink], ids[-tail:]], dim=0)
 
     def _gen(messages, keep_idx):
         import torch
         # Apply chat; then drop tokens not in keep_idx (prompt-level keep)
         text = _apply_gemma_chat(tok, messages)
         ids = tok(text, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
+        ids = _fit_ids(ids)
         n = int(ids.numel())
         if keep_idx is not None:
             idx = torch.as_tensor([i for i in keep_idx if 0 <= int(i) < n], dtype=torch.long)
+            if idx.numel() == 0:
+                idx = torch.arange(n, dtype=torch.long)
             ids = ids.index_select(0, idx)
+            ids = _fit_ids(ids)
         ids = ids.to(model.device)
         with torch.no_grad():
             out = model.generate(
@@ -236,7 +251,19 @@ def main() -> int:
         "rows": detail,
         "note": "Reduced matched-keep on Gemma; PriorityBench scorers may be Qwen-tuned.",
     }
-    # Soft signal: structure >= uniform
+    # Soft signal: structure >= uniform; full must be non-degenerate
+    full_m = _m("full") or 0.0
+    if full_m < 0.05:
+        result["decision"] = "GEMMA_REDUCED_INVALID"
+        result["pass"] = False
+        result["note"] = (
+            "FullKV mean ~0 — context overflow / scorer mismatch / empty generations. "
+            "Not a publishable Gemma result."
+        )
+        out_path.write_text(json.dumps(result, indent=2) + "\n")
+        print(json.dumps({k: result[k] for k in ("decision", "pass", "means", "n")}, indent=2))
+        print(f"out={out_path}")
+        return 1
     if (_m("structure") or 0) + 1e-9 >= (_m("uniform") or 0):
         result["decision"] = "GEMMA_REDUCED_PASS"
     else:
