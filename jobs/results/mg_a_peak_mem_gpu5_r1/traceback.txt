@@ -1,1 +1,0 @@
-out=/data/anupam/scratch/prioritykv/runs/mg_peak_mem/mg_peak_mem_gpu5_r1.json

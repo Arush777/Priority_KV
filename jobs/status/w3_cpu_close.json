@@ -1,7 +1,0 @@
-{
-  "job_id": "w3_cpu_close",
-  "exit": 0,
-  "finished_at": "2026-07-15T05:28:23Z",
-  "log": "/data/anupam/scratch/prioritykv/logs/w3_cpu_close.log",
-  "job_yaml": "jobs/done/w3_cpu_close.yaml"
-}

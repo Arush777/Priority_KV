@@ -1,5 +1,0 @@
-id: w8b_fi_greedy_smoke_gpu5_r1
-command: python scripts/run_w8_fi_greedy_smoke.py --out-tag gpu5_r1 --max-new-tokens 4 --int4-frac 0.5
-gpus: "5"
-sync_cuda: false
-timeout_sec: 1800

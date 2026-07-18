@@ -1,7 +1,0 @@
-{
-  "job_id": "w3_int4_assert_r1",
-  "exit": 1,
-  "finished_at": "2026-07-14T21:44:43Z",
-  "log": "/data/anupam/scratch/prioritykv/logs/w3_int4_assert_r1.log",
-  "job_yaml": "jobs/failed/w3_int4_assert_r1.yaml"
-}

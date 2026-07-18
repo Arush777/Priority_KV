@@ -24,7 +24,6 @@ import prioritykv.cxx20_cuda_ext  # noqa: F401
 from prioritykv.baselines.keep_policy import KeepPolicyConfig, select_structure, select_uniform
 from prioritykv.baselines.keep_policy import assign_token_roles
 from prioritykv.bench_pilot import materialize_examples
-from prioritykv.fullkv_compare import PromptRow
 from prioritykv.page_roles import PageRole
 from prioritykv.stress_pilot import select_stress_rows
 

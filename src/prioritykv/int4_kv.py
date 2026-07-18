@@ -124,12 +124,12 @@ def status() -> dict[str, Any]:
             quanto_ok = False
     cache_cls = None
     try:
-        from transformers import QuantoQuantizedCache  # type: ignore
+        from transformers import QuantoQuantizedCache  # type: ignore  # noqa: F401
 
         cache_cls = "QuantoQuantizedCache"
     except Exception:
         try:
-            from transformers.cache_utils import QuantizedCache  # type: ignore
+            from transformers.cache_utils import QuantizedCache  # type: ignore  # noqa: F401
 
             cache_cls = "QuantizedCache"
         except Exception:

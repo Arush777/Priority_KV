@@ -1,174 +1,0 @@
-=== remote_worker job=d4_latency_micro_gpu5_r1 started=2026-07-18T16:44:05Z ===
-command=python scripts/run_d4_latency.py --config configs/d4_latency_micro.yaml --out-tag gpu5_r1 --max-new-tokens 32 --warmup 1
-CUDA_VISIBLE_DEVICES=5
-CUDA_HOME=/usr/local/cuda
-TORCH_CUDA_ARCH_LIST=9.0
-PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
-cwd=/data/anupam/scratch/Priority_KV
-=== nvidia-smi before ===
-=== nvidia-smi 2026-07-18T16:44:04Z CUDA_VISIBLE_DEVICES=5 ===
-Sat Jul 18 16:44:04 2026       
-+-----------------------------------------------------------------------------------------+
-| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
-+-----------------------------------------+------------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
-|                                         |                        |               MIG M. |
-|=========================================+========================+======================|
-|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
-| N/A   32C    P0            133W /  700W |    2195MiB / 143771MiB |     25%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
-| N/A   30C    P0            130W /  700W |    2215MiB / 143771MiB |     38%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
-| N/A   37C    P0            269W /  700W |   59369MiB / 143771MiB |     53%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
-| N/A   31C    P0            131W /  700W |    2195MiB / 143771MiB |     24%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
-| N/A   30C    P0            133W /  700W |    2195MiB / 143771MiB |     18%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
-| N/A   30C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
-| N/A   29C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
-| N/A   28C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|    0   N/A  N/A          807791      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
-|    1   N/A  N/A          807792      C   ...upam/COSMOS/.venv/bin/python3       2206MiB |
-|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
-|    3   N/A  N/A          807790      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
-|    4   N/A  N/A          806880      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
-+-----------------------------------------------------------------------------------------+
-
-index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
-0, NVIDIA H200, 33 %, 2195 MiB, 143771 MiB, 32
-1, NVIDIA H200, 36 %, 2215 MiB, 143771 MiB, 30
-2, NVIDIA H200, 53 %, 59369 MiB, 143771 MiB, 39
-3, NVIDIA H200, 33 %, 2195 MiB, 143771 MiB, 31
-4, NVIDIA H200, 30 %, 2195 MiB, 143771 MiB, 30
-5, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 30
-6, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
-7, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
-Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:05,  6.12it/s]Loading weights:   1%|          | 2/399 [00:00<01:34,  4.21it/s]Loading weights:   4%|▍         | 16/399 [00:00<00:09, 38.30it/s]Loading weights:   9%|▉         | 35/399 [00:00<00:04, 75.20it/s]Loading weights:  13%|█▎        | 53/399 [00:00<00:03, 102.82it/s]Loading weights:  18%|█▊        | 71/399 [00:00<00:02, 121.90it/s]Loading weights:  23%|██▎       | 92/399 [00:00<00:02, 143.33it/s]Loading weights:  27%|██▋       | 108/399 [00:01<00:02, 143.33it/s]Loading weights:  31%|███▏      | 125/399 [00:01<00:01, 149.02it/s]Loading weights:  35%|███▌      | 141/399 [00:01<00:01, 143.60it/s]Loading weights:  39%|███▉      | 157/399 [00:01<00:01, 145.21it/s]Loading weights:  43%|████▎     | 172/399 [00:01<00:01, 141.54it/s]Loading weights:  48%|████▊     | 191/399 [00:01<00:01, 148.92it/s]Loading weights:  53%|█████▎    | 213/399 [00:01<00:01, 162.08it/s]Loading weights:  58%|█████▊    | 230/399 [00:01<00:01, 159.22it/s]Loading weights:  62%|██████▏   | 247/399 [00:01<00:00, 161.79it/s]Loading weights:  67%|██████▋   | 267/399 [00:02<00:00, 168.55it/s]Loading weights:  71%|███████   | 284/399 [00:02<00:00, 158.56it/s]Loading weights:  75%|███████▌  | 301/399 [00:02<00:00, 152.48it/s]Loading weights:  80%|████████  | 320/399 [00:02<00:00, 161.61it/s]Loading weights:  84%|████████▍ | 337/399 [00:02<00:00, 155.66it/s]Loading weights:  89%|████████▉ | 355/399 [00:02<00:00, 160.55it/s]Loading weights:  94%|█████████▍| 375/399 [00:02<00:00, 169.39it/s]Loading weights:  98%|█████████▊| 393/399 [00:02<00:00, 160.77it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 136.91it/s]
-[d4] multi_turn_state.order_id.v2__c8000__s20281013 full_ttft=24.3ms full_tpot=33.07120337955315
-[d4] instruction_supersession.format_flip.v2__c8000__s20271013 full_ttft=54.4ms full_tpot=50.29255283560844
-[d4] tool_schema.search_docs.v1__c8000__s20260804 full_ttft=50.4ms full_tpot=49.61554443598875
-{
-  "decision": "D4_MICRO_PASS",
-  "pass": true,
-  "arms": {
-    "fullkv_sdpa": {
-      "n": 3,
-      "ttft_ms_mean": 43.04348564861963,
-      "tpot_ms_mean": 44.32643355038345,
-      "tokens_per_s_mean": 23.425473435743736,
-      "score_mean": 1.0,
-      "int4_tokens_mean": null
-    },
-    "mixed_uniform_fi_shim": {
-      "n": 3,
-      "ttft_ms_mean": 7994.523560317854,
-      "tpot_ms_mean": 28.38843783799774,
-      "tokens_per_s_mean": 35.254027922061525,
-      "score_mean": 1.0,
-      "int4_tokens_mean": 7805.333333333333
-    },
-    "mixed_structure_fi_shim": {
-      "n": 3,
-      "ttft_ms_mean": 3584.286874664637,
-      "tpot_ms_mean": 27.72778652531922,
-      "tokens_per_s_mean": 36.066548366090366,
-      "score_mean": 1.0,
-      "int4_tokens_mean": 7805.333333333333
-    }
-  },
-  "ttft_speedup_structure_vs_full": 0.012008939896209336,
-  "cuda_peak_bytes": 23015773696,
-  "seconds": 113.37
-}
-out=/data/anupam/scratch/prioritykv/runs/d4_latency/d4_latency_gpu5_r1.json
-=== nvidia-smi after ===
-=== nvidia-smi 2026-07-18T16:46:08Z CUDA_VISIBLE_DEVICES=5 ===
-Sat Jul 18 16:46:08 2026       
-+-----------------------------------------------------------------------------------------+
-| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
-+-----------------------------------------+------------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
-|                                         |                        |               MIG M. |
-|=========================================+========================+======================|
-|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
-| N/A   32C    P0            134W /  700W |    2195MiB / 143771MiB |      9%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
-| N/A   30C    P0            129W /  700W |    2215MiB / 143771MiB |     41%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
-| N/A   39C    P0            282W /  700W |   59369MiB / 143771MiB |     94%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
-| N/A   31C    P0            131W /  700W |    2195MiB / 143771MiB |      8%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
-| N/A   30C    P0            122W /  700W |    2195MiB / 143771MiB |      1%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
-| N/A   33C    P0            124W /  700W |       0MiB / 143771MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
-| N/A   29C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
-| N/A   28C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|    0   N/A  N/A          807791      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
-|    1   N/A  N/A          807792      C   ...upam/COSMOS/.venv/bin/python3       2206MiB |
-|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
-|    3   N/A  N/A          807790      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
-|    4   N/A  N/A          806880      C   ...upam/COSMOS/.venv/bin/python3       2186MiB |
-+-----------------------------------------------------------------------------------------+
-
-index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
-0, NVIDIA H200, 35 %, 2195 MiB, 143771 MiB, 32
-1, NVIDIA H200, 21 %, 2215 MiB, 143771 MiB, 30
-2, NVIDIA H200, 41 %, 59369 MiB, 143771 MiB, 38
-3, NVIDIA H200, 17 %, 2195 MiB, 143771 MiB, 31
-4, NVIDIA H200, 4 %, 2195 MiB, 143771 MiB, 30
-5, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 33
-6, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
-7, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
-=== finished=2026-07-18T16:46:09Z exit=0 ===

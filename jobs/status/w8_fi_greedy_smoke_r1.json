@@ -1,7 +1,0 @@
-{
-  "job_id": "w8_fi_greedy_smoke_r1",
-  "exit": 0,
-  "finished_at": "2026-07-17T13:03:04Z",
-  "log": "/data/anupam/scratch/prioritykv/logs/w8_fi_greedy_smoke_r1.log",
-  "job_yaml": "jobs/done/w8_fi_greedy_smoke_r1.yaml"
-}

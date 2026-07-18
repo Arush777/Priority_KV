@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Hard gate: nvcc major must match torch.version.cuda major (expect 13).
-
-Handoff §B step 3 / §7. Exit 0 only on match. Does not JIT-build quanto.
-"""
+"""Require nvcc and torch.version.cuda to use the same CUDA major version."""
 from __future__ import annotations
 
 import os

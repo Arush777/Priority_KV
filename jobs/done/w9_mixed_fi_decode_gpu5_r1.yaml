@@ -1,5 +1,0 @@
-id: w9_mixed_fi_decode_gpu5_r1
-command: python scripts/run_mixed_serve.py --config configs/w9_mixed_fi_decode.yaml
-gpus: "5"
-sync_cuda: false
-timeout_sec: 7200

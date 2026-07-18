@@ -1,9 +1,0 @@
-{
-  "job_id": "d4_latency_m2_gpu5_r1",
-  "exit": 1,
-  "decision": "D4_M2_E2E_GATE_FAIL",
-  "pass": false,
-  "log_scratch": "/data/anupam/scratch/prioritykv/logs/d4_latency_m2_gpu5_r1.log",
-  "has_summary": true,
-  "has_nvidia_smi": true
-}

@@ -1,8 +1,8 @@
-# PriorityKV — what this project is and what we shipped
+# PriorityKV: Results
 
-**Freeze:** `SCIENCE_CORE_HOME_2026_07_19` · tip documents this close  
+**Freeze:** `SCIENCE_CORE_HOME_2026_07_19`
+**Authors:** Arush Sharma (IIT (ISM) Dhanbad) · Anupam Rawart (IIT Bombay)
 **Model:** Qwen3-8B @ `b968826d9c46…` · H200 (`dgre2`)  
-**D3:** CLOSED — [`docs/D3_CLOSE.md`](docs/D3_CLOSE.md)
 
 ## Point of the project
 
@@ -28,7 +28,7 @@ look fine on average metrics while **silently breaking agent behavior**.
 | Reliability | Structure ≫ uniform matched-keep (token + page); buried-state scoped claim |
 | Mixed cache | Role planner · true packed INT4 pages · FI LSE multicall · FI decode shim |
 | Systems metrics | Pack/cold/e2e/TPOT · peak + payload (cold-scratch caveat) |
-| Publish appendix | FP8 head-to-head · guardrails · Gemma reduced secondary |
+| Secondary check | Gemma reduced stress slice |
 
 ## Canonical metrics (cite these)
 
@@ -64,12 +64,10 @@ Structure-FI vs FullKV (order of magnitude): e2e ~**1.11–1.12×** · TPOT ~**1
 | Page keep @0.25 | **0.000** | **0.643** |
 | Buried gold (token) | 0.000 | **0.429** (scoped — not oracle) |
 
-### Publish track
+### Secondary model check
 
 | Job | Decision | Note |
 |---|---|---|
-| `pub_a_d4_fp8_compare_gpu01_r1` | **D4_FP8_COMPARE_PASS** | FullKV vs FP8 vs structure-FI |
-| `pub_b_guardrails_gpu5_r1` | **GUARDRAILS_PUB_PASS** | gate Δ=**0.0** |
 | `pub_c_gemma_reduced_gpu01_r6` | **GEMMA_REDUCED_PASS** | n=14 · full **0.36** / structure **0.14** / uniform **0.00** |
 
 ## What we are *not* claiming
@@ -79,15 +77,10 @@ Structure-FI vs FullKV (order of magnitude): e2e ~**1.11–1.12×** · TPOT ~**1
 - Full LongBench/RULER paper matrices  
 - Gemma = Qwen lock-240 absolute scores (reduced secondary only)
 
-## Still open (DeepMind packaging, not GPU science)
-
-arXiv submit · blog go-live · upstream PR · outreach · interview prep.
-
 ## Source of truth
 
 - Dataset (tasks): [`docs/DATASET.md`](docs/DATASET.md)  
 - Freeze: [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml)  
-- Next chat: [`docs/NEXT_CHAT_HANDOFF.md`](docs/NEXT_CHAT_HANDOFF.md)  
-- Decisions log: [`docs/decisions.md`](docs/decisions.md)  
-- Paper draft: [`paper/prioritykv_arxiv_draft.md`](paper/prioritykv_arxiv_draft.md)  
-- Job status: `jobs/status/<id>.json` · done YAMLs: `jobs/done/`
+- Manuscript: [`paper/prioritykv_manuscript.md`](paper/prioritykv_manuscript.md)
+- Reproduction guide: [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md)
+- Job manifests and bundles: [`jobs/`](jobs/)

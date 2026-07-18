@@ -1,5 +1,0 @@
-id: w3_cpu_close
-command: python scripts/run_w3_cpu_close.py
-gpus: "6,7"
-sync_cuda: false
-timeout_sec: 600

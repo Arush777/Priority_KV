@@ -1,6 +1,6 @@
 """PriorityBench-A: agent-reliability eval scaffolding (Workstream A / S1).
 
-Canon: docs/PRIORITYKV_IMPLEMENTATION_PLAN.md §3.
+The frozen dataset contract is documented in docs/DATASET.md.
 """
 
 from prioritybench.generate import generate_tool_schema_pilot

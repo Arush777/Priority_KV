@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""H200 job wrapper for W3 INT4 assert (HANDOFF_W3_INT4 §B steps 2–5).
+"""H200 job wrapper for the W3 INT4 assertion run.
 
 Sets CUDA toolkit env, clears stale torch JIT cache, ensures bench lock present,
 then runs ``run_pilot3.py --modes int4_only`` under allow_fake_fallback=False.

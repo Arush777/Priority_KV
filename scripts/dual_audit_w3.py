@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """D1 dual audit: deterministic 15% sample of w3_lock + second-pass synth scoring.
 
-Writes docs/audit_w3_dual.md. Does not retune locked gold — fails loud on score miss.
+Writes an optional dual-audit artifact. Does not retune locked gold and fails on a score miss.
 """
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def main() -> int:
     ap.add_argument(
         "--out",
         type=Path,
-        default=ROOT / "docs" / "audit_w3_dual.md",
+        default=ROOT / "artifacts" / "dataset_audit_dual.md",
     )
     args = ap.parse_args()
 

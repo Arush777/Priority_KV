@@ -1,6 +1,6 @@
 """Pinned model / chat-template IDs for PriorityBench + S2 page tagging.
 
-Locked in docs/decisions.md. Change only via a new Decided line.
+Frozen values are indexed by FINAL_RUN_MANIFEST.yaml.
 """
 
 from __future__ import annotations

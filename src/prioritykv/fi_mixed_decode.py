@@ -351,8 +351,6 @@ def fi_chunks_for_layer(
     layer_idx: int,
 ) -> Tuple[List[Any], List[Any]]:
     """Return ≤2 FI-layout chunks: hot+tail, then cold (if any)."""
-    import torch
-
     buf = state.layers[layer_idx]
     _fill_cold_scratch(buf, device=state.device, dtype=state.dtype)
     k_pages: list[Any] = []
@@ -386,8 +384,6 @@ def append_decode_kv(
 
     ``k_new`` / ``v_new``: ``(num_kv_heads, 1, head_dim)`` or ``(1, heads, dim)``.
     """
-    import torch
-
     buf = state.layers[layer_idx]
     if k_new.dim() == 3 and k_new.shape[0] == 1:
         # (1, heads, dim) → (heads, 1, dim)

@@ -87,7 +87,6 @@ def _fi_attention_forward(
     **kwargs: Any,  # noqa: ARG001
 ) -> tuple[Any, None]:
     """Drop-in Qwen3Attention.forward that attends via FiMixedDecodeState."""
-    import torch
     from transformers.models.qwen3.modeling_qwen3 import apply_rotary_pos_emb
 
     ctx = _ACTIVE.get()

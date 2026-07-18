@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from prioritybench.pins import qwen3_chat_template_kwargs
 from prioritykv.baselines.keep_policy import (

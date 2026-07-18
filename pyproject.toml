@@ -3,7 +3,21 @@ name = "priority-kv"
 version = "0.1.0"
 description = "PriorityKV-Agent: structure-protected mixed-precision KV cache for long agent traces"
 readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Arush Sharma" },
+    { name = "Anupam Rawart" },
+]
 requires-python = ">=3.11,<3.13"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "numpy>=1.26",
     "jsonschema>=4.22",
@@ -32,6 +46,12 @@ dev = [
     "ruff>=0.8",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Arush777/Priority_KV"
+Repository = "https://github.com/Arush777/Priority_KV"
+Documentation = "https://github.com/Arush777/Priority_KV/blob/main/RESULTS.md"
+Issues = "https://github.com/Arush777/Priority_KV/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -50,3 +70,9 @@ python_files = ["test_*.py"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint.per-file-ignores]
+# Executable experiment scripts establish paths/devices before importing the package.
+"scripts/*.py" = ["E402"]
+# A small number of tests conditionally skip before importing optional GPU modules.
+"tests/*.py" = ["E402"]

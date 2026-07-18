@@ -151,7 +151,7 @@ def main() -> int:
     )
     model.eval()
 
-    def _ids_for(prompt: PromptRow):
+    def _ids_for(prompt: PromptRow, hf_model):
         text = _apply_chat(tok, prompt.messages)
         ids = tok(text, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
         budget = int(vcfg["max_model_len"]) - max_new - 8
@@ -159,10 +159,10 @@ def main() -> int:
             head = ids[: budget // 4]
             tail = ids[-(budget - int(head.numel())) :]
             ids = torch.cat([head, tail])
-        return ids.to(model.device)
+        return ids.to(hf_model.device)
 
     if prompts and args.warmup > 0:
-        w_ids = _ids_for(prompts[0])
+        w_ids = _ids_for(prompts[0], model)
         w_roles = assign_token_roles(tok, prompts[0].messages, chat_kwargs=chat_kwargs)
         _timed_decode_fullkv(model, tok, w_ids, max_new_tokens=min(8, max_new))
         _timed_decode_fi(
@@ -190,22 +190,22 @@ def main() -> int:
 
     t_hf0 = time.time()
     for prompt, ex in zip(prompts, examples, strict=True):
-        ids = _ids_for(prompt)
+        ids = _ids_for(prompt, model)
         roles = assign_token_roles(tok, prompt.messages, chat_kwargs=chat_kwargs)
         ntok = int(ids.numel())
         ctx = int(ex.context_length)
 
-        def _run(kind: str, policy: str | None = None) -> dict[str, Any]:
+        def _run(hf_model, kind: str, policy: str | None = None) -> dict[str, Any]:
             reps = []
             for _ in range(repeats):
                 if kind == "fullkv":
                     reps.append(
-                        _timed_decode_fullkv(model, tok, ids, max_new_tokens=max_new)
+                        _timed_decode_fullkv(hf_model, tok, ids, max_new_tokens=max_new)
                     )
                 else:
                     reps.append(
                         _timed_decode_fi(
-                            model,
+                            hf_model,
                             tok,
                             ids,
                             roles=roles,
@@ -233,8 +233,8 @@ def main() -> int:
             out["fp8_bytes_modeled"] = _modeled_fp8_bytes(ntok)
             return out
 
-        full = _run("fullkv")
-        struct = _run("fi", "structure")
+        full = _run(model, "fullkv")
+        struct = _run(model, "fi", "structure")
         rows_out.extend([full, struct])
         print(
             f"[fp8cmp/hf] {prompt.id} full_score={full['score']:.2f} "

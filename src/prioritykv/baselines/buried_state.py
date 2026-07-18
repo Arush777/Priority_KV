@@ -8,7 +8,7 @@ there's a leak; if it drops toward uniform, W2 claim is correctly scoped.
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Sequence
+from typing import Dict, List, Mapping, Sequence
 
 
 _PAD = (
