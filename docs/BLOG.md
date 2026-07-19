@@ -1,6 +1,6 @@
 # What You Drop From an Agent's KV Cache Matters
 
-*Arush Sharma and Anupam Rawart*
+*Arush Sharma and Anupam Rawat*
 
 Long LLM conversations are not homogeneous text. A tool-using agent trace mixes system
 instructions, tool schemas, superseding user constraints, persistent identifiers, tool
