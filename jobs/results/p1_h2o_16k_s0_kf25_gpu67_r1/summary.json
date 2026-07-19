@@ -1,0 +1,243 @@
+{
+  "manifest_id": "p1_h2o_16k_s0_kf25",
+  "rev": 1,
+  "model_path": "/data/anupam/scratch/prioritykv/models/Qwen3-8B",
+  "n": 20,
+  "keep_frac": 0.25,
+  "compression_ratio": 0.75,
+  "selection": {
+    "splits": [
+      "calibration",
+      "validation",
+      "test"
+    ],
+    "context_lengths": [
+      16000
+    ],
+    "all_matching": true,
+    "replication_slice": 0
+  },
+  "press_status": {
+    "snapkv": true,
+    "h2o_observed_attention": true,
+    "pyramidkv": true,
+    "config": {
+      "keep_frac": 0.25,
+      "compression_ratio": 0.75,
+      "window_size": 64,
+      "kernel_size": 5,
+      "h2o_attn_implementation": "eager"
+    }
+  },
+  "fullkv_mean": 0.9,
+  "arms": {
+    "h2o": {
+      "mean": null,
+      "fullkv_mean": 0.9,
+      "error": "OutOfMemoryError: CUDA out of memory. Tried to allocate 55.61 GiB. GPU 0 has a total capacity of 139.79 GiB of which 46.89 GiB is free. Including non-PyTorch memory, this process has 92.89 GiB memory in use. Of the allocated memory 92.14 GiB is allocated by PyTorch, and 91.74 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    }
+  },
+  "arms_detail": {
+    "h2o": {
+      "mean": null,
+      "fullkv_mean": 0.9,
+      "error": "OutOfMemoryError: CUDA out of memory. Tried to allocate 55.61 GiB. GPU 0 has a total capacity of 139.79 GiB of which 46.89 GiB is free. Including non-PyTorch memory, this process has 92.89 GiB memory in use. Of the allocated memory 92.14 GiB is allocated by PyTorch, and 91.74 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)",
+      "rows": []
+    }
+  },
+  "example_rows": [
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20270955",
+      "category": "instruction_supersession",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271056",
+      "category": "instruction_supersession",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271157",
+      "category": "instruction_supersession",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271258",
+      "category": "instruction_supersession",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271366",
+      "category": "instruction_supersession",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271467",
+      "category": "instruction_supersession",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271568",
+      "category": "instruction_supersession",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "multi_turn_state.file_path.v2__c16000__s20281128",
+      "category": "multi_turn_state",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "multi_turn_state.file_path.v2__c16000__s20281431",
+      "category": "multi_turn_state",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c16000__s20281056",
+      "category": "multi_turn_state",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c16000__s20281366",
+      "category": "multi_turn_state",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "multi_turn_state.user_pref.v2__c16000__s20281193",
+      "category": "multi_turn_state",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 0.0,
+      "fullkv_pass": false
+    },
+    {
+      "example_id": "multi_turn_state.user_pref.v2__c16000__s20281496",
+      "category": "multi_turn_state",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 0.0,
+      "fullkv_pass": false
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c16000__s20261229",
+      "category": "tool_schema",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20260919",
+      "category": "tool_schema",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20261330",
+      "category": "tool_schema",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20261020",
+      "category": "tool_schema",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20261431",
+      "category": "tool_schema",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20261128",
+      "category": "tool_schema",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20261532",
+      "category": "tool_schema",
+      "context_length": 16000,
+      "replication_slice": 0,
+      "fullkv_score": 1.0,
+      "fullkv_pass": true
+    }
+  ],
+  "comparisons_mean_delta": {
+    "snapkv_vs_structure": null,
+    "h2o_vs_structure": null,
+    "pyramid_vs_structure": null,
+    "hybrid_vs_structure": null
+  },
+  "decision": "P1_PARTIAL \u2014 incomplete arms or errors; see arms.*.error",
+  "seconds": {
+    "fullkv": 0.0,
+    "h2o": 41.60562705993652
+  },
+  "selected_ids": [
+    "instruction_supersession.language_flip.v2__c16000__s20270955",
+    "instruction_supersession.language_flip.v2__c16000__s20271056",
+    "instruction_supersession.language_flip.v2__c16000__s20271157",
+    "instruction_supersession.language_flip.v2__c16000__s20271258",
+    "instruction_supersession.language_flip.v2__c16000__s20271366",
+    "instruction_supersession.language_flip.v2__c16000__s20271467",
+    "instruction_supersession.language_flip.v2__c16000__s20271568",
+    "multi_turn_state.file_path.v2__c16000__s20281128",
+    "multi_turn_state.file_path.v2__c16000__s20281431",
+    "multi_turn_state.order_id.v2__c16000__s20281056",
+    "multi_turn_state.order_id.v2__c16000__s20281366",
+    "multi_turn_state.user_pref.v2__c16000__s20281193",
+    "multi_turn_state.user_pref.v2__c16000__s20281496",
+    "tool_schema.http_get.v1__c16000__s20261229",
+    "tool_schema.read_file.v1__c16000__s20260919",
+    "tool_schema.read_file.v1__c16000__s20261330",
+    "tool_schema.send_email.v1__c16000__s20261020",
+    "tool_schema.send_email.v1__c16000__s20261431",
+    "tool_schema.set_config.v1__c16000__s20261128",
+    "tool_schema.set_config.v1__c16000__s20261532"
+  ]
+}
