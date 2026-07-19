@@ -1,0 +1,10 @@
+{
+  "job_id": "p0f_w5_s2_kf25_token_buried_gpu1_r1",
+  "exit": 0,
+  "finished_at": "2026-07-19T08:40:31Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/p0f_w5_s2_kf25_token_buried_gpu1_r1.log",
+  "job_yaml": "jobs/done/p0f_w5_s2_kf25_token_buried_gpu1_r1.yaml",
+  "decision": null,
+  "pass": null,
+  "results_dir": "jobs/results/p0f_w5_s2_kf25_token_buried_gpu1_r1"
+}
