@@ -37,6 +37,17 @@ def select_stress_rows(bench: dict[str, Any], sel: dict[str, Any]) -> list[dict[
         for e in bench["examples"]
         if e["split"] in splits and int(e["context_length"]) in length_set
     ]
+    if "replication_slice" in sel and sel["replication_slice"] is not None:
+        want_slice = int(sel["replication_slice"])
+        pool = [
+            e
+            for e in pool
+            if e.get("replication_slice") is not None
+            and int(e["replication_slice"]) == want_slice
+        ]
+    if sel.get("example_ids"):
+        want_ids = set(str(x) for x in sel["example_ids"])
+        pool = [e for e in pool if str(e["example_id"]) in want_ids]
     if bool(sel.get("all_matching", False)):
         if not pool:
             raise ValueError("no stress examples matched selection")
