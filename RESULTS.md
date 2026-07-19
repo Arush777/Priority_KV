@@ -70,15 +70,56 @@ Structure-FI vs FullKV (order of magnitude): e2e ~**1.11–1.12×** · TPOT ~**1
 |---|---|---|
 | `pub_c_gemma_reduced_gpu01_r6` | **GEMMA_REDUCED_PASS** | n=14 · full **0.36** / structure **0.14** / uniform **0.00** |
 
+## Credibility track (P0–P3) — post-freeze H200
+
+Full narrative: [`docs/EVIDENCE.md`](docs/EVIDENCE.md). Bench: `w5_stress_large`, kf=0.25 unless noted.
+
+### P0 — structure vs uniform/random (Qwen, n=120)
+
+| Arm | Pooled mean |
+|---|---|
+| structure | **0.933** |
+| uniform | **~0.008** |
+| random | **~0.008** |
+
+Jobs: `p0_w5_s{0,1,2}_kf25_token_*`.
+
+### P1 — structure vs attention eviction (Qwen, n=120)
+
+| Arm | Pooled mean |
+|---|---|
+| structure | **0.933** |
+| SnapKV / Pyramid / hybrid | **0.900** |
+| H2O (chunked SDPA) | **~0.68** |
+
+Jobs: `p1_attn_baselines_s{0,1,2}_kf25_*`, `p1_h2o_chunked_s0_kf25_gpu1_r1`.
+Every slice decision: `P1_STRUCTURE_BEATS_SNAPKV`.
+
+### P2 — streamed cold attend
+
+Job `p2_fi_stream_cold_16k_gpu1_r1`: exit=0; proves FI decode without materializing a full BF16 cold scratch.
+
+### P3 — Llama-3.1-8B transfer (n=120 @ kf=0.25)
+
+| Arm | Pooled mean |
+|---|---|
+| structure / SnapKV / H2O / Pyramid / hybrid | **1.000** (ceiling) |
+| full | **0.975** |
+
+Jobs: `p3_llama31_attn_s{0,1,2}_kf25_gpu1_r1`. Decision every slice: `P1_SNAPKV_MATCHES`.
+At kf=0.05 (s0 only): structure **0.875** < SnapKV **1.000** — do not claim universal transfer.
+
 ## What we are *not* claiming
 
 - Soft INT4 accuracy win on PriorityBench  
 - Peak VRAM collapse (cold scratch)  
 - Full LongBench/RULER paper matrices  
 - Gemma = Qwen lock-240 absolute scores (reduced secondary only)
+- Structure beats SnapKV on Llama at kf=0.25 (saturated; negative at kf=0.05)
 
 ## Source of truth
 
+- Evidence track: [`docs/EVIDENCE.md`](docs/EVIDENCE.md)  
 - Dataset (tasks): [`docs/DATASET.md`](docs/DATASET.md)  
 - Freeze: [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml)  
 - Manuscript: [`paper/prioritykv_manuscript.md`](paper/prioritykv_manuscript.md)

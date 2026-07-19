@@ -1,49 +1,45 @@
 # PriorityKV
 
-Structure-aware KV retention and mixed BF16/INT4 storage for long language-model
-agent traces.
+Structure-aware KV retention for long agent traces — keep the tokens that matter
+(tool schemas, constraints, state) when the cache must shrink — plus a packed
+BF16/INT4 systems path with honest latency and memory reporting.
 
-**Arush Sharma** (IIT (ISM) Dhanbad), **Anupam Rawart** (IIT Bombay)
-Apache-2.0 | Python 3.11--3.12 | Primary evaluation: Qwen3-8B on NVIDIA H200
+**Arush Sharma** (IIT (ISM) Dhanbad), **Anupam Rawart** (IIT Bombay)  
+Apache-2.0 · Python 3.11–3.12 · Primary eval: Qwen3-8B on NVIDIA H200
 
 ![PriorityKV system overview](paper/figures/prioritykv_overview.svg)
 
 ## Research question
 
-Agent traces contain tool schemas, superseding instructions, persistent identifiers, and
-ordinary dialogue. All of these tokens occupy the KV cache, but losing them has different
-behavioral consequences. PriorityKV asks whether application-visible message structure
-should influence which KV pages are retained or stored at high precision.
+Agent traces mix tool schemas, superseding instructions, persistent IDs, and ordinary
+dialogue in one KV cache. Losing the wrong tokens can look fine on average metrics
+while silently breaking agent behavior. PriorityKV asks whether **application-visible
+message structure** should decide what to keep (and at what precision).
 
-The frozen evidence supports three scoped conclusions:
+Scoped conclusions from the evidence:
 
-1. **Eviction:** role-blind sink-and-recent eviction destroys targeted agent state at
-   aggressive matched keep budgets; structure-aware retention preserves substantially
-   more of it.
-2. **Quantization:** assigning 75% of positions to soft INT4 does **not** create a
-   meaningful PriorityBench quality separation from FullKV. This hypothesis was
-   falsified.
-3. **Systems:** real packed storage reduces payload bytes, but the current BF16 cold
-   scratch limits peak savings and makes decode slower. Payload, peak, and latency are
-   reported separately.
+1. **Eviction (strong on Qwen):** at matched keep budgets, structure-aware retention
+   beats role-blind keep and common attention eviction (SnapKV / Pyramid / hybrid).
+2. **Quantization (falsified):** soft INT4 at `int4_frac=0.75` does **not** open a
+   PriorityBench quality gap vs FullKV.
+3. **Systems:** packed storage cuts payload bytes; peak/latency are reported with the
+   FI cold-scratch caveat — not as a free VRAM win.
+4. **Transfer (honest):** Llama-3.1-8B at kf=0.25 is ceiling-saturated; do not claim a
+   universal structure≫SnapKV transfer.
 
 ## Key results
 
-Qwen3-8B at revision `b968826d9c46dd6066d109eabc6255188de91218`, NVIDIA H200:
+Qwen3-8B (`b968826d…`) and Llama-3.1-8B-Instruct (`0e9e39f…`) on NVIDIA H200.
+Full tables and job IDs: [`RESULTS.md`](RESULTS.md) · [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
 | Experiment | Result |
 |---|---|
-| Token eviction, 25% keep (`n=14`) | role-blind **0.000**, structure **1.000** |
-| Page eviction, 25% keep (`n=14`) | role-blind **0.000**, structure **0.643** |
-| Middle-relocated page state (`n=16`) | fixed prefix **0.125**, structure **0.688** |
-| Locked mixed quality (`n=240`) | FullKV **0.8875**, role-blind **0.8792**, structure **0.8833** |
-| Packed payload / modeled bytes | **0.719x / 0.473x** FullKV |
-| Peak allocated CUDA memory | **0.868x** FullKV |
-| E2E / TPOT at 8k--16k | **1.11--1.12x / 1.20--1.21x** FullKV |
-
-The positive eviction experiments are controlled stress slices, not a broad benchmark
-matrix. The lock-240 result is a negative quantization finding, not evidence that
-structure-aware INT4 improves quality.
+| P0 token keep 25% (Qwen, n=120) | structure **0.933** vs uniform/random **~0.008** |
+| P1 vs SnapKV/H2O/Pyramid (Qwen, n=120) | structure **0.933** > SnapKV/Pyr/hybrid **0.900** > H2O **~0.68** |
+| P3 same protocol (Llama, n=120, kf=0.25) | all arms **1.000** (saturated / SnapKV matches) |
+| Locked mixed quality (`n=240`) | FullKV **0.8875**, structure **0.8833**, uniform **0.8792** |
+| Packed payload / modeled bytes | **0.719× / 0.473×** FullKV |
+| Peak CUDA / E2E / TPOT | **0.868×** · **1.11–1.12×** · **1.20–1.21×** FullKV |
 
 ![Matched keep-budget results](paper/figures/reliability_keep_sweep.svg)
 
@@ -52,11 +48,13 @@ structure-aware INT4 improves quality.
 | Artifact | Purpose |
 |---|---|
 | [`RESULTS.md`](RESULTS.md) | Canonical metrics and claim boundary |
+| [`docs/EVIDENCE.md`](docs/EVIDENCE.md) | P0–P3 evidence track and claim strength |
 | [`docs/DATASET.md`](docs/DATASET.md) | PriorityBench-A tasks, strata, and generation |
 | [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) | Frozen model, benchmark, configs, and job IDs |
 | [`paper/prioritykv.tex`](paper/prioritykv.tex) | Standalone arXiv source |
 | [`paper/prioritykv_manuscript.md`](paper/prioritykv_manuscript.md) | Readable source manuscript |
 | [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | Reproduction levels and commands |
+| [`docs/H200_QUEUE.md`](docs/H200_QUEUE.md) | Git→H200 job queue |
 | [`docs/BLOG.md`](docs/BLOG.md) | Accessible research summary |
 | [`CITATION.cff`](CITATION.cff) | Citation metadata |
 
@@ -112,10 +110,10 @@ Do not run GPU code on a login node; use at most two H200 GPUs per job.
 ## Scope and limitations
 
 - PriorityBench-A is synthetic and agent-specific; it is not LongBench or RULER.
-- The decisive matched-eviction runs contain 14--16 examples.
-- Qwen3-8B on H200 is the only complete model/device matrix.
+- Early matched-eviction stress slices were small (n=14–16); P0/P1 now use n=120.
+- Qwen carries the positive structure≫SnapKV result; Llama at kf=0.25 is saturated.
 - The structure tagger is heuristic and misses some unmarked free-form state.
-- The current cold path expands INT4 pages into BF16 scratch before attention.
+- The current cold path expands INT4 pages into BF16 scratch before attention (P2 streams it).
 - The latency study is single-request and does not measure serving throughput or tail
   latency under concurrency.
 

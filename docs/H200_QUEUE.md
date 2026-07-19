@@ -26,14 +26,15 @@ Control GPU work from the agent box by **pushing jobs to GitHub**. H200 runs
 ```bash
 cd /data/anupam/scratch/Priority_KV
 git fetch origin && git reset --hard origin/main
-bash scripts/h200_bootstrap_pkworker.sh   # starts pkworker0 + pkworker1 (GPUs 0,1)
-# Override: PKWORKER_GPUS="0 7" bash scripts/h200_bootstrap_pkworker.sh
+# One GPU (recommended):
+PKWORKER_GPUS="1" bash scripts/h200_bootstrap_pkworker.sh
+# Default without override starts pkworker0 + pkworker1 (GPUs 0 and 1).
 tmux ls | grep pkworker
-tmux capture-pane -t pkworker0 -p | tail -20
+tmux capture-pane -t pkworker1 -p | tail -20
 ```
 
-Each worker only claims jobs whose `gpus:` field equals its filter. Enqueue two
-1-GPU jobs on disjoint empty GPUs for parallelism (hard cap: 2 GPUs total).
+Each worker only claims jobs whose `gpus:` field equals its filter. Cap: **at most 2
+H200s** total. Prefer one empty GPU for single jobs.
 
 If you see `ff-only merge failed` forever: re-run bootstrap (`reset --hard origin/main`).
 
