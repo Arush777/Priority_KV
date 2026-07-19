@@ -1,0 +1,33 @@
+# P1 baselines slice 2 (Fable: match P0 n=120 protocol).
+manifest_id: p1_attn_baselines_s2_kf25
+rev: 1
+bench_manifest: data/prioritybench/manifests/w5_stress_large.json
+selection:
+  splits: [calibration, validation, test]
+  context_lengths: [8000, 16000]
+  all_matching: true
+  replication_slice: 2
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.75
+  max_model_len: 32768
+keep_frac: 0.25
+compression_ratio: 0.75
+sink_tokens: 16
+force_recent: 128
+seed: 0
+granularity: token
+page_tokens: 16
+snapkv_window_size: 64
+snapkv_kernel_size: 5
+h2o_attn_implementation: sdpa
+h2o_chunk_size: 1024
+h2o_recent_frac: 0.5
+arms: [structure, snapkv, h2o, pyramid, hybrid]
