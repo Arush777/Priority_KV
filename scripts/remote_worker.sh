@@ -358,12 +358,25 @@ run_one_job() {
 
   if [[ "$sync_cuda" == "true" || "$sync_cuda" == "True" || "$sync_cuda" == "1" ]]; then
     log "sync_cuda for ${job_id}"
-    "$ROOT/scripts/sync.sh" --cuda
+    # Never run pytest here — a failing check.sh would kill the whole pkworker
+    # under set -e and leave a zombie jobs/running claim with no log.
+    if ! "$ROOT/scripts/sync.sh" --cuda --no-check; then
+      log "WARN: sync_cuda failed for ${job_id}; continuing with existing .venv"
+    fi
   fi
 
   if [[ ! -d "$ROOT/.venv" ]]; then
-    log "missing .venv — running ./scripts/sync.sh --cuda"
-    "$ROOT/scripts/sync.sh" --cuda
+    log "missing .venv — running ./scripts/sync.sh --cuda --no-check"
+    if ! "$ROOT/scripts/sync.sh" --cuda --no-check; then
+      log "REJECT ${job_id}: sync failed and .venv missing"
+      mv "$running" "$ROOT/jobs/failed/${job_id}.yaml"
+      mkdir -p "$RESULTS_DIR/${job_id}"
+      echo "sync failed; .venv missing" >"$LOG_DIR/${job_id}.log"
+      collect_job_results "$job_id" 2 "$LOG_DIR/${job_id}.log"
+      write_status_files "$job_id" 2 "$LOG_DIR/${job_id}.log" "jobs/failed/${job_id}.yaml"
+      try_push_job_state "$job_id" failed
+      return
+    fi
   fi
 
   # shellcheck disable=SC1091
