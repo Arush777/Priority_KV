@@ -23,6 +23,13 @@ sleep 5
 tmux ls
 echo "== last pane lines =="
 tmux capture-pane -t pkworker -p | tail -40
+echo "== heartbeat (scratch; works even if pane blank) =="
+HB="${PRIORITYKV_SCRATCH:-/data/anupam/scratch/prioritykv}/pkworker_heartbeat.txt"
+if [[ -f "$HB" ]]; then
+  tail -30 "$HB"
+else
+  echo "(no heartbeat yet at $HB)"
+fi
 echo "== queue dirs =="
 ls jobs/pending jobs/running 2>/dev/null || true
 echo "== worker process =="

@@ -23,16 +23,25 @@ LOG_HEAD_BYTES="${REMOTE_WORKER_LOG_HEAD_BYTES:-65536}"            # first 64 Ki
 LOG_FULL_MAX_BYTES="${REMOTE_WORKER_LOG_FULL_MAX_BYTES:-2097152}"  # ship full log if ≤2 MiB
 WORKER_SCRIPT="$ROOT/scripts/remote_worker.sh"
 WORKER_MTIME_FILE="${REMOTE_WORKER_MTIME_FILE:-$SCRATCH/.pkworker_mtime}"
+HEARTBEAT_FILE="${REMOTE_WORKER_HEARTBEAT:-$SCRATCH/pkworker_heartbeat.txt}"
+GIT_FETCH_TIMEOUT_SEC="${REMOTE_WORKER_GIT_FETCH_TIMEOUT_SEC:-90}"
 
 
 mkdir -p "$LOG_DIR" \
   "$ROOT/jobs/pending" "$ROOT/jobs/running" "$ROOT/jobs/done" \
   "$ROOT/jobs/failed" "$STATUS_DIR" "$RESULTS_DIR"
 
-# Always line-buffer logs (tmux capture was blank under full buffering).
+# Line-buffer to tmux + always mirror to a scratch heartbeat file (survives blank panes).
 log() {
-  printf '[remote_worker %s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2
+  local msg
+  msg="$(printf '[remote_worker %s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*")"
+  printf '%s' "$msg" >&2
+  printf '%s' "$msg" >>"$HEARTBEAT_FILE" 2>/dev/null || true
 }
+
+# Prove we reached main before any network I/O.
+: >"$HEARTBEAT_FILE" 2>/dev/null || true
+log "boot ROOT=${ROOT} SCRATCH=${SCRATCH} HEARTBEAT=${HEARTBEAT_FILE}"
 
 
 # Parse simple key: value YAML (no nested structures).
@@ -66,10 +75,18 @@ command_allowed() {
 }
 
 sync_repo() {
-  log "git fetch origin ${BRANCH}…"
-  if ! git fetch origin "$BRANCH" --quiet; then
-    log "WARN: git fetch failed"
-    return 1
+  log "git fetch origin ${BRANCH} (timeout=${GIT_FETCH_TIMEOUT_SEC}s)…"
+  # A hung fetch previously left pkworker alive but idle forever (blank pane).
+  if command -v timeout >/dev/null 2>&1; then
+    if ! timeout "$GIT_FETCH_TIMEOUT_SEC" git fetch origin "$BRANCH" --quiet; then
+      log "WARN: git fetch failed or timed out"
+      return 1
+    fi
+  else
+    if ! git fetch origin "$BRANCH" --quiet; then
+      log "WARN: git fetch failed"
+      return 1
+    fi
   fi
   # Never reset --hard here: that would wipe claimed/archived job files.
   if ! git merge --ff-only "origin/$BRANCH" >/dev/null 2>&1; then
@@ -469,19 +486,24 @@ stat -c %Y "$WORKER_SCRIPT" 2>/dev/null >"$WORKER_MTIME_FILE" || \
   stat -f %m "$WORKER_SCRIPT" 2>/dev/null >"$WORKER_MTIME_FILE" || true
 
 while true; do
-  sync_repo || log "WARN: sync_repo failed"
-  maybe_reload_worker
-
+  # Claim local pending FIRST — never block the queue on a hung git fetch.
   shopt -s nullglob
   pending_files=("$ROOT"/jobs/pending/*.yaml)
   shopt -u nullglob
 
   if [[ ${#pending_files[@]} -gt 0 ]]; then
+    log "claim ${pending_files[0]}"
     # One job at a time (shared 2-GPU cap).
     run_one_job "${pending_files[0]}"
   else
-    log "idle"
+    log "idle — syncing git"
+    sync_repo || log "WARN: sync_repo failed"
+    maybe_reload_worker
   fi
+
+  # Between jobs (or after idle), pull new pending from origin.
+  sync_repo || log "WARN: sync_repo failed"
+  maybe_reload_worker
 
   sleep "$POLL_SEC"
 done
