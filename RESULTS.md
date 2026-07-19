@@ -72,7 +72,7 @@ Structure-FI vs FullKV (order of magnitude): e2e ~**1.11–1.12×** · TPOT ~**1
 
 ## Credibility track (P0–P3) — post-freeze H200
 
-Full narrative: [`docs/EVIDENCE.md`](docs/EVIDENCE.md). Bench: `w5_stress_large`, kf=0.25 unless noted.
+**External-audit response + checklist:** [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
 ### P0 — structure vs uniform/random (Qwen, n=120)
 
@@ -84,30 +84,30 @@ Full narrative: [`docs/EVIDENCE.md`](docs/EVIDENCE.md). Bench: `w5_stress_large`
 
 Jobs: `p0_w5_s{0,1,2}_kf25_token_*`.
 
+**Placement controls (s0):** mid-context → structure=full=**0.975** (Δ0); buried → structure **0.675** < full **0.900**. Jobs: `p0a_…_middle_…`, `p0b_…_buried_…`. **Do not claim structure > FullKV.**
+
 ### P1 — structure vs attention eviction (Qwen, n=120)
 
 | Arm | Pooled mean |
 |---|---|
-| structure | **0.933** |
-| SnapKV / Pyramid / hybrid | **0.900** |
-| H2O (chunked SDPA) | **~0.68** |
+| structure | **0.933** (112/120) |
+| SnapKV / Pyramid / hybrid | **0.900** (108/120) |
+| H2O | **0.683** = (0.725 chunked s0 + 0.625 s1 + 0.700 s2) / 3 |
 
-Jobs: `p1_attn_baselines_s{0,1,2}_kf25_*`, `p1_h2o_chunked_s0_kf25_gpu1_r1`.
-Every slice decision: `P1_STRUCTURE_BEATS_SNAPKV`.
+McNemar structure vs SnapKV: b=4, c=0, exact two-sided **p=0.125** — [`jobs/results/p1_structure_vs_snapkv_mcnemar.json`](jobs/results/p1_structure_vs_snapkv_mcnemar.json).  
+Phrase as **matches or slightly exceeds** SnapKV-class; hybrid **equals** SnapKV (no complementarity).
 
-### P2 — streamed cold attend
+### P2 — streamed cold attend (smoke)
 
-Job `p2_fi_stream_cold_16k_gpu1_r1`: exit=0; proves FI decode without materializing a full BF16 cold scratch.
+Job `p2_fi_stream_cold_16k_gpu1_r1`: exit=0. Log peak_gib ≈ **36.4** (structure/uniform). Not a systems result; cite frozen D4/MG for latency/peak.
 
-### P3 — Llama-3.1-8B transfer (n=120 @ kf=0.25)
+### P3 — Llama-3.1-8B
 
-| Arm | Pooled mean |
+| Setting | Result |
 |---|---|
-| structure / SnapKV / H2O / Pyramid / hybrid | **1.000** (ceiling) |
-| full | **0.975** |
-
-Jobs: `p3_llama31_attn_s{0,1,2}_kf25_gpu1_r1`. Decision every slice: `P1_SNAPKV_MATCHES`.
-At kf=0.05 (s0 only): structure **0.875** < SnapKV **1.000** — do not claim universal transfer.
+| kf=0.25 n=120 | all arms **1.000** (saturated / non-discriminative until gold-region audit) |
+| kf=0.05 s0 | SnapKV **1.0** > structure **0.875** |
+| kf=0.05 s1 | SnapKV **1.0** > structure **0.900** (replicate) |
 
 ## What we are *not* claiming
 
@@ -115,7 +115,9 @@ At kf=0.05 (s0 only): structure **0.875** < SnapKV **1.000** — do not claim un
 - Peak VRAM collapse (cold scratch)  
 - Full LongBench/RULER paper matrices  
 - Gemma = Qwen lock-240 absolute scores (reduced secondary only)
-- Structure beats SnapKV on Llama at kf=0.25 (saturated; negative at kf=0.05)
+- Structure beats FullKV  
+- Statistically significant structure≫SnapKV on Qwen  
+- Universal Llama transfer / hybrid complementarity
 
 ## Source of truth
 
