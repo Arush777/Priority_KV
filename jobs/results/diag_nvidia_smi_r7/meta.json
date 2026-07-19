@@ -1,0 +1,15 @@
+{
+  "job_id": "diag_nvidia_smi_r7",
+  "exit": 0,
+  "decision": "OK",
+  "pass": true,
+  "log_scratch": "/data/anupam/scratch/prioritykv/logs/diag_nvidia_smi_r7.log",
+  "log_bytes": 11849,
+  "shipped_full_log": true,
+  "truncated": false,
+  "log_tail_bytes": 524288,
+  "log_full_max_bytes": 2097152,
+  "has_summary": true,
+  "has_traceback": true,
+  "has_nvidia_smi": true
+}
