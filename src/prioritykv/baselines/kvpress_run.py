@@ -9,7 +9,11 @@ from prioritykv.fullkv_compare import PromptRow, _apply_chat
 
 
 def _patch_kvpress_cache_position() -> None:
-    """Inject missing ``cache_position`` (transformers×kvpress mismatch → KeyError)."""
+    """Inject missing ``cache_position`` and skip compress on decode steps.
+
+    transformers×kvpress often omit cache_position; without a skip, SnapKV
+    asserts ``q_len > window_size`` on the first decode token (q_len=1).
+    """
     try:
         from kvpress.presses.base_press import BasePress  # type: ignore
     except Exception:
@@ -23,25 +27,28 @@ def _patch_kvpress_cache_position() -> None:
 
     def forward_hook(self, module, input, kwargs, output):  # noqa: A002
         kwargs = dict(kwargs)
+        hs = kwargs.get("hidden_states")
+        if hs is None:
+            return orig(self, module, input, kwargs, output)
+        q_len = int(hs.shape[1])
+        # Decode / short chunk: do not compress (fixes SnapKV window assert).
+        window = int(getattr(self, "window_size", 0) or 0)
+        if q_len <= 1 or (window > 0 and q_len <= window):
+            return output
         if kwargs.get("cache_position") is None:
-            hs = kwargs.get("hidden_states")
             cache = kwargs.get("past_key_values")
-            if hs is not None:
-                q_len = int(hs.shape[1])
-                device = hs.device
-                seq = 0
-                if cache is not None:
-                    getter = getattr(cache, "get_seq_len", None)
-                    if callable(getter):
-                        try:
-                            seq = int(getter())
-                        except Exception:
-                            seq = 0
-                if seq > q_len:
-                    # Decoding: fabricate absolute position so press skips compress.
-                    kwargs["cache_position"] = torch.tensor([seq], device=device)
-                else:
-                    kwargs["cache_position"] = torch.arange(q_len, device=device)
+            device = hs.device
+            seq = 0
+            if cache is not None:
+                getter = getattr(cache, "get_seq_len", None)
+                if callable(getter):
+                    try:
+                        seq = int(getter())
+                    except Exception:
+                        seq = 0
+            if seq > q_len:
+                return output
+            kwargs["cache_position"] = torch.arange(q_len, device=device)
         return orig(self, module, input, kwargs, output)
 
     BasePress.forward_hook = forward_hook  # type: ignore[method-assign]
@@ -137,6 +144,9 @@ def run_transformers_kvpress(
         }
         out.append((txt, new_ids, meta))
         print(f"[kvpress/{mode}] {i + 1}/{len(prompts)} prompt_tokens={n}", flush=True)
+        # Eager H2O builds huge attn maps — free between examples.
+        if attn_implementation == "eager":
+            torch.cuda.empty_cache()
 
     print(f"[kvpress/{mode}] finished {len(out)}", flush=True)
     del model
