@@ -1,0 +1,39 @@
+# P1 finish: H2O ObservedAttention on 16k slice (eager attn maps).
+# Uses 2 visible GPUs via device_map=auto + low max_memory to force weight split.
+# Reuses FullKV texts from r3 (no re-decode). 8k H2O already scored in r3.
+manifest_id: p1_h2o_16k_s0_kf25
+rev: 1
+bench_manifest: data/prioritybench/manifests/w5_stress_large.json
+selection:
+  splits: [calibration, validation, test]
+  context_lengths: [16000]
+  all_matching: true
+  replication_slice: 0
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.75
+  max_model_len: 32768
+keep_frac: 0.25
+compression_ratio: 0.75
+sink_tokens: 16
+force_recent: 128
+seed: 0
+granularity: token
+page_tokens: 16
+snapkv_window_size: 64
+snapkv_kernel_size: 5
+h2o_attn_implementation: eager
+h2o_min_prompt_tokens: 16000
+h2o_max_prompt_tokens: 20000
+h2o_device_map: auto
+# Force shard across the 2 visible GPUs (leave HBM for eager attn maps).
+h2o_max_memory_gib: 12
+reuse_full_path: jobs/results/p1_attn_baselines_s0_kf25_gpu1_r3/summary.json
+arms: [h2o]

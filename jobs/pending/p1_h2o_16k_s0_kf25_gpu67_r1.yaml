@@ -1,0 +1,5 @@
+id: p1_h2o_16k_s0_kf25_gpu67_r1
+command: python scripts/run_attn_baselines.py --config configs/p1_h2o_16k_s0_kf25.yaml --out-tag p1_h2o_16k_s0_kf25_gpu67_r1
+gpus: "6,7"
+sync_cuda: false
+timeout_sec: 28800
