@@ -1,0 +1,15 @@
+{
+  "job_id": "p2_fi_stream_cold_16k_gpu1_r1",
+  "exit": 0,
+  "decision": null,
+  "pass": null,
+  "log_scratch": "/data/anupam/scratch/prioritykv/logs/p2_fi_stream_cold_16k_gpu1_r1.log",
+  "log_bytes": 20495,
+  "shipped_full_log": true,
+  "truncated": false,
+  "log_tail_bytes": 524288,
+  "log_full_max_bytes": 2097152,
+  "has_summary": false,
+  "has_traceback": true,
+  "has_nvidia_smi": true
+}

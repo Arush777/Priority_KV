@@ -1,0 +1,10 @@
+{
+  "job_id": "p2_fi_stream_cold_16k_gpu1_r1",
+  "exit": 0,
+  "finished_at": "2026-07-19T05:45:22Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/p2_fi_stream_cold_16k_gpu1_r1.log",
+  "job_yaml": "jobs/done/p2_fi_stream_cold_16k_gpu1_r1.yaml",
+  "decision": null,
+  "pass": null,
+  "results_dir": "jobs/results/p2_fi_stream_cold_16k_gpu1_r1"
+}
