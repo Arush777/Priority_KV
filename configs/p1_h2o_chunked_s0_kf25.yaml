@@ -1,6 +1,7 @@
-# P1: matched-budget SnapKV / H2O / PyramidKV / hybrid vs structure.
-# w5_stress_large slice 0, keep_frac=0.25 (same budget as P0 smoke).
-manifest_id: p1_attn_baselines_s0_kf25
+# P1 H2O finish: chunked Q/K Heavy-Hitter Oracle under SDPA (1 GPU).
+# Full slice 0 (8k+16k, n=40). Reuses FullKV texts from r3.
+# Fable GO: never ObservedAttention/eager; peak ~H×C×S not H×S×S.
+manifest_id: p1_h2o_chunked_s0_kf25
 rev: 1
 bench_manifest: data/prioritybench/manifests/w5_stress_large.json
 selection:
@@ -28,8 +29,8 @@ granularity: token
 page_tokens: 16
 snapkv_window_size: 64
 snapkv_kernel_size: 5
-# Chunked H2O under SDPA (not eager ObservedAttention).
 h2o_attn_implementation: sdpa
 h2o_chunk_size: 1024
 h2o_recent_frac: 0.5
-arms: [structure, snapkv, h2o, pyramid, hybrid]
+reuse_full_path: jobs/results/p1_attn_baselines_s0_kf25_gpu1_r3/summary.json
+arms: [h2o]

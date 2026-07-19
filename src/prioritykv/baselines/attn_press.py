@@ -14,8 +14,10 @@ class AttnPressConfig:
     compression_ratio: float = 0.75
     window_size: int = 64
     kernel_size: int = 5
-    # ObservedAttentionPress (H2O-related) needs eager attention.
-    h2o_attn_implementation: str = "eager"
+    # Unused by chunked H2O (kept for config compat); H2O runs under SDPA.
+    h2o_attn_implementation: str = "sdpa"
+    h2o_chunk_size: int = 1024
+    h2o_recent_frac: float = 0.5
 
 
 def compression_ratio_for_keep(keep_frac: float) -> float:
@@ -49,15 +51,15 @@ def make_snapkv_press(cfg: Optional[AttnPressConfig] = None):
 
 
 def make_h2o_press(cfg: Optional[AttnPressConfig] = None):
-    """H2O-related baseline via kvpress ObservedAttentionPress (cumulative attn)."""
+    """H2O via chunked Q/K score accumulation (SDPA-safe; no full S×S map).
+
+    Replaces kvpress ObservedAttentionPress, which requires eager attention and
+    OOMs at ~16k on H200. See ``h2o_chunked.make_chunked_h2o_press``.
+    """
     cfg = cfg or AttnPressConfig()
-    cls = _try_import("ObservedAttentionPress")
-    if cls is None:
-        return None
-    try:
-        return cls(compression_ratio=cfg.compression_ratio)
-    except TypeError:
-        return cls()
+    from prioritykv.baselines.h2o_chunked import make_h2o_press_from_cfg
+
+    return make_h2o_press_from_cfg(cfg)
 
 
 def make_pyramid_press(cfg: Optional[AttnPressConfig] = None):
@@ -81,7 +83,7 @@ def make_pyramid_press(cfg: Optional[AttnPressConfig] = None):
 def press_status() -> dict[str, Any]:
     return {
         "snapkv": make_snapkv_press() is not None,
-        "h2o_observed_attention": make_h2o_press() is not None,
+        "h2o_chunked": make_h2o_press() is not None,
         "pyramidkv": make_pyramid_press() is not None,
         "config": asdict(AttnPressConfig()),
     }
