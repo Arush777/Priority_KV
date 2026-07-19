@@ -1,6 +1,6 @@
 """P1: matched-budget attention baselines vs structure on PriorityBench stress.
 
-Arms: FullKV · structure · SnapKV · H2O (ObservedAttention) · PyramidKV · hybrid
+Arms: FullKV · structure · SnapKV · H2O (chunked) · PyramidKV · hybrid
 (structure-protected ∪ SnapKV residual). Same keep_frac / compression_ratio.
 """
 
@@ -118,7 +118,9 @@ def run_attn_baselines(
         compression_ratio=cr,
         window_size=int(cfg.get("snapkv_window_size", 64)),
         kernel_size=int(cfg.get("snapkv_kernel_size", 5)),
-        h2o_attn_implementation=str(cfg.get("h2o_attn_implementation", "eager")),
+        h2o_attn_implementation=str(cfg.get("h2o_attn_implementation", "sdpa")),
+        h2o_chunk_size=int(cfg.get("h2o_chunk_size", 1024)),
+        h2o_recent_frac=float(cfg.get("h2o_recent_frac", 0.5)),
     )
     keep_cfg = KeepPolicyConfig(
         keep_frac=keep_frac,
@@ -175,10 +177,6 @@ def run_attn_baselines(
     arms: dict[str, Any] = {}
     seconds: dict[str, float] = {"fullkv": t_full}
     status = press_status()
-    h2o_device_map = str(cfg.get("h2o_device_map", cfg.get("device_map", "cuda:0")))
-    h2o_max_memory_gib = cfg.get("h2o_max_memory_gib")
-    if h2o_max_memory_gib is not None:
-        h2o_max_memory_gib = float(h2o_max_memory_gib)
 
     if "structure" in arms_wanted:
         t1 = time.time()
@@ -224,110 +222,8 @@ def run_attn_baselines(
         _run_press("snapkv", make_snapkv_press(press_cfg), attn_impl="sdpa")
 
     if "h2o" in arms_wanted:
-        # ObservedAttention needs eager full attn maps — use 2-GPU weight split for 16k.
-        h2o_max = int(cfg.get("h2o_max_prompt_tokens", 20000))
-        h2o_min = int(cfg.get("h2o_min_prompt_tokens", 0))
-        h2o_prompts = []
-        h2o_examples = []
-        for ex, pr in zip(examples, prompts, strict=True):
-            cl = int(ex.context_length)
-            if h2o_min <= cl <= h2o_max:
-                h2o_prompts.append(pr)
-                h2o_examples.append(ex)
-        t1 = time.time()
-        try:
-            if not h2o_prompts:
-                raise RuntimeError(
-                    f"no examples with context_length in [{h2o_min},{h2o_max}] for H2O"
-                )
-            os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
-            outs = run_transformers_kvpress(
-                model_path,
-                h2o_prompts,
-                max_new,
-                press=make_h2o_press(press_cfg),
-                mode="h2o",
-                max_model_len=int(vcfg["max_model_len"]),
-                attn_implementation=press_cfg.h2o_attn_implementation,
-                device_map=h2o_device_map,
-                max_memory_gib=h2o_max_memory_gib,
-            )
-            by_id = {
-                ex.example_id: o for ex, o in zip(h2o_examples, outs, strict=True)
-            }
-            aligned = []
-            for ex in examples:
-                if ex.example_id in by_id:
-                    aligned.append(by_id[ex.example_id])
-                else:
-                    aligned.append(
-                        (
-                            "",
-                            [],
-                            {
-                                "mode": "h2o",
-                                "skipped": True,
-                                "reason": (
-                                    f"context_length={ex.context_length} "
-                                    f"outside [{h2o_min},{h2o_max}]"
-                                ),
-                            },
-                        )
-                    )
-            err = None
-            detail = []
-            scores = []
-            for ex, (txt, _, meta) in zip(examples, aligned, strict=True):
-                ft = full_texts[ex.example_id]
-                sf = float(score_example(ex, ft))
-                if meta.get("skipped"):
-                    sp = None
-                else:
-                    sp = float(score_example(ex, txt))
-                    scores.append(sp)
-                detail.append(
-                    {
-                        "example_id": ex.example_id,
-                        "category": ex.category.value,
-                        "context_length": ex.context_length,
-                        "replication_slice": (ex.meta or {}).get("replication_slice"),
-                        "fullkv_score": sf,
-                        "policy_score": sp,
-                        "fullkv_pass": sf >= 1.0,
-                        "policy_pass": (sp is not None and sp >= 1.0),
-                        "fullkv_text": ft,
-                        "policy_text": txt,
-                        "meta": meta,
-                    }
-                )
-            arms["h2o"] = {
-                "mean": _mean(scores) if scores else None,
-                "fullkv_mean": _mean(
-                    [float(score_example(ex, full_texts[ex.example_id])) for ex in examples]
-                ),
-                "n_scored": len(scores),
-                "n_skipped": len(examples) - len(scores),
-                "h2o_device_map": h2o_device_map,
-                "h2o_max_memory_gib": h2o_max_memory_gib,
-                "delta_minus_full": (
-                    _mean(
-                        [
-                            float(d["policy_score"]) - float(d["fullkv_score"])
-                            for d in detail
-                            if d["policy_score"] is not None
-                        ]
-                    )
-                    if scores
-                    else None
-                ),
-                "error": err,
-                "rows": detail,
-            }
-        except Exception as exc:  # noqa: BLE001
-            outs, err = None, f"{type(exc).__name__}: {exc}"
-            print(f"[attn_baselines] h2o FAIL: {err}", flush=True)
-            arms["h2o"] = _arm_rows(examples, full_texts, None, error=err)
-        seconds["h2o"] = time.time() - t1
+        # Chunked H2O under SDPA (Fable GO) — never eager ObservedAttention.
+        _run_press("h2o", make_h2o_press(press_cfg), attn_impl="sdpa")
 
     if "pyramid" in arms_wanted:
         _run_press("pyramid", make_pyramid_press(press_cfg), attn_impl="sdpa")
