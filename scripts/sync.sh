@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dependency sync. Usage: ./scripts/sync.sh [--cuda]
+# Dependency sync. Usage: ./scripts/sync.sh [--cuda] [--no-check]
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck disable=SC1091
@@ -7,9 +7,13 @@ source "$ROOT/scripts/_env.sh"
 cd "$ROOT"
 
 WITH_CUDA=0
-if [[ "${1:-}" == "--cuda" ]]; then
-  WITH_CUDA=1
-fi
+NO_CHECK=0
+for arg in "$@"; do
+  case "$arg" in
+    --cuda) WITH_CUDA=1 ;;
+    --no-check) NO_CHECK=1 ;;
+  esac
+done
 
 if ! command -v uv >/dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -28,4 +32,6 @@ else
 fi
 
 chmod +x scripts/*.sh 2>/dev/null || true
-"$ROOT/scripts/check.sh"
+if [[ "$NO_CHECK" -eq 0 ]]; then
+  "$ROOT/scripts/check.sh"
+fi
