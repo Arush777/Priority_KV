@@ -1,0 +1,220 @@
+=== remote_worker job=p1_attn_baselines_s0_kf25_gpu7_r2 started=2026-07-19T04:22:26Z ===
+command=python scripts/run_attn_baselines.py --config configs/p1_attn_baselines_s0_kf25.yaml --out-tag p1_attn_baselines_s0_kf25_gpu7_r2
+CUDA_VISIBLE_DEVICES=7
+CUDA_HOME=/usr/local/cuda
+TORCH_CUDA_ARCH_LIST=9.0
+PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
+cwd=/data/anupam/scratch/Priority_KV
+=== nvidia-smi before ===
+=== nvidia-smi 2026-07-19T04:22:26Z CUDA_VISIBLE_DEVICES=7 ===
+Sun Jul 19 04:22:26 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   29C    P0             79W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   28C    P0             75W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   45C    P0            278W /  700W |   59369MiB / 143771MiB |     90%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   56C    P0            665W /  700W |  131557MiB / 143771MiB |    100%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   55C    P0            661W /  700W |  131557MiB / 143771MiB |    100%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   60C    P0            662W /  700W |  131557MiB / 143771MiB |    100%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   57C    P0            658W /  700W |  131557MiB / 143771MiB |     95%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   28C    P0             77W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    3   N/A  N/A         1217228      C   ...3/envs/testenv/bin/python3.14      13154... |
+|    4   N/A  N/A         1217229      C   ...3/envs/testenv/bin/python3.14      13154... |
+|    5   N/A  N/A         1217230      C   ...3/envs/testenv/bin/python3.14      13154... |
+|    6   N/A  N/A         1217231      C   ...3/envs/testenv/bin/python3.14      13154... |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
+1, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+2, NVIDIA H200, 65 %, 59369 MiB, 143771 MiB, 43
+3, NVIDIA H200, 100 %, 131557 MiB, 143771 MiB, 55
+4, NVIDIA H200, 100 %, 131557 MiB, 143771 MiB, 53
+5, NVIDIA H200, 100 %, 131557 MiB, 143771 MiB, 60
+6, NVIDIA H200, 100 %, 131557 MiB, 143771 MiB, 55
+7, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+INFO 07-19 04:22:35 [api_utils.py:273] non-default args: {'trust_remote_code': True, 'dtype': 'bfloat16', 'max_model_len': 32768, 'gpu_memory_utilization': 0.75, 'disable_log_stats': True, 'enforce_eager': True, 'model': '/data/anupam/scratch/prioritykv/models/Qwen3-8B'}
+INFO 07-19 04:22:35 [model.py:619] Resolved architecture: Qwen3ForCausalLM
+INFO 07-19 04:22:35 [model.py:1776] Using max model len 32768
+INFO 07-19 04:22:35 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=16384.
+INFO 07-19 04:22:35 [vllm.py:1042] Asynchronous scheduling is enabled.
+WARNING 07-19 04:22:35 [vllm.py:1096] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+WARNING 07-19 04:22:35 [vllm.py:1144] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+INFO 07-19 04:22:35 [kernel.py:292] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'])
+INFO 07-19 04:22:35 [vllm.py:1322] Cudagraph is disabled under eager mode
+INFO 07-19 04:22:35 [compilation.py:312] Enabled custom fusions: norm_quant, act_quant
+(EngineCore pid=1698929) INFO 07-19 04:22:42 [core.py:114] Initializing a V1 LLM engine (v0.25.1) with config: model='/data/anupam/scratch/prioritykv/models/Qwen3-8B', speculative_config=None, tokenizer='/data/anupam/scratch/prioritykv/models/Qwen3-8B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=True, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=/data/anupam/scratch/prioritykv/models/Qwen3-8B, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.NONE: 0>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['all'], 'ir_enable_torch_wrap': False, 'splitting_ops': [], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.NONE: 0>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': [], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False}, 'max_cudagraph_capture_size': 0, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=1698929) INFO 07-19 04:22:43 [parallel_state.py:1607] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://10.254.0.4:51007 backend=nccl
+(EngineCore pid=1698929) INFO 07-19 04:22:52 [parallel_state.py:1942] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=1698929) INFO 07-19 04:22:52 [gpu_worker.py:360] Using V2 Model Runner
+(EngineCore pid=1698929) INFO 07-19 04:22:52 [model_runner.py:281] Loading model from scratch...
+(EngineCore pid=1698929) INFO 07-19 04:22:53 [cuda.py:476] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=1698929) INFO 07-19 04:22:53 [flash_attn.py:718] Using FlashAttention version 3
+(EngineCore pid=1698929) INFO 07-19 04:22:53 [weight_utils.py:849] Filesystem type for checkpoints: XFS. Checkpoint size: 15.26 GiB. Available RAM: 1622.32 GiB.
+(EngineCore pid=1698929) INFO 07-19 04:22:53 [weight_utils.py:872] Auto-prefetch is disabled because the filesystem (XFS) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=1698929) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=1698929) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:00<00:02,  1.47it/s]
+(EngineCore pid=1698929) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:01<00:02,  1.34it/s]
+(EngineCore pid=1698929) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:02<00:01,  1.31it/s]
+(EngineCore pid=1698929) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:02<00:00,  1.40it/s]
+(EngineCore pid=1698929) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:03<00:00,  1.77it/s]
+(EngineCore pid=1698929) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:03<00:00,  1.57it/s]
+(EngineCore pid=1698929) 
+(EngineCore pid=1698929) INFO 07-19 04:22:56 [default_loader.py:430] Loading weights took 3.23 seconds
+(EngineCore pid=1698929) INFO 07-19 04:22:57 [model_runner.py:302] Model loading took 15.27 GiB and 4.559435 seconds
+(EngineCore pid=1698929) INFO 07-19 04:22:57 [topk_topp_sampler.py:55] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=1698929) INFO 07-19 04:22:58 [gpu_worker.py:538] Available KV cache memory: 87.69 GiB
+(EngineCore pid=1698929) INFO 07-19 04:22:58 [kv_cache_utils.py:2146] GPU KV cache size: 638,560 tokens
+(EngineCore pid=1698929) INFO 07-19 04:22:58 [kv_cache_utils.py:2147] Maximum concurrency for 32,768 tokens per request: 19.49x
+(EngineCore pid=1698929) INFO 07-19 04:22:59 [deep_gemm.py:175] deep_gemm not found in site-packages, trying vendored vllm.third_party.deep_gemm
+(EngineCore pid=1698929) INFO 07-19 04:22:59 [deep_gemm.py:202] DeepGEMM PDL enabled on vllm.third_party.deep_gemm.
+(EngineCore pid=1698929) INFO 07-19 04:22:59 [kernel_warmup.py:170] Using FlashInfer autotune cache file: /data/anupam/.cache/vllm/flashinfer_autotune_cache/0.6.13/90a/179d170d1d2a37b6fe93aa3c3e5cef9783403677629aba1f82b81590131c7734/autotune_configs.json
+(EngineCore pid=1698929) 2026-07-19 04:22:59,089 - INFO - autotuner.py:651 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore pid=1698929) 2026-07-19 04:22:59,116 - INFO - autotuner.py:674 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore pid=1698929) WARNING 07-19 04:22:59 [kernel_warmup.py:199] No FlashInfer autotune cache entries found.Falling back to default tactics.
+(EngineCore pid=1698929) INFO 07-19 04:22:59 [cutedsl_warmup.py:97] Skipping CuTeDSL warmup because no compile units were requested.
+(EngineCore pid=1698929) INFO 07-19 04:22:59 [jit_monitor.py:73] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=1698929) INFO 07-19 04:22:59 [core.py:344] init engine (profile, create kv cache, warmup model) took 2.75 s
+(EngineCore pid=1698929) INFO 07-19 04:23:00 [vllm.py:1042] Asynchronous scheduling is enabled.
+(EngineCore pid=1698929) WARNING 07-19 04:23:00 [vllm.py:1096] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+(EngineCore pid=1698929) WARNING 07-19 04:23:00 [vllm.py:1144] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+(EngineCore pid=1698929) INFO 07-19 04:23:00 [kernel.py:292] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'])
+(EngineCore pid=1698929) INFO 07-19 04:23:00 [vllm.py:1322] Cudagraph is disabled under eager mode
+(EngineCore pid=1698929) INFO 07-19 04:23:00 [compilation.py:312] Enabled custom fusions: norm_quant, act_quant
+Rendering prompts:   0%|          | 0/40 [00:00<?, ?it/s]Rendering prompts:  20%|██        | 8/40 [00:00<00:00, 64.82it/s]Rendering prompts:  38%|███▊      | 15/40 [00:00<00:00, 42.96it/s]Rendering prompts:  50%|█████     | 20/40 [00:00<00:00, 43.56it/s]Rendering prompts:  62%|██████▎   | 25/40 [00:00<00:00, 44.51it/s]Rendering prompts:  78%|███████▊  | 31/40 [00:00<00:00, 46.21it/s]Rendering prompts:  92%|█████████▎| 37/40 [00:00<00:00, 47.44it/s]Rendering prompts: 100%|██████████| 40/40 [00:00<00:00, 46.66it/s]
+Processed prompts:   0%|          | 0/40 [00:00<?, ?it/s, est. speed input: 0.00 toks/s, output: 0.00 toks/s]Processed prompts:   2%|▎         | 1/40 [00:08<05:12,  8.01s/it, est. speed input: 2540.06 toks/s, output: 1.25 toks/s]Processed prompts:   5%|▌         | 2/40 [00:09<02:28,  3.90s/it, est. speed input: 4641.20 toks/s, output: 2.32 toks/s]Processed prompts:   8%|▊         | 3/40 [00:09<01:28,  2.38s/it, est. speed input: 6610.33 toks/s, output: 3.33 toks/s]Processed prompts:  10%|█         | 4/40 [00:10<00:58,  1.63s/it, est. speed input: 7317.26 toks/s, output: 5.25 toks/s]Processed prompts:  15%|█▌        | 6/40 [00:11<00:35,  1.04s/it, est. speed input: 9396.06 toks/s, output: 8.18 toks/s]Processed prompts:  20%|██        | 8/40 [00:11<00:22,  1.41it/s, est. speed input: 11684.20 toks/s, output: 10.46 toks/s]Processed prompts:  22%|██▎       | 9/40 [00:12<00:20,  1.49it/s, est. speed input: 11989.96 toks/s, output: 11.87 toks/s]Processed prompts:  28%|██▊       | 11/40 [00:12<00:14,  2.01it/s, est. speed input: 14029.93 toks/s, output: 13.94 toks/s]Processed prompts:  35%|███▌      | 14/40 [00:13<00:08,  2.92it/s, est. speed input: 16732.85 toks/s, output: 17.06 toks/s]Processed prompts:  40%|████      | 16/40 [00:13<00:07,  3.14it/s, est. speed input: 19077.55 toks/s, output: 18.38 toks/s]Processed prompts:  42%|████▎     | 17/40 [00:14<00:08,  2.78it/s, est. speed input: 19061.20 toks/s, output: 18.52 toks/s]Processed prompts:  45%|████▌     | 18/40 [00:14<00:08,  2.49it/s, est. speed input: 19691.35 toks/s, output: 18.62 toks/s]Processed prompts:  48%|████▊     | 19/40 [00:15<00:09,  2.27it/s, est. speed input: 20277.23 toks/s, output: 18.45 toks/s]Processed prompts:  50%|█████     | 20/40 [00:15<00:09,  2.21it/s, est. speed input: 20917.37 toks/s, output: 18.63 toks/s]Processed prompts:  57%|█████▊    | 23/40 [00:16<00:05,  3.33it/s, est. speed input: 22843.18 toks/s, output: 20.06 toks/s]Processed prompts:  62%|██████▎   | 25/40 [00:16<00:04,  3.30it/s, est. speed input: 23256.74 toks/s, output: 20.57 toks/s]Processed prompts:  68%|██████▊   | 27/40 [00:18<00:06,  2.13it/s, est. speed input: 22379.39 toks/s, output: 21.10 toks/s]Processed prompts:  70%|███████   | 28/40 [00:19<00:06,  1.75it/s, est. speed input: 21765.76 toks/s, output: 21.29 toks/s]Processed prompts:  78%|███████▊  | 31/40 [00:19<00:03,  2.97it/s, est. speed input: 24246.24 toks/s, output: 25.30 toks/s]Processed prompts:  92%|█████████▎| 37/40 [00:19<00:00,  6.32it/s, est. speed input: 29969.23 toks/s, output: 34.23 toks/s]Processed prompts: 100%|██████████| 40/40 [00:19<00:00,  6.32it/s, est. speed input: 31492.84 toks/s, output: 39.23 toks/s]Processed prompts: 100%|██████████| 40/40 [00:19<00:00,  2.01it/s, est. speed input: 31492.84 toks/s, output: 39.23 toks/s]
+(EngineCore pid=1698929) INFO 07-19 04:23:22 [core.py:1214] [shutdown] EngineCore: trigger received signal=SIGTERM
+(EngineCore pid=1698929) INFO 07-19 04:23:22 [core.py:1333] [shutdown] EngineCore: start mode=abort timeout=0s
+(EngineCore pid=1698929) INFO 07-19 04:23:22 [core.py:1364] [shutdown] EngineCore: request processing complete; starting resource teardown
+(EngineCore pid=1698929) INFO 07-19 04:23:22 [core.py:1227] [shutdown] EngineCore: exiting busy loop
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:10,  5.63it/s]Loading weights:   1%|          | 2/399 [00:00<01:18,  5.05it/s]Loading weights:   4%|▍         | 15/399 [00:00<00:09, 41.38it/s]Loading weights:   8%|▊         | 31/399 [00:00<00:04, 76.04it/s]Loading weights:  12%|█▏        | 49/399 [00:00<00:03, 100.27it/s]Loading weights:  18%|█▊        | 70/399 [00:00<00:02, 125.55it/s]Loading weights:  21%|██        | 84/399 [00:00<00:02, 127.90it/s]Loading weights:  26%|██▌       | 103/399 [00:01<00:02, 133.03it/s]Loading weights:  30%|███       | 120/399 [00:01<00:01, 141.03it/s]Loading weights:  34%|███▍      | 137/399 [00:01<00:01, 143.92it/s]Loading weights:  39%|███▉      | 155/399 [00:01<00:01, 152.85it/s]Loading weights:  43%|████▎     | 171/399 [00:01<00:01, 147.78it/s]Loading weights:  48%|████▊     | 191/399 [00:01<00:01, 156.43it/s]Loading weights:  52%|█████▏    | 207/399 [00:01<00:01, 155.63it/s]Loading weights:  56%|█████▌    | 224/399 [00:01<00:01, 153.98it/s]Loading weights:  60%|██████    | 240/399 [00:01<00:01, 147.33it/s]Loading weights:  65%|██████▍   | 258/399 [00:02<00:00, 151.74it/s]Loading weights:  69%|██████▉   | 277/399 [00:02<00:00, 162.20it/s]Loading weights:  74%|███████▎  | 294/399 [00:02<00:00, 152.98it/s]Loading weights:  78%|███████▊  | 312/399 [00:02<00:00, 142.24it/s]Loading weights:  84%|████████▍ | 335/399 [00:02<00:00, 160.83it/s]Loading weights:  89%|████████▉ | 356/399 [00:02<00:00, 169.36it/s]Loading weights:  94%|█████████▎| 374/399 [00:02<00:00, 167.91it/s]Loading weights:  98%|█████████▊| 392/399 [00:02<00:00, 160.25it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 136.75it/s]
+[keep] policy=structure gran=token keep_frac=0.25 page_tokens=16 sink=16 force_recent=128 n=40
+Keep[structure]:   0%|          | 0/40 [00:00<?, ?ex/s]Keep[structure]:   0%|          | 0/40 [00:01<?, ?ex/s, kept=2593/10372]Keep[structure]:   2%|▎         | 1/40 [00:01<00:43,  1.11s/ex, kept=2593/10372]Keep[structure]:   2%|▎         | 1/40 [00:01<00:43,  1.11s/ex, kept=2505/10020]Keep[structure]:   5%|▌         | 2/40 [00:01<00:36,  1.03ex/s, kept=2505/10020]Keep[structure]:   5%|▌         | 2/40 [00:03<00:36,  1.03ex/s, kept=2764/11058]Keep[structure]:   8%|▊         | 3/40 [00:03<00:37,  1.02s/ex, kept=2764/11058]Keep[structure]:   8%|▊         | 3/40 [00:03<00:37,  1.02s/ex, kept=2544/10177]Keep[structure]:  10%|█         | 4/40 [00:03<00:34,  1.04ex/s, kept=2544/10177]Keep[structure]:  10%|█         | 4/40 [00:04<00:34,  1.04ex/s, kept=2568/10274]Keep[structure]:  12%|█▎        | 5/40 [00:04<00:31,  1.12ex/s, kept=2568/10274]Keep[structure]:  12%|█▎        | 5/40 [00:05<00:31,  1.12ex/s, kept=2506/10023]Keep[structure]:  15%|█▌        | 6/40 [00:05<00:28,  1.18ex/s, kept=2506/10023]Keep[structure]:  15%|█▌        | 6/40 [00:06<00:28,  1.18ex/s, kept=2552/10207]Keep[structure]:  18%|█▊        | 7/40 [00:06<00:28,  1.16ex/s, kept=2552/10207]Keep[structure]:  18%|█▊        | 7/40 [00:07<00:28,  1.16ex/s, kept=5138/20553]Keep[structure]:  20%|██        | 8/40 [00:07<00:29,  1.09ex/s, kept=5138/20553]Keep[structure]:  20%|██        | 8/40 [00:08<00:29,  1.09ex/s, kept=5087/20347]Keep[structure]:  22%|██▎       | 9/40 [00:08<00:27,  1.12ex/s, kept=5087/20347]Keep[structure]:  22%|██▎       | 9/40 [00:09<00:27,  1.12ex/s, kept=5400/21598]Keep[structure]:  25%|██▌       | 10/40 [00:09<00:28,  1.06ex/s, kept=5400/21598]Keep[structure]:  25%|██▌       | 10/40 [00:10<00:28,  1.06ex/s, kept=5395/21581]Keep[structure]:  28%|██▊       | 11/40 [00:10<00:28,  1.00ex/s, kept=5395/21581]Keep[structure]:  28%|██▊       | 11/40 [00:11<00:28,  1.00ex/s, kept=5373/21493]Keep[structure]:  30%|███       | 12/40 [00:11<00:27,  1.03ex/s, kept=5373/21493]Keep[structure]:  30%|███       | 12/40 [00:12<00:27,  1.03ex/s, kept=5132/20530]Keep[structure]:  32%|███▎      | 13/40 [00:12<00:25,  1.08ex/s, kept=5132/20530]Keep[structure]:  32%|███▎      | 13/40 [00:13<00:25,  1.08ex/s, kept=5390/21560]Keep[structure]:  35%|███▌      | 14/40 [00:13<00:24,  1.05ex/s, kept=5390/21560]Keep[structure]:  35%|███▌      | 14/40 [00:14<00:24,  1.05ex/s, kept=5401/21605]Keep[structure]:  38%|███▊      | 15/40 [00:14<00:23,  1.06ex/s, kept=5401/21605]Keep[structure]:  38%|███▊      | 15/40 [00:14<00:23,  1.06ex/s, kept=5092/20366]Keep[structure]:  40%|████      | 16/40 [00:14<00:22,  1.07ex/s, kept=5092/20366]Keep[structure]:  40%|████      | 16/40 [00:15<00:22,  1.07ex/s, kept=2705/10821]Keep[structure]:  42%|████▎     | 17/40 [00:15<00:18,  1.23ex/s, kept=2705/10821]Keep[structure]:  42%|████▎     | 17/40 [00:16<00:18,  1.23ex/s, kept=2558/10231]Keep[structure]:  45%|████▌     | 18/40 [00:16<00:16,  1.36ex/s, kept=2558/10231]Keep[structure]:  45%|████▌     | 18/40 [00:17<00:16,  1.36ex/s, kept=5028/20112]Keep[structure]:  48%|████▊     | 19/40 [00:17<00:16,  1.25ex/s, kept=5028/20112]Keep[structure]:  48%|████▊     | 19/40 [00:17<00:16,  1.25ex/s, kept=5030/20118]Keep[structure]:  50%|█████     | 20/40 [00:17<00:16,  1.18ex/s, kept=5030/20118]Keep[structure]:  50%|█████     | 20/40 [00:18<00:16,  1.18ex/s, kept=2703/10811]Keep[structure]:  52%|█████▎    | 21/40 [00:18<00:14,  1.31ex/s, kept=2703/10811]Keep[structure]:  52%|█████▎    | 21/40 [00:19<00:14,  1.31ex/s, kept=2584/10338]Keep[structure]:  55%|█████▌    | 22/40 [00:19<00:12,  1.43ex/s, kept=2584/10338]Keep[structure]:  55%|█████▌    | 22/40 [00:19<00:12,  1.43ex/s, kept=2567/10268]Keep[structure]:  57%|█████▊    | 23/40 [00:19<00:11,  1.54ex/s, kept=2567/10268]Keep[structure]:  57%|█████▊    | 23/40 [00:20<00:11,  1.54ex/s, kept=5083/20332]Keep[structure]:  60%|██████    | 24/40 [00:20<00:11,  1.35ex/s, kept=5083/20332]Keep[structure]:  60%|██████    | 24/40 [00:21<00:11,  1.35ex/s, kept=5005/20021]Keep[structure]:  62%|██████▎   | 25/40 [00:21<00:11,  1.26ex/s, kept=5005/20021]Keep[structure]:  62%|██████▎   | 25/40 [00:22<00:11,  1.26ex/s, kept=2714/10855]Keep[structure]:  65%|██████▌   | 26/40 [00:22<00:10,  1.38ex/s, kept=2714/10855]Keep[structure]:  65%|██████▌   | 26/40 [00:22<00:10,  1.38ex/s, kept=2768/11070]Keep[structure]:  68%|██████▊   | 27/40 [00:22<00:08,  1.53ex/s, kept=2768/11070]Keep[structure]:  68%|██████▊   | 27/40 [00:23<00:08,  1.53ex/s, kept=2657/10629]Keep[structure]:  70%|███████   | 28/40 [00:23<00:08,  1.37ex/s, kept=2657/10629]Keep[structure]:  70%|███████   | 28/40 [00:24<00:08,  1.37ex/s, kept=2732/10929]Keep[structure]:  72%|███████▎  | 29/40 [00:24<00:08,  1.26ex/s, kept=2732/10929]Keep[structure]:  72%|███████▎  | 29/40 [00:25<00:08,  1.26ex/s, kept=5114/20455]Keep[structure]:  75%|███████▌  | 30/40 [00:25<00:09,  1.05ex/s, kept=5114/20455]Keep[structure]:  75%|███████▌  | 30/40 [00:27<00:09,  1.05ex/s, kept=5070/20279]Keep[structure]:  78%|███████▊  | 31/40 [00:27<00:10,  1.11s/ex, kept=5070/20279]Keep[structure]:  78%|███████▊  | 31/40 [00:28<00:10,  1.11s/ex, kept=5114/20458]Keep[structure]:  80%|████████  | 32/40 [00:28<00:09,  1.20s/ex, kept=5114/20458]Keep[structure]:  80%|████████  | 32/40 [00:29<00:09,  1.20s/ex, kept=2564/10258]Keep[structure]:  82%|████████▎ | 33/40 [00:29<00:08,  1.18s/ex, kept=2564/10258]Keep[structure]:  82%|████████▎ | 33/40 [00:30<00:08,  1.18s/ex, kept=2570/10282]Keep[structure]:  85%|████████▌ | 34/40 [00:30<00:07,  1.17s/ex, kept=2570/10282]Keep[structure]:  85%|████████▌ | 34/40 [00:32<00:07,  1.17s/ex, kept=2656/10623]Keep[structure]:  88%|████████▊ | 35/40 [00:32<00:05,  1.15s/ex, kept=2656/10623]Keep[structure]:  88%|████████▊ | 35/40 [00:33<00:05,  1.15s/ex, kept=5512/22048]Keep[structure]:  90%|█████████ | 36/40 [00:33<00:04,  1.24s/ex, kept=5512/22048]Keep[structure]:  90%|█████████ | 36/40 [00:34<00:04,  1.24s/ex, kept=5361/21443]Keep[structure]:  92%|█████████▎| 37/40 [00:34<00:03,  1.31s/ex, kept=5361/21443]Keep[structure]:  92%|█████████▎| 37/40 [00:36<00:03,  1.31s/ex, kept=5395/21579]Keep[structure]:  95%|█████████▌| 38/40 [00:36<00:02,  1.33s/ex, kept=5395/21579]Keep[structure]:  95%|█████████▌| 38/40 [00:37<00:02,  1.33s/ex, kept=5132/20529]Keep[structure]:  98%|█████████▊| 39/40 [00:37<00:01,  1.33s/ex, kept=5132/20529]Keep[structure]:  98%|█████████▊| 39/40 [00:38<00:01,  1.33s/ex, kept=2678/10711]Keep[structure]: 100%|██████████| 40/40 [00:38<00:00,  1.22s/ex, kept=2678/10711]Keep[structure]: 100%|██████████| 40/40 [00:38<00:00,  1.04ex/s, kept=2678/10711]
+[keep/structure] finished 40
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:18,  5.09it/s]Loading weights:   1%|          | 2/399 [00:00<01:20,  4.92it/s]Loading weights:   4%|▍         | 17/399 [00:00<00:08, 45.08it/s]Loading weights:  10%|▉         | 38/399 [00:00<00:04, 88.62it/s]Loading weights:  15%|█▍        | 59/399 [00:00<00:03, 113.28it/s]Loading weights:  20%|██        | 81/399 [00:00<00:02, 136.64it/s]Loading weights:  24%|██▍       | 97/399 [00:00<00:02, 142.51it/s]Loading weights:  29%|██▉       | 115/399 [00:01<00:01, 147.49it/s]Loading weights:  34%|███▎      | 134/399 [00:01<00:01, 152.57it/s]Loading weights:  38%|███▊      | 150/399 [00:01<00:01, 154.55it/s]Loading weights:  43%|████▎     | 170/399 [00:01<00:01, 161.82it/s]Loading weights:  48%|████▊     | 191/399 [00:01<00:01, 169.07it/s]Loading weights:  52%|█████▏    | 209/399 [00:01<00:01, 171.09it/s]Loading weights:  57%|█████▋    | 227/399 [00:01<00:01, 164.23it/s]Loading weights:  62%|██████▏   | 247/399 [00:01<00:00, 169.60it/s]Loading weights:  67%|██████▋   | 266/399 [00:01<00:00, 171.46it/s]Loading weights:  71%|███████   | 284/399 [00:02<00:00, 172.02it/s]Loading weights:  76%|███████▌  | 302/399 [00:02<00:00, 165.58it/s]Loading weights:  81%|████████  | 322/399 [00:02<00:00, 169.53it/s]Loading weights:  86%|████████▌ | 342/399 [00:02<00:00, 175.66it/s]Loading weights:  90%|█████████ | 360/399 [00:02<00:00, 166.61it/s]Loading weights:  95%|█████████▍| 379/399 [00:02<00:00, 170.88it/s]Loading weights:  99%|█████████▉| 397/399 [00:02<00:00, 171.53it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 145.33it/s]
+[kvpress/snapkv] attn=sdpa n=40
+[attn_baselines] snapkv FAIL: AssertionError: Query length 1 should be greater than the window size 64
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:18,  5.10it/s]Loading weights:   1%|          | 2/399 [00:00<01:21,  4.89it/s]Loading weights:   4%|▍         | 17/399 [00:00<00:08, 45.07it/s]Loading weights:   9%|▉         | 36/399 [00:00<00:04, 86.21it/s]Loading weights:  13%|█▎        | 50/399 [00:00<00:03, 100.97it/s]Loading weights:  18%|█▊        | 71/399 [00:00<00:02, 128.16it/s]Loading weights:  23%|██▎       | 90/399 [00:00<00:02, 131.19it/s]Loading weights:  28%|██▊       | 113/399 [00:01<00:01, 154.02it/s]Loading weights:  33%|███▎      | 131/399 [00:01<00:01, 159.64it/s]Loading weights:  37%|███▋      | 148/399 [00:01<00:01, 159.76it/s]Loading weights:  42%|████▏     | 169/399 [00:01<00:01, 169.18it/s]Loading weights:  47%|████▋     | 187/399 [00:01<00:01, 167.45it/s]Loading weights:  51%|█████     | 204/399 [00:01<00:01, 164.21it/s]Loading weights:  56%|█████▌    | 224/399 [00:01<00:01, 174.23it/s]Loading weights:  61%|██████    | 242/399 [00:01<00:00, 172.35it/s]Loading weights:  65%|██████▌   | 260/399 [00:01<00:00, 166.05it/s]Loading weights:  70%|███████   | 280/399 [00:02<00:00, 166.86it/s]Loading weights:  74%|███████▍  | 297/399 [00:02<00:00, 166.27it/s]Loading weights:  79%|███████▊  | 314/399 [00:02<00:00, 155.21it/s]Loading weights:  84%|████████▍ | 336/399 [00:02<00:00, 166.44it/s]Loading weights:  89%|████████▉ | 357/399 [00:02<00:00, 174.61it/s]Loading weights:  94%|█████████▍| 376/399 [00:02<00:00, 158.55it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 144.93it/s]
+[kvpress/h2o] attn=eager n=40
+[kvpress/h2o] 1/40 prompt_tokens=10372
+[kvpress/h2o] 2/40 prompt_tokens=10020
+[kvpress/h2o] 3/40 prompt_tokens=11058
+[kvpress/h2o] 4/40 prompt_tokens=10177
+[kvpress/h2o] 5/40 prompt_tokens=10274
+[kvpress/h2o] 6/40 prompt_tokens=10023
+[kvpress/h2o] 7/40 prompt_tokens=10207
+[attn_baselines] h2o FAIL: OutOfMemoryError: CUDA out of memory. Tried to allocate 50.36 GiB. GPU 0 has a total capacity of 139.79 GiB of which 46.18 GiB is free. Including non-PyTorch memory, this process has 93.60 GiB memory in use. Of the allocated memory 92.48 GiB is allocated by PyTorch, and 462.97 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<02:48,  2.37it/s]Loading weights:   4%|▍         | 17/399 [00:00<00:09, 40.05it/s]Loading weights:  10%|▉         | 38/399 [00:00<00:04, 82.71it/s]Loading weights:  15%|█▍        | 59/399 [00:00<00:03, 112.70it/s]Loading weights:  19%|█▉        | 76/399 [00:00<00:02, 127.35it/s]Loading weights:  23%|██▎       | 93/399 [00:00<00:02, 137.26it/s]Loading weights:  28%|██▊       | 110/399 [00:01<00:02, 144.16it/s]Loading weights:  32%|███▏      | 127/399 [00:01<00:01, 146.42it/s]Loading weights:  37%|███▋      | 148/399 [00:01<00:01, 157.48it/s]Loading weights:  42%|████▏     | 167/399 [00:01<00:01, 161.97it/s]Loading weights:  47%|████▋     | 186/399 [00:01<00:01, 168.13it/s]Loading weights:  51%|█████     | 204/399 [00:01<00:01, 161.91it/s]Loading weights:  56%|█████▌    | 224/399 [00:01<00:01, 165.61it/s]Loading weights:  61%|██████    | 244/399 [00:01<00:00, 171.52it/s]Loading weights:  66%|██████▋   | 265/399 [00:01<00:00, 179.71it/s]Loading weights:  71%|███████   | 284/399 [00:02<00:00, 171.18it/s]Loading weights:  76%|███████▌  | 302/399 [00:02<00:00, 164.52it/s]Loading weights:  81%|████████  | 323/399 [00:02<00:00, 170.78it/s]Loading weights:  85%|████████▌ | 341/399 [00:02<00:00, 168.67it/s]Loading weights:  90%|████████▉ | 358/399 [00:02<00:00, 162.65it/s]Loading weights:  95%|█████████▍| 378/399 [00:02<00:00, 167.52it/s]Loading weights:  99%|█████████▉| 397/399 [00:02<00:00, 173.37it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 144.71it/s]
+[kvpress/pyramid] attn=sdpa n=40
+[attn_baselines] pyramid FAIL: AssertionError: Query length 1 should be greater than the window size 64
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:19,  5.02it/s]Loading weights:   1%|          | 2/399 [00:00<01:24,  4.72it/s]Loading weights:   4%|▎         | 14/399 [00:00<00:10, 37.43it/s]Loading weights:   7%|▋         | 28/399 [00:00<00:05, 65.68it/s]Loading weights:  12%|█▏        | 48/399 [00:00<00:03, 101.88it/s]Loading weights:  15%|█▌        | 61/399 [00:00<00:03, 106.19it/s]Loading weights:  20%|██        | 81/399 [00:00<00:02, 130.16it/s]Loading weights:  24%|██▍       | 96/399 [00:01<00:02, 133.85it/s]Loading weights:  28%|██▊       | 111/399 [00:01<00:02, 137.94it/s]Loading weights:  32%|███▏      | 126/399 [00:01<00:01, 140.74it/s]Loading weights:  35%|███▌      | 141/399 [00:01<00:01, 139.78it/s]Loading weights:  40%|███▉      | 159/399 [00:01<00:01, 147.68it/s]Loading weights:  44%|████▎     | 174/399 [00:01<00:01, 142.20it/s]Loading weights:  48%|████▊     | 192/399 [00:01<00:01, 147.31it/s]Loading weights:  52%|█████▏    | 207/399 [00:01<00:01, 144.73it/s]Loading weights:  56%|█████▋    | 225/399 [00:01<00:01, 151.38it/s]Loading weights:  62%|██████▏   | 246/399 [00:02<00:00, 162.16it/s]Loading weights:  66%|██████▌   | 263/399 [00:02<00:00, 161.49it/s]Loading weights:  70%|███████   | 280/399 [00:02<00:00, 160.85it/s]Loading weights:  74%|███████▍  | 297/399 [00:02<00:00, 163.42it/s]Loading weights:  79%|███████▊  | 314/399 [00:02<00:00, 150.54it/s]Loading weights:  84%|████████▍ | 335/399 [00:02<00:00, 159.98it/s]Loading weights:  89%|████████▉ | 356/399 [00:02<00:00, 166.22it/s]Loading weights:  93%|█████████▎| 373/399 [00:02<00:00, 164.81it/s]Loading weights:  98%|█████████▊| 390/399 [00:02<00:00, 161.52it/s]Loading weights: 100%|██████████| 399/399 [00:02<00:00, 134.41it/s]
+[kvpress/hybrid] attn=sdpa n=40
+[attn_baselines] hybrid FAIL: AssertionError: Query length 1 should be greater than the window size 64
+n=40 full=0.900 decision=P1_PARTIAL
+  structure  mean=0.975 d=+0.075
+  snapkv     ERROR AssertionError: Query length 1 should be greater than the window size 64
+  h2o        ERROR OutOfMemoryError: CUDA out of memory. Tried to allocate 50.36 GiB. GPU 0 has a total capacity of 139.79 GiB of which 46.18 GiB is free. Including non-PyTorch memory, this process has 93.60 GiB memory in use. Of the allocated memory 92.48 GiB is allocated by PyTorch, and 462.97 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+  pyramid    ERROR AssertionError: Query length 1 should be greater than the window size 64
+  hybrid     ERROR AssertionError: Query length 1 should be greater than the window size 64
+out=/data/anupam/scratch/prioritykv/runs/attn_baselines/p1_attn_baselines_s0_kf25_gpu7_r2.json
+=== nvidia-smi after ===
+=== nvidia-smi 2026-07-19T04:24:57Z CUDA_VISIBLE_DEVICES=7 ===
+Sun Jul 19 04:24:57 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H200                    On  |   00000000:A3:00.0 Off |                    0 |
+| N/A   29C    P0             78W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H200                    On  |   00000000:AD:00.0 Off |                    0 |
+| N/A   28C    P0             75W /  700W |       0MiB / 143771MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H200                    On  |   00000000:B7:00.0 Off |                    0 |
+| N/A   44C    P0            269W /  700W |   59369MiB / 143771MiB |     39%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H200                    On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   56C    P0            647W /  700W |  131557MiB / 143771MiB |     94%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA H200                    On  |   00000000:CB:00.0 Off |                    0 |
+| N/A   52C    P0            647W /  700W |  131557MiB / 143771MiB |     90%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA H200                    On  |   00000000:D5:00.0 Off |                    0 |
+| N/A   64C    P0            654W /  700W |  131557MiB / 143771MiB |     94%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA H200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   57C    P0            657W /  700W |  131557MiB / 143771MiB |     94%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA H200                    On  |   00000000:E9:00.0 Off |                    0 |
+| N/A   34C    P0            128W /  700W |       0MiB / 143771MiB |    100%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    2   N/A  N/A          643513      C   ...nvs/weather_ai/bin/python3.11      59358MiB |
+|    3   N/A  N/A         1217228      C   ...3/envs/testenv/bin/python3.14      13154... |
+|    4   N/A  N/A         1217229      C   ...3/envs/testenv/bin/python3.14      13154... |
+|    5   N/A  N/A         1217230      C   ...3/envs/testenv/bin/python3.14      13154... |
+|    6   N/A  N/A         1217231      C   ...3/envs/testenv/bin/python3.14      13154... |
++-----------------------------------------------------------------------------------------+
+
+index, name, utilization.gpu [%], memory.used [MiB], memory.total [MiB], temperature.gpu
+0, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 29
+1, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 28
+2, NVIDIA H200, 51 %, 59369 MiB, 143771 MiB, 46
+3, NVIDIA H200, 100 %, 131557 MiB, 143771 MiB, 55
+4, NVIDIA H200, 100 %, 131557 MiB, 143771 MiB, 53
+5, NVIDIA H200, 100 %, 131557 MiB, 143771 MiB, 65
+6, NVIDIA H200, 100 %, 131557 MiB, 143771 MiB, 59
+7, NVIDIA H200, 0 %, 0 MiB, 143771 MiB, 34
+=== finished=2026-07-19T04:24:58Z exit=0 ===
