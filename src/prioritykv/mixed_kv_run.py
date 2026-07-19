@@ -146,6 +146,8 @@ def run_transformers_mixed_kv(
     attn_backend: str | None = None,
     fi_parity_every: int = 1,
     fi_require_pass: bool = True,
+    cold_attend: str = "full",
+    cold_chunk_tokens: int = 1024,
     revision: str | None = None,
     max_model_len: int = 32768,
 ) -> list[tuple[str, list[int], dict[str, Any]]]:
@@ -275,10 +277,14 @@ def run_transformers_mixed_kv(
                             dtype=torch.bfloat16,
                             int4_cfg=int4_cfg,
                             decode_tail_cap=max(max_new_tokens + 8, 64),
+                            cold_attend=cold_attend,
+                            cold_chunk_tokens=cold_chunk_tokens,
                         )
                         packed_meta = {
                             "storage": "packed",
                             "attn_backend": "flashinfer_fi_shim",
+                            "cold_attend": cold_attend,
+                            "cold_chunk_tokens": int(cold_chunk_tokens),
                             "n_pages": len(packed.page_manager.pages),
                             "payload_bytes": packed.payload_bytes(),
                             "realized_bytes": packed.realized_bytes(),
