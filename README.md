@@ -105,9 +105,9 @@ export PRIORITYKV_SCRATCH=/data/anupam/scratch/prioritykv
 ```
 
 Canonical commands and device assignments are indexed in
-[`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml). The H200 worker contract and result
-bundle format are documented in [`jobs/README.md`](jobs/README.md). Do not run GPU code on
-a login node; the original environment used at most two H200 GPUs per job.
+[`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml). Live git→H200 job queue (no agent SSH):
+[`docs/H200_QUEUE.md`](docs/H200_QUEUE.md) · [`jobs/README.md`](jobs/README.md).
+Do not run GPU code on a login node; use at most two H200 GPUs per job.
 
 ## Scope and limitations
 
