@@ -1,0 +1,10 @@
+{
+  "job_id": "p1_attn_baselines_s1_kf25_gpu1_r1",
+  "exit": 0,
+  "finished_at": "2026-07-19T05:12:01Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/p1_attn_baselines_s1_kf25_gpu1_r1.log",
+  "job_yaml": "jobs/done/p1_attn_baselines_s1_kf25_gpu1_r1.yaml",
+  "decision": "P1_STRUCTURE_BEATS_SNAPKV \u2014 structure > SnapKV at matched keep_frac",
+  "pass": null,
+  "results_dir": "jobs/results/p1_attn_baselines_s1_kf25_gpu1_r1"
+}
