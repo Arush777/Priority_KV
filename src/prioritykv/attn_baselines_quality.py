@@ -135,23 +135,50 @@ def run_attn_baselines(
         )
     )
 
-    t0 = time.time()
-    full_out = _run_vllm_mode(
-        model_path,
-        prompts,
-        max_new_tokens=max_new,
-        kv_cache_dtype="auto",
-        calculate_kv_scales=False,
-        tp=int(vcfg["tensor_parallel_size"]),
-        gpu_mem=float(vcfg["gpu_memory_utilization"]),
-        max_model_len=int(vcfg["max_model_len"]),
-    )
-    t_full = time.time() - t0
-    full_texts = {ex.example_id: ft for ex, (ft, _) in zip(examples, full_out, strict=True)}
+    reuse_full = cfg.get("reuse_full_path")
+    full_texts: dict[str, str] = {}
+    t_full = 0.0
+    if reuse_full:
+        prior_path = Path(reuse_full)
+        if not prior_path.is_absolute():
+            prior_path = root / prior_path
+        prior = json.loads(prior_path.read_text(encoding="utf-8"))
+        # Prefer arms_detail rows (have fullkv_text); fall back to example_rows only for ids.
+        for arm in (prior.get("arms_detail") or {}).values():
+            for r in arm.get("rows") or []:
+                if r.get("fullkv_text") and r.get("example_id"):
+                    full_texts[r["example_id"]] = r["fullkv_text"]
+        missing = [ex.example_id for ex in examples if ex.example_id not in full_texts]
+        if missing:
+            raise RuntimeError(
+                f"reuse_full_path missing fullkv_text for {len(missing)} ids "
+                f"(e.g. {missing[:3]}); re-run FullKV or point at r3 summary"
+            )
+        print(f"[attn_baselines] reused FullKV texts from {prior_path} n={len(full_texts)}", flush=True)
+    else:
+        t0 = time.time()
+        full_out = _run_vllm_mode(
+            model_path,
+            prompts,
+            max_new_tokens=max_new,
+            kv_cache_dtype="auto",
+            calculate_kv_scales=False,
+            tp=int(vcfg["tensor_parallel_size"]),
+            gpu_mem=float(vcfg["gpu_memory_utilization"]),
+            max_model_len=int(vcfg["max_model_len"]),
+        )
+        t_full = time.time() - t0
+        full_texts = {
+            ex.example_id: ft for ex, (ft, _) in zip(examples, full_out, strict=True)
+        }
 
     arms: dict[str, Any] = {}
     seconds: dict[str, float] = {"fullkv": t_full}
     status = press_status()
+    h2o_device_map = str(cfg.get("h2o_device_map", cfg.get("device_map", "cuda:0")))
+    h2o_max_memory_gib = cfg.get("h2o_max_memory_gib")
+    if h2o_max_memory_gib is not None:
+        h2o_max_memory_gib = float(h2o_max_memory_gib)
 
     if "structure" in arms_wanted:
         t1 = time.time()
@@ -197,19 +224,22 @@ def run_attn_baselines(
         _run_press("snapkv", make_snapkv_press(press_cfg), attn_impl="sdpa")
 
     if "h2o" in arms_wanted:
-        # ObservedAttention needs eager full attn maps — OOM on ~16k. Prefer 8k-only.
-        h2o_max = int(cfg.get("h2o_max_prompt_tokens", 9000))
+        # ObservedAttention needs eager full attn maps — use 2-GPU weight split for 16k.
+        h2o_max = int(cfg.get("h2o_max_prompt_tokens", 20000))
+        h2o_min = int(cfg.get("h2o_min_prompt_tokens", 0))
         h2o_prompts = []
         h2o_examples = []
         for ex, pr in zip(examples, prompts, strict=True):
-            # context_length is the nominal bench length; skip long prompts for eager H2O.
-            if int(ex.context_length) <= h2o_max:
+            cl = int(ex.context_length)
+            if h2o_min <= cl <= h2o_max:
                 h2o_prompts.append(pr)
                 h2o_examples.append(ex)
         t1 = time.time()
         try:
             if not h2o_prompts:
-                raise RuntimeError(f"no ≤{h2o_max}-token examples for H2O (eager) arm")
+                raise RuntimeError(
+                    f"no examples with context_length in [{h2o_min},{h2o_max}] for H2O"
+                )
             os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
             outs = run_transformers_kvpress(
                 model_path,
@@ -219,8 +249,9 @@ def run_attn_baselines(
                 mode="h2o",
                 max_model_len=int(vcfg["max_model_len"]),
                 attn_implementation=press_cfg.h2o_attn_implementation,
+                device_map=h2o_device_map,
+                max_memory_gib=h2o_max_memory_gib,
             )
-            # Align to full example list: None outs for skipped 16k.
             by_id = {
                 ex.example_id: o for ex, o in zip(h2o_examples, outs, strict=True)
             }
@@ -236,11 +267,13 @@ def run_attn_baselines(
                             {
                                 "mode": "h2o",
                                 "skipped": True,
-                                "reason": f"context_length={ex.context_length}>{h2o_max}",
+                                "reason": (
+                                    f"context_length={ex.context_length} "
+                                    f"outside [{h2o_min},{h2o_max}]"
+                                ),
                             },
                         )
                     )
-            # Score only non-skipped for arm mean; still store rows.
             err = None
             detail = []
             scores = []
@@ -274,6 +307,8 @@ def run_attn_baselines(
                 ),
                 "n_scored": len(scores),
                 "n_skipped": len(examples) - len(scores),
+                "h2o_device_map": h2o_device_map,
+                "h2o_max_memory_gib": h2o_max_memory_gib,
                 "delta_minus_full": (
                     _mean(
                         [

@@ -55,6 +55,29 @@ def _patch_kvpress_cache_position() -> None:
     BasePress._prioritykv_cache_position_patched = True
 
 
+def _hf_device_map(
+    device_map: str,
+    *,
+    max_memory_gib: float | None,
+) -> tuple[Any, dict[int, str] | None]:
+    """Resolve HF ``device_map`` / ``max_memory``.
+
+    For eager H2O on long contexts, pass ``device_map=auto`` with a *low*
+    ``max_memory_gib`` so weights split across visible GPUs and leave HBM for
+    attention maps (``CUDA_VISIBLE_DEVICES`` already isolates the pair).
+    """
+    import torch
+
+    n = int(torch.cuda.device_count())
+    if device_map in ("", "cuda:0", "single") or (device_map == "auto" and n <= 1):
+        return "cuda:0", None
+    if device_map in ("auto", "balanced", "multi"):
+        # Cap weight placement so auto *must* shard (Qwen3-8B bf16 ≈ 16 GiB).
+        per = float(max_memory_gib) if max_memory_gib is not None else 12.0
+        return "auto", {i: f"{per:.0f}GiB" for i in range(n)}
+    return device_map, None
+
+
 def run_transformers_kvpress(
     model_path: str,
     prompts: list[PromptRow],
@@ -65,6 +88,8 @@ def run_transformers_kvpress(
     revision: str | None = None,
     max_model_len: int = 32768,
     attn_implementation: str = "sdpa",
+    device_map: str = "cuda:0",
+    max_memory_gib: float | None = None,
     per_prompt_press: Optional[Callable[[PromptRow, int, Any], Any]] = None,
     tokenizer_messages_hook: Optional[Callable[[PromptRow, Any, int], None]] = None,
 ) -> list[tuple[str, list[int], dict[str, Any]]]:
@@ -82,11 +107,14 @@ def run_transformers_kvpress(
         revision=revision if not Path(model_path).exists() else None,
         trust_remote_code=True,
     )
+    dm, max_mem = _hf_device_map(device_map, max_memory_gib=max_memory_gib)
     load_kwargs: dict[str, Any] = {
-        "device_map": "cuda:0",
+        "device_map": dm,
         "trust_remote_code": True,
         "attn_implementation": attn_implementation,
     }
+    if max_mem is not None:
+        load_kwargs["max_memory"] = max_mem
     rev = revision if not Path(model_path).exists() else None
     if rev:
         load_kwargs["revision"] = rev
@@ -99,16 +127,21 @@ def run_transformers_kvpress(
             model_path, torch_dtype=torch.bfloat16, **load_kwargs
         )
     model.eval()
+    try:
+        in_device = model.get_input_embeddings().weight.device
+    except Exception:  # noqa: BLE001
+        in_device = torch.device("cuda:0")
 
     print(
-        f"[kvpress/{mode}] attn={attn_implementation} n={len(prompts)}",
+        f"[kvpress/{mode}] attn={attn_implementation} device_map={dm} "
+        f"max_memory={max_mem} n_gpu={torch.cuda.device_count()} n={len(prompts)}",
         flush=True,
     )
     out: list[tuple[str, list[int], dict[str, Any]]] = []
     for i, pr in enumerate(prompts):
         text = _apply_chat(tok, pr.messages)
         enc = tok(text, return_tensors="pt", add_special_tokens=False)
-        input_ids = enc["input_ids"].to(model.device)
+        input_ids = enc["input_ids"].to(in_device)
         n = int(input_ids.shape[-1])
         if n > max_model_len - max_new_tokens:
             input_ids = input_ids[:, -(max_model_len - max_new_tokens) :]
@@ -140,6 +173,7 @@ def run_transformers_kvpress(
             "compression_ratio": cr,
             "keep_frac_target": max(0.0, 1.0 - cr) if cr >= 0 else None,
             "attn_implementation": attn_implementation,
+            "device_map": str(dm),
             "n_protected": len(getattr(use_press, "protected", ()) or ()),
         }
         out.append((txt, new_ids, meta))
