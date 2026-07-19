@@ -1,28 +1,46 @@
-# Experiment artifacts
+# H200 jobs — evidence archive + live queue
 
-This directory contains the frozen commands and tracked result bundles used by the
-PriorityKV manuscript. It is an evidence archive, not a live job queue.
+## Live queue (agent → H200, no SSH)
 
-## Layout
+```
+Agent box                              H200 pkworker (tmux)
+─────────                              ────────────────────
+1. edit code / add jobs/pending/<id>.yaml
+2. git push  ─────────────────────────► 3. poll ~45s, ff-only pull
+                                        4. run allowlisted python scripts/*.py
+                                        5. write jobs/status + jobs/results
+6. git pull / pull_job.sh ◄──────────── 7. git push status
+```
 
-| Directory | Contents |
+| Dir | Purpose |
 |---|---|
-| `manifests/` | Exact commands and GPU assignments for canonical H200 runs |
-| `results/<job_id>/` | Summary, logs, environment metadata, and GPU snapshots |
+| `pending/` | New jobs (commit + push to enqueue) |
+| `running/` | Claimed locally on H200 only (gitignored) |
+| `done/` / `failed/` | Terminal outcomes |
+| `status/` | Thin JSON: exit, decision, pass |
+| `results/<id>/` | Debug bundle (logs, summary, nvidia-smi) |
 
-## Canonical runs
+**Helpers (agent box):** `./scripts/pull_job.sh [--watch] <id>`  
+**Worker (H200 once):** `tmux new -s pkworker './scripts/remote_worker.sh'`  
+**Unstick H200:** `bash scripts/h200_bootstrap_pkworker.sh`
 
-| Job ID | Measurement |
+### Job YAML
+
+```yaml
+id: diag_nvidia_smi_r7
+command: python scripts/diag_nvidia_smi.py --out-tag r7
+gpus: "0,1"          # max TWO ids
+sync_cuda: false
+timeout_sec: 120
+```
+
+Rules: `command` must be `python scripts/<name>.py …` · filename = `id` · **max 2 GPUs**.
+
+## Evidence archive (paper freeze)
+
+| Dir | Contents |
 |---|---|
-| `d4_latency_m3c_gpu56_r1` | 8k/16k end-to-end and per-token latency |
-| `mg_a_peak_mem_gpu5_r1` | Peak CUDA memory and packed payload bytes |
-| `mg_b_lock240_quality_gpu01_r1` | Locked 240-example Qwen3-8B quality |
-| `pub_c_gemma_reduced_gpu01_r6` | Reduced secondary-model stress check |
+| `manifests/` | Canonical manuscript run commands |
+| `results/<canonical_id>/` | Frozen result bundles cited in the paper |
 
-Each `summary.json` is machine-readable. `meta.json` records bundle metadata,
-`nvidia_smi_before.txt` and `nvidia_smi.txt` capture device state, and log files preserve
-the original program output. The canonical decision and process exit code are recorded in
-the summary and manifest.
-
-See [`../docs/REPRODUCIBILITY.md`](../docs/REPRODUCIBILITY.md) for environment setup,
-expected deviations, and the claim-to-artifact index.
+See [`../docs/REPRODUCIBILITY.md`](../docs/REPRODUCIBILITY.md) and [`../docs/H200_QUEUE.md`](../docs/H200_QUEUE.md).

@@ -1,0 +1,5 @@
+id: diag_nvidia_smi_r7
+command: python scripts/diag_nvidia_smi.py --out-tag r7
+gpus: "0,1"
+sync_cuda: false
+timeout_sec: 120
