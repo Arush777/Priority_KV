@@ -1,7 +1,7 @@
 # PriorityKV: Results
 
 **Freeze:** `SCIENCE_CORE_HOME_2026_07_19`
-**Authors:** Arush Sharma (IIT (ISM) Dhanbad) · Anupam Rawart (IIT Bombay)
+**Authors:** Arush Sharma (IIT (ISM) Dhanbad) · Anupam Rawat (IIT Bombay)
 **Model:** Qwen3-8B @ `b968826d9c46…` · H200 (`dgre2`)  
 
 ## Point of the project
