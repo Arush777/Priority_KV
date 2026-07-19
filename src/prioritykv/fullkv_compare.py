@@ -63,9 +63,9 @@ def resolve_model_path(manifest: dict[str, Any]) -> str:
 
 
 def _apply_chat(tokenizer, messages: list[dict[str, str]]) -> str:
-    from prioritybench.pins import qwen3_chat_template_kwargs
+    from prioritybench.pins import chat_template_kwargs_for_tokenizer
 
-    kwargs = dict(qwen3_chat_template_kwargs())
+    kwargs = dict(chat_template_kwargs_for_tokenizer(tokenizer))
     return tokenizer.apply_chat_template(
         messages,
         tokenize=False,

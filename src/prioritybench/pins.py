@@ -26,3 +26,12 @@ def qwen3_tokenizer_kwargs() -> dict:
 def qwen3_chat_template_kwargs() -> dict:
     """Extra kwargs for tokenizer.apply_chat_template(...)."""
     return {"enable_thinking": QWEN3_ENABLE_THINKING}
+
+
+def chat_template_kwargs_for_tokenizer(tokenizer) -> dict:
+    """Model-aware apply_chat_template kwargs (Qwen-only enable_thinking)."""
+    name = str(getattr(tokenizer, "name_or_path", "") or "").lower()
+    cls = type(tokenizer).__name__.lower()
+    if "qwen" in name or "qwen" in cls:
+        return qwen3_chat_template_kwargs()
+    return {}
