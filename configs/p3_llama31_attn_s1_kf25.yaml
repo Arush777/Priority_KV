@@ -1,0 +1,33 @@
+# P3 transfer: Llama-3.1-8B-Instruct slice 1, kf=0.25 (matched Qwen P1 protocol).
+manifest_id: p3_llama31_attn_s1_kf25
+rev: 1
+bench_manifest: data/prioritybench/manifests/w5_stress_large.json
+selection:
+  splits: [calibration, validation, test]
+  context_lengths: [8000, 16000]
+  all_matching: true
+  replication_slice: 1
+model:
+  local_dirname: Llama-3.1-8B-Instruct
+  hub_id: meta-llama/Llama-3.1-8B-Instruct
+  revision: 0e9e39f249a16976918f6564b8830bc894c89659
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.75
+  max_model_len: 32768
+keep_frac: 0.25
+compression_ratio: 0.75
+sink_tokens: 16
+force_recent: 128
+seed: 0
+granularity: token
+page_tokens: 16
+snapkv_window_size: 64
+snapkv_kernel_size: 5
+h2o_attn_implementation: sdpa
+h2o_chunk_size: 1024
+h2o_recent_frac: 0.5
+arms: [structure, snapkv, h2o, pyramid, hybrid]
