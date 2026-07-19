@@ -1,0 +1,15 @@
+{
+  "job_id": "p1_attn_baselines_s2_kf25_gpu1_r1",
+  "exit": 0,
+  "decision": "P1_STRUCTURE_BEATS_SNAPKV \u2014 structure > SnapKV at matched keep_frac",
+  "pass": null,
+  "log_scratch": "/data/anupam/scratch/prioritykv/logs/p1_attn_baselines_s2_kf25_gpu1_r1.log",
+  "log_bytes": 49046,
+  "shipped_full_log": true,
+  "truncated": false,
+  "log_tail_bytes": 524288,
+  "log_full_max_bytes": 2097152,
+  "has_summary": true,
+  "has_traceback": true,
+  "has_nvidia_smi": true
+}
