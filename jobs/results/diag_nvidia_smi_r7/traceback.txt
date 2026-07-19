@@ -1,0 +1,1 @@
+out=/data/anupam/scratch/prioritykv/runs/diag_nvidia_smi/diag_nvidia_smi_r7.json
