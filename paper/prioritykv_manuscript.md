@@ -1,420 +1,463 @@
 # PriorityKV: Structure-Aware KV Retention for Long Agent Traces
 
-**Artifact version:** `SCIENCE_CORE_HOME_2026_07_19`
-**Authors:** Arush Sharma (Indian Institute of Technology (Indian School of Mines)
-Dhanbad); Anupam Rawart (Indian Institute of Technology Bombay)
-**Author order:** Arush Sharma (first author), Anupam Rawart
-**Primary model:** Qwen3-8B at revision `b968826d9c46dd6066d109eabc6255188de91218`
-**Hardware:** NVIDIA H200; reduced secondary check on Gemma-2-9B-IT
+**Authors:** Arush Sharma, Indian Institute of Technology (Indian School of Mines)
+Dhanbad; Anupam Rawat, Indian Institute of Technology Bombay<br>
+**Primary hardware:** NVIDIA H200
 
 ## Abstract
 
-Long language-model agent traces contain heterogeneous state: tool schemas, system
-instructions, superseding constraints, identifiers, ordinary dialogue, and filler. All of
-these tokens occupy the key-value (KV) cache, but losing them has different behavioral
-consequences. We study whether cache allocation should use this known trace structure.
-We introduce PriorityBench-A, a locked 240-example benchmark covering tool-schema
-conformance, instruction supersession, and multi-turn state recall at 8k, 16k, and 32k
-context strata. On matched-budget eviction stress slices, a role-blind sink-and-recent
-policy scores 0.000 while structure-aware retention scores 1.000 at token granularity and
-0.643 at 16-token page granularity. An adversarial buried-state variant lowers the
-structure score to 0.429, identifying the boundary of the heuristic rather than an oracle
-effect. We separately test mixed-precision storage and falsify the hypothesis that soft
-INT4 quantization of 75% of positions creates a meaningful quality separation: on the
-locked 240 examples, FullKV, role-blind mixed, and structure-aware mixed score 0.888,
-0.879, and 0.883, respectively. We therefore treat quantization as a systems mechanism,
-not a quality result. Our Qwen3-8B prototype stores BF16 and packed INT4 pages and uses
-FlashInfer-backed decode on an H200. The structure-aware path uses 0.72x measured KV
-payload and 0.87x peak allocated CUDA memory relative to FullKV, while end-to-end time
-to first token is 1.11--1.12x and time per output token is 1.20--1.21x. The gap between
-payload and peak is caused by an explicit INT4-to-BF16 cold-attention scratch buffer. The
-result is a scoped measurement study: agent-trace structure is useful under eviction, soft
-INT4 is quality-neutral at the tested operating point, and packed bytes do not
-automatically imply a latency or peak-memory win.
+Long agent traces pack tool schemas, persistent identifiers, superseding instructions,
+and filler into one key–value (KV) cache. Every token has the same storage cost, but not
+the same failure cost: losing a schema field can break a tool call, while losing filler
+changes nothing. We test whether visible trace structure is a useful prior for deciding
+what to evict. On a synthetic stress benchmark with Qwen3-8B and a matched 25% keep
+budget, structure-aware retention passes 112/120 examples, compared with 1/120 for both
+uniform and random eviction. It matches or slightly exceeds repository
+reimplementations of SnapKV, PyramidKV, and a structure–SnapKV hybrid, each at 108/120,
+although the paired advantage over SnapKV is not significant (exact two-sided McNemar
+p=0.125).
+
+We also report where the idea fails. Placement controls show that structure ties, rather
+than beats, FullKV when state is moved to the middle and loses when state is buried in
+free-form text. On Llama-3.1-8B at a 5% budget, SnapKV wins on both evaluated slices. A
+separate mixed-precision study finds no quality benefit from role-aware INT4 placement.
+The packed BF16/INT4 prototype reduces measured KV payload to 0.719× FullKV, but BF16
+cold scratch raises time per output token to 1.200–1.215×. The result supports visible
+agent structure as a scoped eviction prior, not as a universal selector, an INT4 quality
+win, or a latency win.
 
 ## 1. Introduction
 
-Autoregressive Transformer inference stores the keys and values of previous tokens so
-that generation does not recompute the complete prefix. The resulting KV cache grows
-with context length and batch size and is a central memory-management concern in LLM
-serving [1, 2]. Existing work reduces this cost through paging, eviction, token selection,
-or quantization [2--9]. These methods generally estimate token importance from position,
-attention, or activation statistics.
+Forty turns into an illustrative agent conversation, the model emits a tool call without
+a required field. The field belonged to a schema that the cache evicted thirty turns
+earlier to stay under budget; byte for byte, it looked no different from the filler that
+survived. This is the failure PriorityKV targets. In an agent trace, a JSON schema field
+and a throwaway pleasantry cost the same storage but not the same failure. Losing the
+former can also resurrect an obsolete instruction or substitute the wrong identifier.
 
-Agent traces expose another signal before attention is evaluated: their protocol
-structure. A serving layer often knows which spans are system instructions, tool schemas,
-tool results, user constraints, or generated dialogue. A role-blind cache policy can
-therefore satisfy a nominal token budget while deleting state that is necessary for the
-agent's next action. Aggregate language-model metrics may not expose failures such as a
-malformed tool call, compliance with an obsolete instruction, or use of the wrong order
-identifier.
+Autoregressive inference stores prior keys and values so each decode step can reuse the
+prefix. The cache grows with sequence length and constrains serving capacity [1, 2].
+Existing work reduces that cost through paging, streaming windows, attention-derived
+eviction, or quantization [3–7]. Agent traces add a signal those methods do not directly
+use: serialization already exposes message roles, tool contracts, constraints, results,
+and persistent state.
 
-PriorityKV asks two questions:
+![Conceptual agent-trace failure mode](figures/agent_trace_failure_mode.svg)
 
-1. At a matched eviction budget, does preserving protocol structure improve agent-task
-   reliability over role-blind position policies?
-2. If low-precision KV storage is quality-neutral, can a working mixed BF16/INT4 cache
-   still provide measurable systems value?
+**Figure 1 — equal storage cost, unequal failure cost.** Two policies keep the same
+illustrative 14/26-token budget. Hatched cells are evicted; callouts show failure modes,
+not empirical counts.
 
-These questions must remain separate. Eviction removes information; quantization retains
-an approximation of it. Our initial expectation that role-aware INT4 placement would
-create a quality gap was not supported at the selected 75% INT4 operating point. We keep
-that negative result and evaluate the packed path in bytes and latency instead.
+PriorityKV asks whether application-visible structure is useful when a cache must
+discard tokens, and separately whether a mixed BF16/INT4 implementation can save bytes.
+These are different hypotheses: eviction removes information, whereas quantization
+retains an approximation. Combining their outcomes into one “compression quality” claim
+would conceal the falsified INT4 hypothesis and the measured latency cost.
 
-This report makes four contributions:
+![Experiment hypothesis split](figures/hypothesis_split.svg)
 
-1. **PriorityBench-A:** a reproducible 240-example agent-reliability benchmark with
-   deterministic scorers and a frozen manifest hash.
-2. **Matched-budget eviction evidence:** structure-aware retention outperforms role-blind
-   sink-and-recent and fixed-prefix controls on targeted stress slices, with an adversarial
-   buried-state check that scopes the result.
-3. **A falsified quality hypothesis:** uniform and structure-aware mixed INT4 policies
-   remain close to FullKV on the locked 240-example evaluation.
-4. **An auditable systems prototype:** packed BF16/INT4 pages, FlashInfer log-sum-exp
-   state merging, phase-separated latency, and separate reporting of payload and peak
-   memory on H200.
+**Figure 2 — three questions, three verdicts.** Eviction reliability, precision
+placement, and systems performance are evaluated independently.
 
-The report does not claim paper-grade generalization across LongBench or RULER, a
-quantization-driven accuracy advantage, or a fused INT4 attention speedup.
+**Scope of claims.** The paper separates those three questions because a result in one
+family does not establish either of the others. The baselines are matched-budget
+repository reimplementations, the benchmark is synthetic, and the systems measurements
+are single-request prototype results. Section 8 collects the remaining limitations.
 
-![PriorityKV overview](figures/prioritykv_overview.svg)
+The contributions are:
 
-Figure 1 uses the token-strip and left-to-right cache-workflow conventions common in
-H2O [5], SnapKV [6], and KIVI [8], but depicts PriorityKV's distinct input signal and
-allocation policy. Unlike attention-derived selection, PriorityKV begins with message-role
-metadata already present in an agent trace.
+1. PriorityBench-A, a deterministic synthetic benchmark for tool-schema conformance,
+   instruction supersession, and multi-turn state recall, together with disjoint stress
+   slices, placement controls, and a gold-span retention audit.
+2. A Qwen eviction comparison at n=120 with matched-budget attention baselines and a
+   paired McNemar test. The supported claim is that structure matches or slightly
+   exceeds SnapKV-class selection while decisively beating position-only baselines; it
+   is not that structure beats FullKV or SnapKV in general.
+3. Two prominent negatives: structure loses to SnapKV on both Llama slices at a 5%
+   budget, and structure-aware placement of 75% INT4 positions does not create a quality
+   advantage on the locked Qwen benchmark.
+4. Packed BF16/INT4 pages and two-call FlashInfer decode with payload, allocator peak,
+   packing, cold-scratch, end-to-end, and per-output-token measurements reported
+   separately.
 
 ## 2. Related Work
 
-**KV memory management.** PagedAttention reduces fragmentation and enables flexible KV
-sharing without changing which tokens are retained [2]. StreamingLLM observes the role of
-attention sinks and combines initial tokens with a recent window [3]. We use this
-sink-and-recent shape as a deliberately role-blind eviction control, not as a complete
-reimplementation or evaluation of StreamingLLM.
+**Paging and streaming.** PagedAttention separates logical KV blocks from
+non-contiguous physical storage to reduce fragmentation and enable sharing; it does not
+choose semantic tokens to retain [2]. StreamingLLM identifies attention sinks and
+combines initial tokens with a recent window for streaming language modeling [3].
+PriorityKV uses sink plus recent as a mandatory region and the shape of its position-only
+control, not as a claim to reproduce StreamingLLM's streaming setting.
 
-**KV eviction and token selection.** Scissorhands retains tokens that were previously
-important [4], while H2O balances heavy hitters with recent tokens [5]. SnapKV estimates
-prompt importance from an observation window [6], and PyramidKV varies the budget across
-layers [7]. These methods derive importance from model behavior. PriorityKV instead asks
-whether application-visible message roles are useful when the workload is an agent trace.
-The approaches are complementary: structural priors could be combined with attention-based
-selection, but that combination is not evaluated here.
+**Eviction and attention-derived selection.** H2O retains accumulated-attention heavy
+hitters together with recent tokens [4]. SnapKV uses an observation window near the end
+of the prompt to select clustered prefix features [5]. PyramidKV varies the cache budget
+across layers in response to pyramidal information funneling [6]. The comparison uses repository
+reimplementations at matched token budgets, not the authors' reference code. H2O is a
+chunked SDPA reimplementation and has a fidelity caveat. A hybrid that protects
+structural tokens and fills the remainder with SnapKV equals SnapKV on Qwen at 25% keep
+and collapses below both parents on the two Llama 5% slices. The complementarity
+hypothesis is therefore not supported.
 
-**KV quantization.** KIVI motivates asymmetric low-bit treatment of keys and values and
-demonstrates that aggressive KV quantization can preserve downstream quality [8]. Our
-INT4 path is not proposed as a replacement for KIVI or a new quantizer. It is a storage
-and measurement vehicle for comparing role-aware and role-blind precision allocation.
+**KV quantization and attention engines.** KIVI motivates asymmetric group-wise
+low-bit KV quantization and keeps residual tokens at full precision [7]. PriorityKV's
+INT4 path is not a new quantizer or KIVI replacement. FlashInfer exposes composable
+attention kernels and log-sum-exp state merging for heterogeneous KV layouts [8].
+PriorityKV uses that merge contract while retaining an explicit BF16 cold-scratch
+limitation.
 
-**Serving and evaluation.** FlashInfer provides composable attention kernels and state
-merging for heterogeneous serving workloads [9]. PriorityKV uses `merge_state` to combine
-hot BF16 and dequantized cold attention results. LongBench and RULER provide broad
-long-context evaluations [10, 11]. PriorityBench is narrower: it isolates deterministic
-agent-state failures and should be read as a complementary diagnostic rather than a
-general long-context benchmark.
+**Long-context evaluation.** LongBench and RULER cover broad long-context capabilities
+[9, 10]. PriorityBench-A is intentionally narrower: it provides exact failure
+attribution for synthetic agent protocols and cannot replace a general long-context
+suite.
 
 ## 3. PriorityBench-A
 
-### 3.1 Tasks
+### 3.1 Tasks and scoring
 
-PriorityBench-A contains 240 generated multi-turn conversations, with 80 examples in each
-of three categories:
+PriorityBench-A generates multi-turn chats in which an early span contains state
+required by a final request and intervening turns provide benign filler. Scoring is
+binary and programmatic; no LLM judge is used.
 
-| Category | Required behavior | Scoring |
+| Category | Required behavior | Deterministic scorer |
 |---|---|---|
-| Tool schema | Emit a valid call under an earlier tool contract | JSON parsing plus schema-subset checks |
-| Instruction supersession | Follow the latest of conflicting constraints | Required and forbidden regular expressions |
+| Tool schema | Emit a valid call under an early contract | JSON/schema subset |
+| Instruction supersession | Follow the latest conflicting constraint | Required/forbidden regex |
 | Multi-turn state | Reuse an earlier ID, path, or preference | Exact slot match |
 
-Each conversation plants relevant state, adds benign filler, and ends with a request whose
-correct answer depends on that state. Scoring is programmatic and does not use an
-LLM-as-judge. The lock contains 83 examples at 8k, 81 at 16k, and 76 at 32k; the split
-counts are 92 calibration, 49 validation, and 99 test. Stable hashing assigns splits.
-The manifest SHA256 is
-`fc44b966725738c94008ba61ce57ad7366169b9c0be73074f8161d909ccfae89`.
+Two manifests from the same PriorityBench-A generator serve different studies. The
+locked 240-example manifest (W3) contains 83, 81, and 76 examples at nominal 8k, 16k,
+and 32k; stable hashing assigns 92 calibration, 49 validation, and 99 test examples.
+The 120-example stress manifest (W5) is split evenly across the three categories and
+8k/16k strata, with three disjoint 40-example slices. Section 9 records both digests.
 
-PriorityBench is synthetic by design. It offers controlled failure attribution and exact
-scoring, but it does not estimate the frequency of these failures in production traffic.
-The generator, templates, manifest, and scorers are included in the repository.
+### 3.2 Placement and leakage controls
 
-### 3.2 Adversarial variants
+The generator's visible templates are a threat: a heuristic tagger can appear semantic
+if gold state is consistently short, early, or visibly marked. Middle relocation moves
+state away from the prefix while retaining the leading system message and final request.
+Buried state lengthens or embeds state-bearing turns so a short-span heuristic does not
+protect all gold.
 
-The initial templates often place short, gold-bearing turns before long filler. A policy
-that simply prefers short or early spans can therefore appear semantic. We use two checks:
-
-- **Buried state:** lengthen or bury gold-bearing turns so that short-turn tagging no
-  longer identifies all state.
-- **Middle relocation:** move the state block away from the prefix while preserving the
-  leading system message and final request.
-
-These variants exposed a real limitation: the basic structure policy preserves tool and
-constraint roles more reliably than unmarked free-form state. We retain that failure in
-the results.
+A separate CPU audit maps gold-bearing messages into tokenizer spans and intersects them
+with selected positions. It measures the gold fraction already in sink plus recent and
+the fraction retained by each policy without using model outputs.
 
 ## 4. Method
 
-### 4.1 Structural roles
+### 4.1 Roles and matched-budget retention
 
-PriorityKV maps chat messages to page roles using information already available to an
-agent serving stack. System messages are tagged as system, tool, or constraint spans;
-tool messages and schema-like assistant messages are tagged as tool spans; constraint-like
-user messages are tagged as constraints; and short state-bearing turns can be tagged as
-other structured state. The first 16 tokens are protected as an attention sink and the
-most recent 128 tokens are protected as a decode-local window.
+For tokenized trace x₁:ₙ and keep fraction k, the nominal budget is
+`B(n,k)=round(kn)`. The mandatory set is `M = sink ∪ recent`, with the first 16
+tokens and last 128 tokens protected. Every evaluated token-level compressed arm selects
+`A ⊇ M` with `|A| = max(B, |M|)`.
 
-The current tagger is a transparent heuristic over message roles, length, and a small set
-of schema or constraint markers. It is not a learned importance model and does not inspect
-the benchmark answer. A removed early implementation keyed on final-answer markup; the
-buried-state and middle-relocation controls were added specifically to detect such leakage.
+Uniform retention uses the mandatory sink and fills from the recent edge. Random keeps M
+and samples the remaining budget. Structure first includes system, tool, constraint, and
+other state-bearing positions, then fills residual budget from the recent edge. Whole-page
+experiments apply the same priority while respecting page boundaries.
 
-### 4.2 Matched-budget eviction
+The tagger consumes message roles and transparent schema or constraint markers. It does
+not inspect benchmark answers or future attention.
 
-For a prompt of length `n` and keep fraction `k`, every arm receives the same nominal
-budget `round(k n)`, subject to the common sink and recent minimum. The controls are:
+### 4.2 Pages and mixed precision
 
-- **Role-blind sink+recent:** retain the sink and then fill the budget from the recent
-  edge.
-- **Random:** retain the same mandatory region and sample the remaining pages.
-- **Fixed prefix:** retain sink, recent, and the lowest-index pages.
-- **Structure-aware:** retain sink, recent, and protected-role pages before filling the
-  remaining budget near the recent edge.
-- **Keep all:** retain the complete prompt as a wiring control.
+Physical page size is P=16 tokens. In the mixed-precision study, every position remains
+present and an exact target fraction f=0.75 is stored as INT4, subject to common
+sink/recent BF16 protection. The role-blind arm spaces INT4 positions across the
+demotable region. Structure demotes filler, generated, and low-risk positions first.
+Both arms have the same number of INT4 positions.
 
-Page experiments operate on contiguous 16-token pages. Token selection is applied by
-gathering the retained prompt positions and regenerating the cache, avoiding an invalid
-RoPE index substitution. These experiments isolate missing-state sensitivity; they are
-not the packed mixed-precision serving path.
+![Page allocation architecture](figures/page_allocation_architecture.svg)
 
-### 4.3 Matched mixed precision
+**Figure 3 — PriorityKV architecture.** Chat metadata becomes token roles and 16-token
+pages before matched-budget retention or precision placement.
 
-The mixed policy assigns the same number of positions to INT4 in both arms. With
-`int4_frac = 0.75`, sink and recent positions remain BF16. The role-blind arm spaces INT4
-positions uniformly through the demotable region. The structure arm demotes filler and
-low-risk roles first, spilling into protected roles only when required to meet the exact
-budget.
+### 4.3 Two-call FlashInfer decode
 
-For the frozen Qwen3-8B path, K and V are divided into 16-token pages. Hot pages store
-BF16 tensors; cold pages store packed 4-bit values and per-group scale metadata. Packing
-is real storage, not a fake-quantized BF16 tensor. The implementation reports both actual
-payload bytes, including metadata, and an idealized 0.5-byte-per-element model.
+Prefill uses the native Hugging Face path. The cache is partitioned into coalesced hot
+BF16 pages and packed cold pages. Before the frozen full-scratch decode measurement,
+cold pages are dequantized into BF16 GPU scratch. Each layer makes at most two
+homogeneous FlashInfer calls: one over hot pages plus decode tail and one over cold
+scratch. Outputs and native log-sum-exp states are combined with `merge_state`. A parity
+artifact records maximum absolute error of approximately 4.88e-4.
 
-### 4.4 FlashInfer decode
+![Decode dataflow and memory lifetime](figures/decode_memory_lifetime.svg)
 
-Prefill uses the native Hugging Face path. The cache is then split into hot BF16 pages and
-cold packed pages. During decode, the Qwen3 attention shim performs at most two attention
-calls per layer: one over coalesced hot pages and the decode tail, and one over cold pages
-after dequantization. FlashInfer's log-sum-exp merge combines their attention states.
-Parity tests reduced the maximum absolute merge error to approximately `4.88e-4` after
-correcting an LSE-base mismatch.
+**Figure 4 — decode path and allocation lifetime.** Two homogeneous FlashInfer calls
+are merged through log-sum-exp state; packed payload persists while BF16 cold scratch is
+live during decode.
 
-The current implementation expands cold INT4 pages into a BF16 GPU scratch buffer before
-attention. This avoids silently materializing a full Hugging Face cache but limits peak
-memory savings and adds decode overhead. Direct fused or page-streamed INT4 attention is
-future systems work.
+The streamed-cold experiment (P2) instead dequantizes chunks and releases them after
+merging. Its three-example run is only a successful smoke test.
 
-![FlashInfer decode dataflow](figures/flashinfer_decode_dataflow.svg)
+## 5. Experimental Design
 
-Figure 2 follows the modular system-dataflow convention used by FlashInfer [9] and the
-grouped/residual cache presentation used by KIVI [8]. It makes the temporary BF16 cold
-scratch explicit because that allocation explains the difference between payload and peak
-memory.
+All GPU experiments use greedy decoding on NVIDIA H200 hardware. Canonical jobs use at
+most two GPUs; each eviction, attention-baseline, and transfer job uses one. Section 9
+records pinned model revisions, manifest digests, and result bundles.
 
-## 5. Experimental Setup
+### 5.1 Eviction, attention baselines, and placement controls
 
-The primary experiments use Qwen3-8B in non-thinking greedy decode mode on NVIDIA H200
-GPUs. The model revision, benchmark hash, configurations, job IDs, and job status are
-frozen in `FINAL_RUN_MANIFEST.yaml`.
+The eviction and placement study (P0) evaluates Qwen on the 120-example stress manifest,
+divided into three disjoint 40-example slices and balanced across 8k and 16k contexts.
+At token keep k=0.25 it compares structure, uniform, random, keep-all, and a separately
+recorded FullKV run. Middle-relocation and buried-state transformations cover all three
+slices. The attention-baseline comparison (P1) reuses the same examples and budget for
+repository reimplementations of SnapKV, PyramidKV, H2O, and a structure–SnapKV hybrid.
+SnapKV uses a 64-token observation window and kernel size five. H2O is a chunked SDPA
+reimplementation. A tracked artifact supplies the exact paired McNemar test.
 
-The evaluation families answer different questions:
+### 5.2 CPU retention audit
 
-| Family | Size | Purpose |
-|---|---:|---|
-| Matched-keep stress | 14--16 examples per configuration | Controlled eviction sensitivity and policy ablations |
-| Lock-240 mixed quality | 240 examples | Quality of FullKV and matched 75% INT4 placement |
-| D4 latency | 18 examples, 9 per 8k/16k stratum | Pack, cold-scratch, TTFT, and TPOT measurement |
-| Peak and payload | 18 examples | Allocated/reserved CUDA peak and cache payload |
-| Gemma reduced | 14 examples at approximately 8k | Directional second-model check only |
+The audit runs the Qwen and Llama tokenizers on the three stress slices per model
+(n=120 each) at k=0.25. It reports descriptive gold-token fractions rather than model
+accuracy; no binomial interval or significance test is attached.
 
-Latency rows use 128 generated tokens, greedy decoding, one warm-up sequence, and three
-timing repeats whose median is recorded. FullKV uses SDPA; mixed arms use the FlashInfer
-shim. This is a single-request prototype comparison, not a throughput or concurrency
-study. The FP8 publish job uses a different batch-amortized timing protocol and is
-therefore retained as a pass/fail secondary check rather than merged into the main
-latency table.
+### 5.3 Mixed-precision quality and systems measurements
+
+The locked mixed-precision study evaluates all 240 Qwen examples: 83 at 8k, 81 at 16k,
+and 76 at 32k. FullKV, uniform-mixed, and structure-mixed use matched f=0.75 INT4
+placement for the mixed arms. This tests precision placement, not eviction.
+
+The latency measurement uses nine 8k and nine 16k examples, 128 generated tokens, one
+warm-up, and three timing repetitions summarized by per-example medians. FullKV uses
+SDPA; the packed path uses the FlashInfer shim. The memory measurement uses 18 examples.
+Both are single-request studies, and the canonical jobs were not independently repeated.
+A three-example streamed-cold run is smoke only.
+
+### 5.4 Cross-model transfer and weak checks
+
+The Llama transfer study (P3) evaluates the structure and attention arms on all three
+stress slices at k=0.25 (n=120). At k=0.05, only the first two slices are run (n=40
+each); no uniform Llama arm is available. Secondary checks reuse one 14-example Qwen
+slice across three whole-page budgets and evaluate 14 Gemma-2-9B-IT examples with
+Qwen-tuned prompts.
 
 ## 6. Results
 
-### 6.1 Structure matters under eviction
+### 6.1 Structure protects state that blind eviction drops
 
-| Setting | n | Full/keep-all | Role-blind | Random/fixed prefix | Structure |
-|---|---:|---:|---:|---:|---:|
-| Token keep, `k=0.25` | 14 | 1.000 | 0.000 | random 0.000 | **1.000** |
-| Page keep, `k=0.15` | 14 | 1.000 | 0.000 | random 0.071 | **0.643** |
-| Page keep, `k=0.25` | 14 | 1.000 | 0.000 | random 0.286 | **0.643** |
-| Page keep, `k=0.35` | 14 | 1.000 | 0.000 | random 0.429 | **0.643** |
-| Buried token state, `k=0.25` | 14 | 1.000 | 0.000 | random 0.000 | **0.429** |
-| Middle-relocated page state, `k=0.25` | 16 | 1.000 | 0.000 | fixed prefix 0.125 | **0.688** |
+![Qwen eviction and attention baselines](figures/eviction_and_baselines.svg)
 
-The same 14-example slice is reused across the page-budget sweep, so the rows are an
-ablation rather than independent replications. The uniform arm's zero score shows that
-the sink-and-recent policy removes required middle state at these aggressive budgets.
-The structure arm's 0.643 plateau and buried-state drop are equally important: explicit
-roles rescue a subset of failures, but the heuristic does not identify all free-form
-multi-turn state. Middle relocation separates structure from the fixed-prefix control,
-showing that the result is not solely early-position retention.
+**Figure 5 — matched-budget Qwen comparison.** Points show pass rates with Wilson 95%
+intervals, with exact counts aligned at right; the paired structure–SnapKV McNemar
+p-value is 0.125. H2O* is the chunked repository reimplementation.
 
-![Matched keep-budget results](figures/reliability_keep_sweep.svg)
+| Arm | Passes | Rate | Wilson 95% interval |
+|---|---:|---:|---:|
+| FullKV | 107/120 | 0.892 | [0.823, 0.936] |
+| Structure | 112/120 | 0.933 | [0.874, 0.966] |
+| Uniform | 1/120 | 0.008 | [0.002, 0.046] |
+| Random | 1/120 | 0.008 | [0.002, 0.046] |
+| SnapKV | 108/120 | 0.900 | [0.833, 0.942] |
+| PyramidKV | 108/120 | 0.900 | [0.833, 0.942] |
+| Hybrid | 108/120 | 0.900 | [0.833, 0.942] |
+| H2O (chunked) | 82/120 | 0.683 | [0.596, 0.760] |
 
-### 6.2 Soft INT4 does not create a quality separation
+Middle relocation yields 115/120 for both structure and FullKV, 0.958 with Wilson
+[0.906, 0.982]. Buried state yields 80/120 for structure, 0.667 [0.578, 0.745],
+versus 107/120 for FullKV, 0.892 [0.823, 0.936].
 
-| Arm | Score, n=240 | Difference from FullKV |
+| Slice | Middle: structure / FullKV / uniform | Buried: structure / FullKV / uniform |
 |---|---:|---:|
-| FullKV | **0.8875** | -- |
-| Role-blind mixed INT4 | **0.8792** | -0.0083 |
-| Structure-aware mixed INT4 | **0.8833** | -0.0042 |
+| 0 | 0.975 / 0.975 / 0.025 | 0.675 / 0.900 / 0.000 |
+| 1 | 0.950 / 0.950 / 0.050 | 0.650 / 0.875 / 0.000 |
+| 2 | 0.950 / 0.950 / 0.000 | 0.675 / 0.900 / 0.000 |
 
-The structure and role-blind arms differ by 0.0042, equivalent to one aggregate success
-on this 240-example benchmark. We do not interpret that difference as evidence of a
-structure-aware quantization quality advantage. At 8k and 16k, all three arms score 1.0.
-At 32k, FullKV itself falls to 0.645, while role-blind and structure-aware mixed score
-0.618 and 0.632. The primary conclusion is negative: retaining an INT4 approximation of
-75% of positions is much less destructive than evicting those positions.
+The placement result prevents a structure-over-FullKV claim.
 
-![Lock-240 quality by context length](figures/lock240_quality_by_length.svg)
+### 6.2 Structure matches attention selection; the hybrid does not help
 
-### 6.3 Packed storage reduces bytes, not latency
+The paired structure–SnapKV artifact records b=4 and c=0; exact two-sided McNemar
+p=0.125. The difference is not significant. Hybrid equals SnapKV and does not support
+complementarity. H2O passes 82/120 using the chunked implementation, so the comparison
+does not establish a reference-code H2O result.
 
-| Context | Structure pack | Cold scratch | E2E / FullKV | TPOT / FullKV | Score |
-|---|---:|---:|---:|---:|---:|
-| 8k | 34.8 ms | 14.2 ms | 1.118x | 1.200x | 1.000 |
-| 16k | 48.1 ms | 19.7 ms | 1.113x | 1.215x | 0.889 |
+**Retention audit.** The audit confirms that the eviction gap is not an artifact of the
+always-kept window.
 
-The mixed path is close to FullKV in end-to-end latency because prefill dominates these
-single-request traces, but it is approximately 20% slower per output token. This is a
-latency cost, not a speedup. Packing and cold-scratch construction cost tens of
-milliseconds per sequence.
+| Model | Slice | Gold in sink+recent | Structure kept | Uniform kept |
+|---|---|---:|---:|---:|
+| Qwen | 0 | 0.010 | 1.000 | 0.010 |
+| Qwen | 1 | 0.013 | 1.000 | 0.013 |
+| Qwen | 2 | 0.010 | 1.000 | 0.010 |
+| Llama | 0 | 0.000 | 1.000 | 0.000 |
+| Llama | 1 | 0.000 | 1.000 | 0.000 |
+| Llama | 2 | 0.000 | 1.000 | 0.000 |
 
-Across the 18-example memory slice, FullKV allocates 23.61 GB at peak and the
-structure-aware mixed path allocates 20.50 GB, a ratio of 0.868. Actual mixed payload is
-1.679 GB versus a 2.336 GB BF16 cache model, a ratio of 0.719. The idealized bit model is
-0.473. The smaller payload does not translate one-for-one into peak reduction because the
-cold attention path temporarily expands INT4 pages to BF16.
+Only about 0–1% of gold is already in sink plus recent. Structure retains all mapped
+gold; uniform retains only the gold already in that window. The Qwen gap is
+retention-real, and the Llama ceiling is not explained by gold already being mandatory.
 
-![Systems tradeoff](figures/systems_tradeoff.svg)
+### 6.3 The advantage depends on model and budget
 
-### 6.4 Secondary model check
+![Budget and model dependence](figures/budget_and_transfer.svg)
 
-On a reduced 14-example Gemma-2-9B-IT check at approximately 8k, FullKV, structure, and
-role-blind eviction score 0.357, 0.143, and 0.000. This supports only the direction
-`structure >= role-blind` under the tested stress. The absolute values are not comparable
-to the Qwen lock because the prompt/scorer design and length cap were tuned around Qwen.
+**Figure 6 — budget and model dependence.** Qwen and Llama k=0.25 use n=120;
+each Llama k=0.05 condition uses n=40. Error bars are Wilson 95% intervals.
+
+All five structure and attention arms pass 120/120 at Llama k=0.25. With no uniform
+arm, this is an easy-task ceiling rather than evidence of universal transfer. At
+k=0.05, SnapKV passes 40/40 on both slices while structure passes 35/40 and 36/40.
+Hybrid falls to 23/40 and 21/40. No paired Llama test was produced.
+
+Failures at the tighter budget concentrate in tool-schema tasks: structure passes 8/13
+and 9/13 in the first and second slices, versus SnapKV at 13/13 in both. Hybrid passes
+only 1/13 and 0/13. Protecting broad structural spans can consume too much residual
+budget, and simply unioning role and attention selections does not make them
+complementary.
+
+### 6.4 Matched INT4 placement does not separate quality
+
+![Locked INT4 quality](figures/lock240_quality_by_length.svg)
+
+**Figure 7 — matched INT4 quality.** Qwen3-8B FullKV and matched f=0.75 mixed arms by
+context stratum; error bars are Wilson 95% intervals.
+
+| Arm | Passes | Rate | Wilson 95% interval |
+|---|---:|---:|---:|
+| FullKV | 213/240 | 0.8875 | [0.841, 0.922] |
+| Uniform mixed | 211/240 | 0.8792 | [0.832, 0.915] |
+| Structure mixed | 212/240 | 0.8833 | [0.837, 0.918] |
+
+At 8k and 16k every arm is 1.0. At 32k, FullKV, uniform, and structure are
+49/76, 47/76, and 48/76. The tested role-aware INT4 quality hypothesis is falsified.
+
+### 6.5 Packed bytes incur scratch and latency costs
+
+![H200 systems ratios](figures/systems_tradeoff.svg)
+
+**Figure 8 — H200 systems trade-off.** Packed payload is smaller than FullKV,
+allocator peak falls less, and each measured latency ratio exceeds the 1.0 reference.
+
+Modeled, measured-payload, and allocated-peak ratios are 0.473×, 0.719×, and 0.868×.
+At 8k, structure packing and scratch take 34.8 and 14.2 ms; E2E is 1.118× and TPOT
+rises from 25.25 to 30.29 ms (1.200×). At 16k, pack and scratch take 48.1 and
+19.7 ms; E2E is 1.113× and TPOT rises from 23.84 to 28.95 ms (1.215×). These are
+regressions, not speedups.
+
+The streamed-cold run exits successfully with parity and approximately 36.4 GiB peak in
+its log, but with three examples and no comparative frontier it remains smoke only.
+
+### 6.6 Additional weak checks
+
+A whole-page Qwen ablation reuses the same 14 examples at 15%, 25%, and 35% keep.
+Structure remains 9/14 at each budget; random rises from 1/14 to 6/14, and the
+role-blind arm remains 0/14. On a separate 14-example Gemma check, FullKV passes 5/14,
+structure 2/14, and uniform 0/14. The reused Qwen slice, low Gemma FullKV score,
+Qwen-tuned prompts, and small samples make both results directional checks.
 
 ## 7. Discussion
 
-The experiments support a narrow design principle: when an application already knows
-the protocol role of a span, discarding that information before cache allocation is
-unnecessary. Message roles are cheap, deterministic priors that can protect tool and
-instruction state when attention-only importance estimates are unavailable or stale.
+**Structure is a prior, not an oracle.** The eviction results and retention audit show that visible
+protocol structure can protect state a sink/recent or random budget discards. Middle and
+buried controls qualify the result: when state remains recognizable, structure ties
+FullKV; when embedded in longer free-form turns, structure loses.
 
-The results also show why eviction and quantization should not be grouped under a single
-"compression quality" claim. In our setup, removing 75% of tokens destroys the targeted
-agent behaviors, while representing approximately 75% of positions in INT4 leaves the
-aggregate result near FullKV. A mixed-precision policy should therefore be justified by
-memory and kernel behavior unless a harder quality regime demonstrates otherwise.
+**The advantage depends on model and budget.** Qwen at 25% strongly separates structure
+from position-only policies and places it within four paired successes of SnapKV. Llama
+at 25% cannot differentiate competent selectors; at 5%, SnapKV is better on both slices.
+Tool-schema failure at that extreme budget suggests role protection can be too coarse
+within a broad protected span.
 
-Finally, payload accounting is not a proxy for deployed memory or performance. The
-prototype stores fewer bytes but re-expands cold pages for attention. A production
-implementation would need fused low-bit attention or bounded page streaming, allocator
-analysis under concurrency, and integration into a serving scheduler before claiming
-capacity or throughput gains.
+**Hybrid complementarity is falsified.** Hybrid equals SnapKV on Qwen and is below both
+parents on Llama at 5%. Unioning protected and attention-ranked positions changes the
+residual budget and can inherit both rules' weaknesses.
+
+**Bytes, peak, and speed differ.** Packed values and scale metadata genuinely reduce
+payload. Full-layer BF16 scratch expands the working set and adds preparation and decode
+cost. The observed 0.719× payload, 0.868× peak, and roughly 1.20× TPOT are mutually
+consistent, but do not establish throughput or capacity under concurrency.
 
 ## 8. Limitations and Threats to Validity
 
-1. **Synthetic benchmark.** PriorityBench provides controlled, deterministic failures but
-   is not sampled from production agent traffic.
-2. **Small positive-result slices.** The decisive eviction experiments use 14--16
-   examples. The 240-example run evaluates mixed INT4 quality, not matched eviction.
-3. **One primary model and device.** Qwen3-8B on H200 is the only complete matrix. The
-   Gemma check is reduced and low-scoring.
-4. **Heuristic structure labels.** Free-form state without recognizable roles remains a
-   failure mode. Structural metadata can also be missing or incorrect in real systems.
-5. **Limited baselines.** Role-blind sink/recent, random, fixed-prefix, FP8, and a reduced
-   SnapKV attempt do not constitute a full comparison with H2O, SnapKV, PyramidKV, or
-   state-of-the-art KV quantizers.
-6. **Prototype timing.** Measurements cover single-request latency, not batching,
-   concurrency, throughput, or tail latency. FullKV SDPA and mixed FlashInfer are not a
-   kernel-isolated comparison.
-7. **Cold scratch.** INT4-to-BF16 expansion limits the realized peak-memory reduction and
-   causes the measured TPOT regression.
-8. **No uncertainty from repeated jobs.** Per-example timing medians reduce local noise,
-   but canonical jobs were not repeated across independent machine runs.
-
-PriorityBench contains generated tool contracts and synthetic identifiers rather than
-personal data. The main foreseeable misuse is overgeneralizing the benchmark to claim
-production reliability; the frozen claim and public limitations are intended to prevent
-that interpretation.
+1. **Synthetic workload.** PriorityBench-A is generated from controlled templates and
+   exact scorers. It does not estimate deployment prevalence and is not LongBench/RULER.
+2. **Tagger–generator alignment.** The tagger uses visible role, length, and marker
+   signals resembling generator templates. The gold audit rules out leakage into
+   sink+recent but not all template alignment. Buried structure scores
+   0.675/0.650/0.675 versus FullKV 0.900/0.875/0.900.
+3. **Baseline fidelity.** SnapKV, PyramidKV, H2O, and hybrid are repository
+   reimplementations, not reference runs. Chunked H2O is particularly approximate.
+4. **Statistical scope.** Qwen structure–SnapKV is not significant (p=0.125). Jobs are
+   single canonical runs, not independent machine replications. Llama has no paired test.
+5. **Model and budget scope.** Qwen3-8B is primary. Llama gives a ceiling and negative
+   crossover, not universal transfer. Gemma is a low-scoring n=14 check.
+6. **Systems scope.** FullKV SDPA and mixed FlashInfer are different backends.
+   Measurements exclude batching, concurrent serving, throughput, and tails. Streamed-cold is smoke
+   only; payload is not peak because cold attention expands INT4 into BF16.
 
 ## 9. Reproducibility
 
-The repository records:
+| Item or claim | Revision, digest, or artifact / job |
+|---|---|
+| Qwen3-8B revision | `b968826d9c46dd6066d109eabc6255188de91218` |
+| Llama-3.1-8B revision | `0e9e39f249a16976918f6564b8830bc894c89659` |
+| Locked 240-example manifest | SHA256 `fc44b966725738c94008ba61ce57ad7366169b9c0be73074f8161d909ccfae89` |
+| Stress 120-example manifest | SHA256 `154c07b900a7be6a26a0381b0fa28d49e0847086eade0b98e9472663b578784f` |
+| P0 plain | `p0_w5_s{0,1,2}_kf25_token_*` |
+| Middle/buried controls | `p0{a,b,c,d,e,f}_*/summary.json` |
+| P1 attention baselines | `p1_attn_baselines_s{0,1,2}_kf25_*` |
+| H2O 0.683 | `p1_h2o_chunked_s0_kf25_gpu1_r1` plus P1 s1/s2 |
+| McNemar p=0.125 | `jobs/results/p1_structure_vs_snapkv_mcnemar.json` |
+| Retention audit | `audit_retention_{qwen,llama}_s{0,1,2}_kf25_summary.json` |
+| Llama k=0.25 | `p3_llama31_attn_s{0,1,2}_kf25_*` |
+| Llama k=0.05 | `p3_llama31_attn_s{0,1}_kf05_*` |
+| Locked INT4 | `mg_b_lock240_quality_gpu01_r1` |
+| Payload/peak | `mg_a_peak_mem_gpu5_r1` |
+| Latency | `d4_latency_m3c_gpu56_r1` |
+| P2 smoke | `p2_fi_stream_cold_16k_gpu1_r1` |
+| Gemma | `pub_c_gemma_reduced_gpu01_r6` |
+| Legacy page sweep | `docs/atlas_w4_structure_rows.jsonl` |
 
-- benchmark generator, templates, scorers, manifest, and SHA256 audit;
-- exact Qwen3-8B model revision and non-thinking generation settings;
-- frozen YAML configurations and job commands;
-- raw summaries, logs, and GPU snapshots for the main latency, memory, quality, and Gemma
-  jobs;
-- CPU unit tests for policies, packed storage, quantization, page management, and
-  FlashInfer state logic; and
-- `FINAL_RUN_MANIFEST.yaml` as the claim and artifact index.
-
-Generate and audit the locked dataset with:
-
-```bash
-PYTHONPATH=src uv run python scripts/mk_bench.py --mode w3_lock
-PYTHONPATH=src uv run python scripts/audit_bench.py
-```
-
-Regenerate the paper figures from frozen artifacts with:
+Regenerate the complete figure suite with:
 
 ```bash
 uv run python scripts/make_publication_figures.py
 ```
 
-GPU reproduction requires the pinned model weights, the `gpu` optional dependency set,
-and an H200-class CUDA environment. Canonical commands and result bundles are documented
-under `jobs/` and in `docs/REPRODUCIBILITY.md`.
+Build the paper from `paper/` with:
+
+```bash
+latexmk -pdf -interaction=nonstopmode -halt-on-error prioritykv.tex
+```
+
+The TeX source uses `\graphicspath{{figures/}{paper/figures/}}`, so figures also resolve
+when the repository root is the Overleaf project root.
 
 ## 10. Conclusion
 
-PriorityKV demonstrates that known agent-trace structure is a useful cache-allocation
-signal under aggressive eviction. It does not demonstrate that role-aware soft INT4
-placement improves quality, and it does not hide that the current packed implementation
-is slower per decoded token. The complete result is therefore a measurement result rather
-than a universal cache-compression claim: preserve protocol-critical state when dropping
-KV, use low precision for bytes when quality permits, and measure payload, peak, and
-latency as separate quantities.
+On synthetic Qwen agent traces, visible structure is a strong retention prior against
+position-blind eviction and matches or slightly exceeds the tested SnapKV-class
+reimplementations at a 25% budget, without a significant paired advantage. It does not
+beat FullKV under placement controls, transfer universally to Llama at a 5% budget, or
+combine complementarily with SnapKV in the tested hybrid. The separate mixed-precision
+study falsifies a role-aware INT4 quality win. Packed storage reduces payload, but BF16
+scratch limits peak reduction and produces a TPOT regression. The bounded conclusion is:
+use application-visible structure when state must be discarded, and measure precision,
+payload, peak, and latency as separate hypotheses. When a constrained cache must choose,
+retain the schema field before the pleasantry.
 
 ## References
 
-1. Vaswani et al. *Attention Is All You Need.* NeurIPS, 2017.
+1. Vaswani et al. *Attention Is All You Need.* Advances in Neural Information Processing
+   Systems 30, 2017.
 2. Kwon et al. *Efficient Memory Management for Large Language Model Serving with
-   PagedAttention.* SOSP, 2023. https://arxiv.org/abs/2309.06180
+   PagedAttention.* 29th ACM Symposium on Operating Systems Principles, 2023.
+   doi:10.1145/3600006.3613165.
 3. Xiao et al. *Efficient Streaming Language Models with Attention Sinks.* ICLR, 2024.
-   https://arxiv.org/abs/2309.17453
-4. Liu et al. *Scissorhands: Exploiting the Persistence of Importance Hypothesis for LLM
-   KV Cache Compression at Test Time.* NeurIPS, 2023.
-   https://arxiv.org/abs/2305.17118
-5. Zhang et al. *H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large
-   Language Models.* NeurIPS, 2023. https://arxiv.org/abs/2306.14048
-6. Li et al. *SnapKV: LLM Knows What You Are Looking for Before Generation.* NeurIPS,
-   2024. https://arxiv.org/abs/2404.14469
-7. Cai et al. *PyramidKV: Dynamic KV Cache Compression Based on Pyramidal Information
-   Funneling.* https://arxiv.org/abs/2406.02069
-8. Liu et al. *KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache.* ICML,
-   2024. https://arxiv.org/abs/2402.02750
-9. Ye et al. *FlashInfer: Efficient and Customizable Attention Engine for LLM Inference
-   Serving.* https://arxiv.org/abs/2501.01005
-10. Bai et al. *LongBench: A Bilingual, Multitask Benchmark for Long Context
-    Understanding.* ACL, 2024. https://arxiv.org/abs/2308.14508
-11. Hsieh et al. *RULER: What's the Real Context Size of Your Long-Context Language
-    Models?* COLM, 2024. https://arxiv.org/abs/2404.06654
-12. Yang et al. *Qwen3 Technical Report.* https://arxiv.org/abs/2505.09388
+4. Zhang et al. *H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large
+   Language Models.* Advances in Neural Information Processing Systems 36, 2023.
+5. Li et al. *SnapKV: LLM Knows What You Are Looking for Before Generation.* NeurIPS,
+   2024. doi:10.52202/079017-0722.
+6. Cai et al. *PyramidKV: Dynamic KV Cache Compression Based on Pyramidal Information
+   Funneling.* arXiv:2406.02069, 2024.
+7. Liu et al. *KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache.* ICML,
+   PMLR 235:32332–32344, 2024.
+8. Ye et al. *FlashInfer: Efficient and Customizable Attention Engine for LLM Inference
+   Serving.* Proceedings of Machine Learning and Systems 7, 2025.
+9. Bai et al. *LongBench: A Bilingual, Multitask Benchmark for Long Context
+   Understanding.* ACL, pages 3119–3137, 2024. doi:10.18653/v1/2024.acl-long.172.
+10. Hsieh et al. *RULER: What's the Real Context Size of Your Long-Context Language
+    Models?* COLM, 2024. arXiv:2404.06654.

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="445" viewBox="0 0 1200 445" role="img" aria-labelledby="title">
+<title id="title">Three independent PriorityKV hypotheses</title>
+<defs>
+<marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#20262E"/></marker>
+<pattern id="evictedHatch" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#ECEFF1"/><path d="M-2,8 L8,-2 M2,10 L10,2" stroke="#AEB5BC" stroke-width="1"/></pattern>
+</defs>
+<rect x="0.0" y="0.0" width="1200.0" height="445.0" fill="white" stroke="white" stroke-width="1.1"/>
+<text x="42.0" y="35.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="17.0" font-weight="700" fill="#20262E">One frozen benchmark, three independent questions</text>
+<rect x="42.0" y="75.0" width="190.0" height="80.0" fill="white" stroke="#20262E" stroke-width="1.2"/>
+<text x="137.0" y="103.0" text-anchor="middle" font-family="Liberation Sans,Arial,sans-serif" font-size="11.2" font-weight="700" fill="#5D6772">COMMON INPUT</text>
+<text x="137.0" y="127.0" text-anchor="middle" font-family="Liberation Sans,Arial,sans-serif" font-size="13.2" font-weight="700" fill="#20262E">PriorityBench-A</text>
+<text x="137.0" y="146.0" text-anchor="middle" font-family="Liberation Sans,Arial,sans-serif" font-size="10.8" font-weight="400" fill="#20262E">frozen model + seeds</text>
+<line x1="232.0" y1="115.0" x2="275.0" y2="115.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<line x1="275.0" y1="115.0" x2="275.0" y2="345.0" stroke="#20262E" stroke-width="1.0"/>
+<line x1="275.0" y1="122.0" x2="307.0" y2="122.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="312.0" y="82.0" width="78.0" height="80.0" fill="#2C6DA4" stroke="#2C6DA4" stroke-width="1.1"/>
+<text x="351.0" y="129.0" text-anchor="middle" font-family="Liberation Sans,Arial,sans-serif" font-size="16.0" font-weight="700" fill="white">H1</text>
+<rect x="390.0" y="82.0" width="240.0" height="80.0" fill="white" stroke="#D9DEE3" stroke-width="1.0"/>
+<text x="408.0" y="111.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="12.2" font-weight="700" fill="#20262E">Which tokens survive?</text>
+<text x="408.0" y="137.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="11.1" font-weight="400" fill="#5D6772">evict to k=0.25</text>
+<line x1="630.0" y1="122.0" x2="662.0" y2="122.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="667.0" y="82.0" width="196.0" height="80.0" fill="white" stroke="#D9DEE3" stroke-width="1.0"/>
+<text x="682.0" y="109.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="10.2" font-weight="400" fill="#5D6772">against</text>
+<text x="682.0" y="136.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="12.2" font-weight="700" fill="#20262E">blind + attention</text>
+<line x1="863.0" y1="122.0" x2="895.0" y2="122.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="900.0" y="82.0" width="258.0" height="80.0" fill="white" stroke="#2C6DA4" stroke-width="1.3"/>
+<text x="920.0" y="111.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="13.0" font-weight="700" fill="#2C6DA4">112 vs 1 (blind)</text>
+<text x="920.0" y="139.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="#20262E">108 attention · p=.125</text>
+<line x1="275.0" y1="238.0" x2="307.0" y2="238.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="312.0" y="198.0" width="78.0" height="80.0" fill="#A44747" stroke="#A44747" stroke-width="1.1"/>
+<text x="351.0" y="245.0" text-anchor="middle" font-family="Liberation Sans,Arial,sans-serif" font-size="16.0" font-weight="700" fill="white">H2</text>
+<rect x="390.0" y="198.0" width="240.0" height="80.0" fill="white" stroke="#D9DEE3" stroke-width="1.0"/>
+<text x="408.0" y="227.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="12.2" font-weight="700" fill="#20262E">How are tokens stored?</text>
+<text x="408.0" y="253.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="11.1" font-weight="400" fill="#5D6772">pack f=0.75 INT4</text>
+<line x1="630.0" y1="238.0" x2="662.0" y2="238.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="667.0" y="198.0" width="196.0" height="80.0" fill="white" stroke="#D9DEE3" stroke-width="1.0"/>
+<text x="682.0" y="225.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="10.2" font-weight="400" fill="#5D6772">against</text>
+<text x="682.0" y="252.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="12.2" font-weight="700" fill="#20262E">uniform placement</text>
+<line x1="863.0" y1="238.0" x2="895.0" y2="238.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="900.0" y="198.0" width="258.0" height="80.0" fill="white" stroke="#A44747" stroke-width="1.3"/>
+<text x="920.0" y="227.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="13.0" font-weight="700" fill="#A44747">0.8833 vs 0.8792</text>
+<text x="920.0" y="255.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="#20262E">no quality gain</text>
+<line x1="275.0" y1="354.0" x2="307.0" y2="354.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="312.0" y="314.0" width="78.0" height="80.0" fill="#72578D" stroke="#72578D" stroke-width="1.1"/>
+<text x="351.0" y="361.0" text-anchor="middle" font-family="Liberation Sans,Arial,sans-serif" font-size="16.0" font-weight="700" fill="white">H3</text>
+<rect x="390.0" y="314.0" width="240.0" height="80.0" fill="white" stroke="#D9DEE3" stroke-width="1.0"/>
+<text x="408.0" y="343.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="12.2" font-weight="700" fill="#20262E">What does it cost?</text>
+<text x="408.0" y="369.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="11.1" font-weight="400" fill="#5D6772">packed H200 path</text>
+<line x1="630.0" y1="354.0" x2="662.0" y2="354.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="667.0" y="314.0" width="196.0" height="80.0" fill="white" stroke="#D9DEE3" stroke-width="1.0"/>
+<text x="682.0" y="341.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="10.2" font-weight="400" fill="#5D6772">against</text>
+<text x="682.0" y="368.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="12.2" font-weight="700" fill="#20262E">FullKV</text>
+<line x1="863.0" y1="354.0" x2="895.0" y2="354.0" stroke="#20262E" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="900.0" y="314.0" width="258.0" height="80.0" fill="white" stroke="#72578D" stroke-width="1.3"/>
+<text x="920.0" y="343.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="13.0" font-weight="700" fill="#72578D">0.719× bytes</text>
+<text x="920.0" y="371.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="#20262E">1.20× TPOT</text>
+<text x="42.0" y="423.0" text-anchor="start" font-family="Liberation Sans,Arial,sans-serif" font-size="11.5" font-weight="400" fill="#5D6772">The eviction verdict does not imply an INT4-quality or latency verdict.</text>
+<text x="1158.0" y="423.0" text-anchor="end" font-family="Liberation Sans,Arial,sans-serif" font-size="11.5" font-weight="400" fill="#5D6772">Hybrid = SnapKV at k=0.25</text>
+</svg>
