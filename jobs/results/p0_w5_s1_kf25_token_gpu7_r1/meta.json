@@ -1,0 +1,15 @@
+{
+  "job_id": "p0_w5_s1_kf25_token_gpu7_r1",
+  "exit": 0,
+  "decision": null,
+  "pass": null,
+  "log_scratch": "/data/anupam/scratch/prioritykv/logs/p0_w5_s1_kf25_token_gpu7_r1.log",
+  "log_bytes": 63027,
+  "shipped_full_log": true,
+  "truncated": false,
+  "log_tail_bytes": 524288,
+  "log_full_max_bytes": 2097152,
+  "has_summary": true,
+  "has_traceback": true,
+  "has_nvidia_smi": false
+}
