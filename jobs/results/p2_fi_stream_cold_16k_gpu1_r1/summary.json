@@ -1,0 +1,33 @@
+{
+  "manifest_id": "p2_fi_stream_cold_16k",
+  "job_id": "p2_fi_stream_cold_16k_gpu1_r1",
+  "n": 3,
+  "fullkv_mean": 1.0,
+  "cold_attend": "streamed",
+  "int4_frac": 0.75,
+  "arms": {
+    "full": {
+      "mean": 1.0,
+      "delta_minus_full": 0.0,
+      "int4_real": 0.0,
+      "peak_gib": 33.5589
+    },
+    "uniform": {
+      "mean": 1.0,
+      "delta_minus_full": 0.0,
+      "int4_real": 0.75,
+      "peak_gib": 36.4331
+    },
+    "structure": {
+      "mean": 1.0,
+      "delta_minus_full": 0.0,
+      "int4_real": 0.75,
+      "peak_gib": 36.4331
+    }
+  },
+  "smoke_only": true,
+  "note": "Reconstructed from log_full.txt; original run did not ship summary.json. Not a systems claim.",
+  "exit": 0,
+  "finished_at": "2026-07-19T05:45:22Z",
+  "fi_parity": "PARITY_PASS"
+}

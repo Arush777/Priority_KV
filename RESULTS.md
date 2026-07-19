@@ -99,7 +99,8 @@ Phrase as **matches or slightly exceeds** SnapKV-class; hybrid **equals** SnapKV
 
 ### P2 — streamed cold attend (smoke)
 
-Job `p2_fi_stream_cold_16k_gpu1_r1`: exit=0. Log peak_gib ≈ **36.4** (structure/uniform). Not a systems result; cite frozen D4/MG for latency/peak.
+Job `p2_fi_stream_cold_16k_gpu1_r1`: exit=0. Log peak_gib ≈ **36.4** (structure/uniform).
+`summary.json` reconstructed from `log_full.txt` (smoke hygiene). Not a systems result; cite frozen D4/MG for latency/peak.
 
 ### P3 — Llama-3.1-8B
 

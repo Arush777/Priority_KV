@@ -1,0 +1,1088 @@
+{
+  "config": "configs/p3_llama31_attn_s2_kf25.yaml",
+  "manifest_id": "p3_llama31_attn_s2_kf25",
+  "model_path": "meta-llama/Llama-3.1-8B-Instruct",
+  "n": 40,
+  "buried_state": false,
+  "relocate_middle": false,
+  "keep_frac": 0.25,
+  "sink_tokens": 16,
+  "force_recent": 128,
+  "mean_gold_in_sink_recent_frac": 0.0,
+  "frac_examples_gold_fully_in_sink_recent": 0.0,
+  "mean_n_tokens": 13280.775,
+  "mean_n_gold_tokens": 49.575,
+  "mean_uniform_gold_kept_frac": 0.0,
+  "frac_uniform_gold_fully_evicted": 1.0,
+  "mean_structure_gold_kept_frac": 1.0,
+  "frac_structure_gold_fully_evicted": 0.0,
+  "mean_random_gold_kept_frac": 0.0,
+  "frac_random_gold_fully_evicted": 1.0,
+  "verdict": "GOLD_MOSTLY_EVICTABLE \u2014 majority of gold outside sink+recent",
+  "rows": [
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20270973",
+      "category": "instruction_supersession",
+      "n_tokens": 8590,
+      "n_gold_tokens": 106,
+      "gold_token_spans": [
+        [
+          76,
+          103
+        ],
+        [
+          103,
+          122
+        ],
+        [
+          122,
+          162
+        ],
+        [
+          162,
+          182
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20271074",
+      "category": "instruction_supersession",
+      "n_tokens": 9077,
+      "n_gold_tokens": 107,
+      "gold_token_spans": [
+        [
+          76,
+          102
+        ],
+        [
+          102,
+          120
+        ],
+        [
+          120,
+          161
+        ],
+        [
+          161,
+          183
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20271175",
+      "category": "instruction_supersession",
+      "n_tokens": 9027,
+      "n_gold_tokens": 105,
+      "gold_token_spans": [
+        [
+          76,
+          102
+        ],
+        [
+          102,
+          120
+        ],
+        [
+          120,
+          160
+        ],
+        [
+          160,
+          181
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20271276",
+      "category": "instruction_supersession",
+      "n_tokens": 9164,
+      "n_gold_tokens": 107,
+      "gold_token_spans": [
+        [
+          76,
+          102
+        ],
+        [
+          102,
+          120
+        ],
+        [
+          120,
+          161
+        ],
+        [
+          161,
+          183
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20271377",
+      "category": "instruction_supersession",
+      "n_tokens": 8779,
+      "n_gold_tokens": 106,
+      "gold_token_spans": [
+        [
+          76,
+          103
+        ],
+        [
+          103,
+          122
+        ],
+        [
+          122,
+          162
+        ],
+        [
+          162,
+          182
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.format_flip.v2__c8000__s20271485",
+      "category": "instruction_supersession",
+      "n_tokens": 8425,
+      "n_gold_tokens": 107,
+      "gold_token_spans": [
+        [
+          76,
+          102
+        ],
+        [
+          102,
+          120
+        ],
+        [
+          120,
+          161
+        ],
+        [
+          161,
+          183
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20270919",
+      "category": "instruction_supersession",
+      "n_tokens": 17248,
+      "n_gold_tokens": 68,
+      "gold_token_spans": [
+        [
+          45,
+          65
+        ],
+        [
+          65,
+          75
+        ],
+        [
+          75,
+          103
+        ],
+        [
+          103,
+          113
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271020",
+      "category": "instruction_supersession",
+      "n_tokens": 18556,
+      "n_gold_tokens": 66,
+      "gold_token_spans": [
+        [
+          45,
+          64
+        ],
+        [
+          64,
+          74
+        ],
+        [
+          74,
+          101
+        ],
+        [
+          101,
+          111
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271128",
+      "category": "instruction_supersession",
+      "n_tokens": 18228,
+      "n_gold_tokens": 68,
+      "gold_token_spans": [
+        [
+          45,
+          65
+        ],
+        [
+          65,
+          75
+        ],
+        [
+          75,
+          103
+        ],
+        [
+          103,
+          113
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271229",
+      "category": "instruction_supersession",
+      "n_tokens": 17428,
+      "n_gold_tokens": 66,
+      "gold_token_spans": [
+        [
+          45,
+          64
+        ],
+        [
+          64,
+          74
+        ],
+        [
+          74,
+          101
+        ],
+        [
+          101,
+          111
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271330",
+      "category": "instruction_supersession",
+      "n_tokens": 18118,
+      "n_gold_tokens": 66,
+      "gold_token_spans": [
+        [
+          45,
+          64
+        ],
+        [
+          64,
+          74
+        ],
+        [
+          74,
+          101
+        ],
+        [
+          101,
+          111
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271431",
+      "category": "instruction_supersession",
+      "n_tokens": 17366,
+      "n_gold_tokens": 68,
+      "gold_token_spans": [
+        [
+          45,
+          65
+        ],
+        [
+          65,
+          75
+        ],
+        [
+          75,
+          103
+        ],
+        [
+          103,
+          113
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "instruction_supersession.language_flip.v2__c16000__s20271532",
+      "category": "instruction_supersession",
+      "n_tokens": 18024,
+      "n_gold_tokens": 68,
+      "gold_token_spans": [
+        [
+          45,
+          65
+        ],
+        [
+          65,
+          75
+        ],
+        [
+          75,
+          103
+        ],
+        [
+          103,
+          113
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.file_path.v2__c16000__s20281020",
+      "category": "multi_turn_state",
+      "n_tokens": 18047,
+      "n_gold_tokens": 39,
+      "gold_token_spans": [
+        [
+          35,
+          57
+        ],
+        [
+          57,
+          74
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.file_path.v2__c16000__s20281330",
+      "category": "multi_turn_state",
+      "n_tokens": 17089,
+      "n_gold_tokens": 39,
+      "gold_token_spans": [
+        [
+          35,
+          57
+        ],
+        [
+          57,
+          74
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.file_path.v2__c8000__s20280973",
+      "category": "multi_turn_state",
+      "n_tokens": 8642,
+      "n_gold_tokens": 43,
+      "gold_token_spans": [
+        [
+          35,
+          59
+        ],
+        [
+          59,
+          78
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.file_path.v2__c8000__s20281276",
+      "category": "multi_turn_state",
+      "n_tokens": 9196,
+      "n_gold_tokens": 39,
+      "gold_token_spans": [
+        [
+          35,
+          57
+        ],
+        [
+          57,
+          74
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c16000__s20280955",
+      "category": "multi_turn_state",
+      "n_tokens": 17487,
+      "n_gold_tokens": 32,
+      "gold_token_spans": [
+        [
+          53,
+          72
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c16000__s20281258",
+      "category": "multi_turn_state",
+      "n_tokens": 18626,
+      "n_gold_tokens": 32,
+      "gold_token_spans": [
+        [
+          53,
+          72
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c16000__s20281568",
+      "category": "multi_turn_state",
+      "n_tokens": 16742,
+      "n_gold_tokens": 32,
+      "gold_token_spans": [
+        [
+          53,
+          72
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c8000__s20281110",
+      "category": "multi_turn_state",
+      "n_tokens": 8402,
+      "n_gold_tokens": 32,
+      "gold_token_spans": [
+        [
+          53,
+          72
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.order_id.v2__c8000__s20281413",
+      "category": "multi_turn_state",
+      "n_tokens": 8683,
+      "n_gold_tokens": 32,
+      "gold_token_spans": [
+        [
+          53,
+          72
+        ],
+        [
+          72,
+          85
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.user_pref.v2__c16000__s20281092",
+      "category": "multi_turn_state",
+      "n_tokens": 17157,
+      "n_gold_tokens": 31,
+      "gold_token_spans": [
+        [
+          35,
+          51
+        ],
+        [
+          51,
+          66
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.user_pref.v2__c16000__s20281395",
+      "category": "multi_turn_state",
+      "n_tokens": 17110,
+      "n_gold_tokens": 33,
+      "gold_token_spans": [
+        [
+          35,
+          52
+        ],
+        [
+          52,
+          68
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.user_pref.v2__c8000__s20281038",
+      "category": "multi_turn_state",
+      "n_tokens": 9173,
+      "n_gold_tokens": 33,
+      "gold_token_spans": [
+        [
+          35,
+          52
+        ],
+        [
+          52,
+          68
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "multi_turn_state.user_pref.v2__c8000__s20281348",
+      "category": "multi_turn_state",
+      "n_tokens": 9315,
+      "n_gold_tokens": 31,
+      "gold_token_spans": [
+        [
+          35,
+          51
+        ],
+        [
+          51,
+          66
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c8000__s20260973",
+      "category": "tool_schema",
+      "n_tokens": 8543,
+      "n_gold_tokens": 29,
+      "gold_token_spans": [
+        [
+          335,
+          351
+        ],
+        [
+          351,
+          364
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.create_ticket.v1__c8000__s20261377",
+      "category": "tool_schema",
+      "n_tokens": 9096,
+      "n_gold_tokens": 29,
+      "gold_token_spans": [
+        [
+          335,
+          351
+        ],
+        [
+          351,
+          364
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c16000__s20261092",
+      "category": "tool_schema",
+      "n_tokens": 17363,
+      "n_gold_tokens": 29,
+      "gold_token_spans": [
+        [
+          439,
+          454
+        ],
+        [
+          454,
+          468
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.http_get.v1__c16000__s20261496",
+      "category": "tool_schema",
+      "n_tokens": 16749,
+      "n_gold_tokens": 29,
+      "gold_token_spans": [
+        [
+          439,
+          454
+        ],
+        [
+          454,
+          468
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.read_file.v1__c16000__s20261193",
+      "category": "tool_schema",
+      "n_tokens": 17100,
+      "n_gold_tokens": 51,
+      "gold_token_spans": [
+        [
+          403,
+          429
+        ],
+        [
+          429,
+          454
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c8000__s20261009",
+      "category": "tool_schema",
+      "n_tokens": 9083,
+      "n_gold_tokens": 23,
+      "gold_token_spans": [
+        [
+          335,
+          348
+        ],
+        [
+          348,
+          358
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.schedule_job.v1__c8000__s20261413",
+      "category": "tool_schema",
+      "n_tokens": 9138,
+      "n_gold_tokens": 23,
+      "gold_token_spans": [
+        [
+          335,
+          348
+        ],
+        [
+          348,
+          358
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20261038",
+      "category": "tool_schema",
+      "n_tokens": 8377,
+      "n_gold_tokens": 36,
+      "gold_token_spans": [
+        [
+          351,
+          369
+        ],
+        [
+          369,
+          387
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.search_docs.v1__c8000__s20261449",
+      "category": "tool_schema",
+      "n_tokens": 8983,
+      "n_gold_tokens": 36,
+      "gold_token_spans": [
+        [
+          351,
+          369
+        ],
+        [
+          369,
+          387
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.send_email.v1__c16000__s20261294",
+      "category": "tool_schema",
+      "n_tokens": 18581,
+      "n_gold_tokens": 28,
+      "gold_token_spans": [
+        [
+          308,
+          322
+        ],
+        [
+          322,
+          336
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20260991",
+      "category": "tool_schema",
+      "n_tokens": 18575,
+      "n_gold_tokens": 28,
+      "gold_token_spans": [
+        [
+          297,
+          313
+        ],
+        [
+          313,
+          325
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.set_config.v1__c16000__s20261395",
+      "category": "tool_schema",
+      "n_tokens": 18279,
+      "n_gold_tokens": 28,
+      "gold_token_spans": [
+        [
+          297,
+          313
+        ],
+        [
+          313,
+          325
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c8000__s20261074",
+      "category": "tool_schema",
+      "n_tokens": 8996,
+      "n_gold_tokens": 30,
+      "gold_token_spans": [
+        [
+          362,
+          380
+        ],
+        [
+          380,
+          392
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    },
+    {
+      "example_id": "tool_schema.sql_query.v1__c8000__s20261485",
+      "category": "tool_schema",
+      "n_tokens": 8669,
+      "n_gold_tokens": 28,
+      "gold_token_spans": [
+        [
+          362,
+          379
+        ],
+        [
+          379,
+          390
+        ]
+      ],
+      "gold_in_sink_recent_frac": 0.0,
+      "gold_fully_in_sink_recent": false,
+      "uniform_gold_kept_frac": 0.0,
+      "uniform_gold_fully_evicted": true,
+      "structure_gold_kept_frac": 1.0,
+      "structure_gold_fully_evicted": false,
+      "random_gold_kept_frac": 0.0,
+      "random_gold_fully_evicted": true
+    }
+  ]
+}

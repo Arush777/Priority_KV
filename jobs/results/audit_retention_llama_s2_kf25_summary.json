@@ -1,0 +1,22 @@
+{
+  "config": "configs/p3_llama31_attn_s2_kf25.yaml",
+  "manifest_id": "p3_llama31_attn_s2_kf25",
+  "model_path": "meta-llama/Llama-3.1-8B-Instruct",
+  "n": 40,
+  "buried_state": false,
+  "relocate_middle": false,
+  "keep_frac": 0.25,
+  "sink_tokens": 16,
+  "force_recent": 128,
+  "mean_gold_in_sink_recent_frac": 0.0,
+  "frac_examples_gold_fully_in_sink_recent": 0.0,
+  "mean_n_tokens": 13280.775,
+  "mean_n_gold_tokens": 49.575,
+  "mean_uniform_gold_kept_frac": 0.0,
+  "frac_uniform_gold_fully_evicted": 1.0,
+  "mean_structure_gold_kept_frac": 1.0,
+  "frac_structure_gold_fully_evicted": 0.0,
+  "mean_random_gold_kept_frac": 0.0,
+  "frac_random_gold_fully_evicted": 1.0,
+  "verdict": "GOLD_MOSTLY_EVICTABLE \u2014 majority of gold outside sink+recent"
+}
