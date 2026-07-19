@@ -1,0 +1,30 @@
+# P0 replication: w5 slice 1, keep_frac=0.25, token, plain.
+manifest_id: w5_stress_s1_kf25_token
+rev: 1
+bench_manifest: data/prioritybench/manifests/w5_stress_large.json
+selection:
+  splits: [calibration, validation, test]
+  context_lengths: [8000, 16000]
+  all_matching: true
+  replication_slice: 1
+model:
+  local_dirname: Qwen3-8B
+  hub_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+decode:
+  max_new_tokens: 64
+  temperature: 0.0
+vllm:
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.75
+  max_model_len: 32768
+keep:
+  keep_frac: 0.25
+  sink_tokens: 16
+  force_recent: 128
+  seed: 0
+  page_tokens: 16
+  granularity: token
+  policies: [uniform, structure, random, keep_all]
+buried_state: false
+relocate_middle: false

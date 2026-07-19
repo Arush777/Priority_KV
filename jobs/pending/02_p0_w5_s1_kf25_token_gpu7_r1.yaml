@@ -1,0 +1,5 @@
+id: p0_w5_s1_kf25_token_gpu7_r1
+command: python scripts/run_stress_structured.py --config configs/w5_stress_s1_kf25_token.yaml --out-tag p0_w5_s1_kf25_token_gpu7_r1
+gpus: "7"
+sync_cuda: false
+timeout_sec: 28800

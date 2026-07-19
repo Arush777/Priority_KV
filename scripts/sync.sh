@@ -22,7 +22,7 @@ if [[ ! -f .env ]]; then
 fi
 
 if [[ "$WITH_CUDA" -eq 1 ]]; then
-  uv sync --extra gpu --extra dev -q
+  uv sync --extra gpu --extra kvpress --extra dev -q
 else
   uv sync --extra dev -q
 fi
