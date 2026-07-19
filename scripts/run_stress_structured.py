@@ -19,7 +19,8 @@ if _dotenv.exists():
             continue
         k, _, v = line.partition("=")
         os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
-os.environ.setdefault("CUDA_VISIBLE_DEVICES", "6,7")
+# Prefer job YAML CUDA_VISIBLE_DEVICES; default to a single GPU.
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")
 
 from prioritykv.structured_stress import run_structured_stress  # noqa: E402
@@ -31,6 +32,11 @@ def main() -> int:
         "--config", default=str(ROOT / "configs" / "stress_structured_25.yaml")
     )
     ap.add_argument("--out", default=None)
+    ap.add_argument(
+        "--out-tag",
+        default=None,
+        help="Write under $PRIORITYKV_SCRATCH/runs/stress_structured/<tag>.json",
+    )
     ap.add_argument("--reuse-full", default=None)
     ap.add_argument(
         "--buried",
@@ -43,9 +49,18 @@ def main() -> int:
         help="Move gold state turns to mid-context (FixedHot vs P2 discriminator)",
     )
     args = ap.parse_args()
+    out_path = Path(args.out) if args.out else None
+    if out_path is None and args.out_tag:
+        scratch = os.environ.get("PRIORITYKV_SCRATCH")
+        base = (
+            Path(scratch) / "runs" / "stress_structured"
+            if scratch
+            else ROOT / "runs" / "stress_structured"
+        )
+        out_path = base / f"{args.out_tag}.json"
     result = run_structured_stress(
         Path(args.config),
-        Path(args.out) if args.out else None,
+        out_path,
         reuse_full_path=Path(args.reuse_full) if args.reuse_full else None,
         buried=True if args.buried else None,
         relocate_middle=True if args.relocate_middle else None,
@@ -53,9 +68,9 @@ def main() -> int:
     print(
         f"n={result['n']} full={result['fullkv_mean']:.3f} "
         f"keep_frac={result['keep']['keep_frac']} "
-        f"buried={result.get('buried_state')} middle={result.get('relocate_middle')} "
-        f"out={result['out_path']}"
+        f"buried={result.get('buried_state')} middle={result.get('relocate_middle')}"
     )
+    print(f"out={result['out_path']}")
     for p, arm in result["arms"].items():
         cats = " ".join(
             f"{k}:{v['policy_mean']:.2f}" for k, v in arm["by_category"].items()

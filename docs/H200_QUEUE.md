@@ -70,7 +70,8 @@ done'
 
 ## Hard rules
 
-- **Max 2 GPUs** per job (`gpus: "0,1"` or `"5,6"` …).
+- **Max 2 GPUs** per job (`gpus: "0,1"` or `"5,6"` …). **Prefer 1 GPU** whenever the
+  workload fits (set `gpus: "7"` or a single free index from the latest diag).
 - Never put secrets in job YAML; `HF_TOKEN` stays in H200 `.env`.
 - Allowlisted commands only: `python scripts/<name>.py …`.
 - Disk/scratch unconstrained under `$PRIORITYKV_SCRATCH`.
@@ -79,3 +80,4 @@ done'
 
 Enqueue `diag_nvidia_smi_*` — worker captures `nvidia-smi` into `jobs/results/<id>/`.
 After status push, agent reads that file via `pull_job.sh` (still no SSH).
+Latest free-GPU snapshot (r7): **GPU 7 free** — use `gpus: "7"` for new 1-GPU jobs.

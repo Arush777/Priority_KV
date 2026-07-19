@@ -18,11 +18,13 @@ from prioritybench.generate import (  # noqa: E402
     W2B_MASTER_SEED,
     W2D_MASTER_SEED,
     W3_MASTER_SEED,
+    W5_STRESS_SEED,
     generate_tool_schema_pilot,
     generate_w2_mixed_pilot,
     generate_w2b_pilot,
     generate_w2d_pilot,
     generate_w3_lock_pilot,
+    generate_w5_stress_large_pilot,
     gold_tool_call,
     write_split_dirs,
 )
@@ -56,9 +58,9 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument(
         "--mode",
-        choices=["w1", "w2", "w2b", "w2d", "w3_lock"],
+        choices=["w1", "w2", "w2b", "w2d", "w3_lock", "w5_stress_large"],
         default="w1",
-        help="w1=tool; w2=tool+super; w2b=~145 v1; w2d=~145 v2; w3_lock=240 locked",
+        help="w1=tool; …; w3_lock=240 locked; w5_stress_large=P0 120-ex stress pool",
     )
     ap.add_argument(
         "--out-dir",
@@ -74,6 +76,7 @@ def main() -> int:
             "w2b": "w2b_pilot.json",
             "w2d": "w2d_pilot.json",
             "w3_lock": "w3_lock.json",
+            "w5_stress_large": "w5_stress_large.json",
         }[args.mode]
         args.manifest = ROOT / "data" / "prioritybench" / "manifests" / name
     if args.seed is None:
@@ -83,6 +86,7 @@ def main() -> int:
             "w2b": W2B_MASTER_SEED,
             "w2d": W2D_MASTER_SEED,
             "w3_lock": W3_MASTER_SEED,
+            "w5_stress_large": W5_STRESS_SEED,
         }[args.mode]
 
     if args.mode == "w1":
@@ -93,6 +97,8 @@ def main() -> int:
         examples = generate_w2b_pilot(master_seed=args.seed)
     elif args.mode == "w2d":
         examples = generate_w2d_pilot(master_seed=args.seed)
+    elif args.mode == "w5_stress_large":
+        examples = generate_w5_stress_large_pilot(master_seed=args.seed)
     else:
         examples = generate_w3_lock_pilot(master_seed=args.seed)
 
@@ -143,10 +149,23 @@ def main() -> int:
                 "approx_tokens": ex.meta.get("approx_tokens"),
                 "buried_state": bool(ex.meta.get("buried_state")),
                 "w2d_preserved": bool(ex.meta.get("w2d_preserved")),
+                "replication_slice": ex.meta.get("replication_slice"),
             }
             for ex in examples
         ],
     }
+    if args.mode == "w5_stress_large":
+        manifest["replication"] = {
+            "n_slices": 3,
+            "slice_counts": dict(
+                Counter(
+                    int(ex.meta.get("replication_slice", -1))
+                    for ex in examples
+                    if ex.meta.get("replication_slice") is not None
+                )
+            ),
+            "note": "Three disjoint ~40-example replications; run each slice separately.",
+        }
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"n={len(examples)} splits={counts} manifest={args.manifest}")

@@ -148,8 +148,11 @@ def run_structured_stress(
                     "example_id": ex.example_id,
                     "category": cat,
                     "context_length": ex.context_length,
+                    "replication_slice": (ex.meta or {}).get("replication_slice"),
                     "fullkv_score": sf,
                     "policy_score": sp,
+                    "fullkv_pass": sf >= 1.0,
+                    "policy_pass": sp >= 1.0,
                     "fullkv_text": ft,
                     "policy_text": txt,
                     "meta": meta,
@@ -178,6 +181,28 @@ def run_structured_stress(
             "rows": detail,
         }
 
+    # Flat per-example table for stats (McNemar / Wilson / bootstrap).
+    example_rows: list[dict[str, Any]] = []
+    for ex in examples:
+        eid = ex.example_id
+        ft = full_texts[eid]
+        sf = float(score_example(ex, ft))
+        row: dict[str, Any] = {
+            "example_id": eid,
+            "category": ex.category.value,
+            "context_length": ex.context_length,
+            "replication_slice": (ex.meta or {}).get("replication_slice"),
+            "fullkv_score": sf,
+            "fullkv_pass": sf >= 1.0,
+        }
+        for policy in policies:
+            for d in arms[policy]["rows"]:
+                if d["example_id"] == eid:
+                    row[f"{policy}_score"] = d["policy_score"]
+                    row[f"{policy}_pass"] = d["policy_pass"]
+                    break
+        example_rows.append(row)
+
     result = {
         "manifest_id": cfg["manifest_id"],
         "rev": cfg["rev"],
@@ -186,6 +211,7 @@ def run_structured_stress(
         "buried_state": use_buried,
         "relocate_middle": use_middle,
         "relocate_position": middle_pos if use_middle else None,
+        "selection": cfg.get("selection"),
         "keep": keep_cfg.__dict__,
         "policies": policies,
         "fullkv_mean": _mean(
@@ -193,6 +219,7 @@ def run_structured_stress(
         ),
         "arms": {p: {k: v for k, v in arms[p].items() if k != "rows"} for p in policies},
         "arms_detail": arms,
+        "example_rows": example_rows,
         "seconds": seconds,
         "selected_ids": [ex.example_id for ex in examples],
     }

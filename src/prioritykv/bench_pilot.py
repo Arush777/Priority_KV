@@ -99,6 +99,22 @@ def materialize_examples(
                 scoring=ex.scoring,
                 meta={**dict(ex.meta), "buried_state": True, "parent_id": ex.example_id},
             )
+        # Preserve selection metadata from the manifest row (e.g. replication_slice).
+        meta_extra = {}
+        if row.get("replication_slice") is not None:
+            meta_extra["replication_slice"] = int(row["replication_slice"])
+        if meta_extra:
+            ex = PE(
+                example_id=ex.example_id,
+                category=ex.category,
+                split=ex.split,
+                context_length=ex.context_length,
+                template_id=ex.template_id,
+                seed=ex.seed,
+                messages=ex.messages,
+                scoring=ex.scoring,
+                meta={**dict(ex.meta), **meta_extra},
+            )
         if ex.example_id != eid:
             raise ValueError(f"id mismatch: got {ex.example_id} expected {eid}")
         examples.append(ex)

@@ -31,6 +31,8 @@ W2_MASTER_SEED = 20260721
 W2B_MASTER_SEED = 20260728
 W2D_MASTER_SEED = 20260804
 W3_MASTER_SEED = 20260811
+# P0 large stress pool (independent of w3_lock). Do not reuse for lock SHA.
+W5_STRESS_SEED = 20260901
 
 # Split fractions from plan §3.2 (calibration 40% / validation 20% / test 40%).
 _SPLIT_THRESHOLDS = (
@@ -305,6 +307,69 @@ def generate_w3_lock_pilot(
                 f"w3_lock failed {cat.value}: got {_count(cat)}/80 "
                 f"(buried={_buried(cat)})"
             )
+    return out
+
+
+def generate_w5_stress_large_pilot(
+    *,
+    master_seed: int = W5_STRESS_SEED,
+    context_lengths: Sequence[int] = (8000, 16000),
+    n_per_category: int = 40,
+    n_slices: int = 3,
+) -> List[PriorityExample]:
+    """P0 stress pool: ``n_per_category`` × 3 cats = 120 examples, 3 replication slices.
+
+    Fresh seeds — **does not** preserve or mutate ``w3_lock``. Each example gets
+    ``meta.replication_slice`` ∈ {0,1,2} so configs can run independent 40-example
+    replications (≈13–14 per category per slice).
+    """
+    tools = _generate_round_robin(
+        n_per_category,
+        master_seed=master_seed,
+        context_lengths=context_lengths,
+        templates=TOOL_SCHEMA_TEMPLATES,
+    )
+    supers = _generate_round_robin(
+        n_per_category,
+        master_seed=master_seed + 10_000,
+        context_lengths=context_lengths,
+        templates=INSTRUCTION_SUPERSESSION_TEMPLATES_V2,
+    )
+    multi = _generate_round_robin(
+        n_per_category,
+        master_seed=master_seed + 20_000,
+        context_lengths=context_lengths,
+        templates=MULTI_TURN_STATE_TEMPLATES_V2,
+    )
+    out: List[PriorityExample] = []
+    # Global round-robin after category-sorted concat → exactly n_slices equal
+    # pools (40/40/40 for n=120) while keeping ~equal category mix per slice.
+    ordered: List[PriorityExample] = []
+    for group in (tools, supers, multi):
+        ordered.extend(sorted(group, key=lambda e: e.example_id))
+    ordered.sort(key=lambda e: (e.category.value, e.example_id))
+    for i, ex in enumerate(ordered):
+        slice_id = i % n_slices
+        out.append(
+            PriorityExample(
+                example_id=ex.example_id,
+                category=ex.category,
+                split=ex.split,
+                context_length=ex.context_length,
+                template_id=ex.template_id,
+                seed=ex.seed,
+                messages=ex.messages,
+                scoring=ex.scoring,
+                meta={
+                    **dict(ex.meta),
+                    "buried_state": False,
+                    "w2d_preserved": False,
+                    "replication_slice": slice_id,
+                    "generator": "prioritybench.generate.w5_stress_large",
+                    "master_seed_ref": master_seed,
+                },
+            )
+        )
     return out
 
 
