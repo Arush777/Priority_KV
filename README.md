@@ -16,30 +16,35 @@ dialogue in one KV cache. Losing the wrong tokens can look fine on average metri
 while silently breaking agent behavior. PriorityKV asks whether **application-visible
 message structure** should decide what to keep (and at what precision).
 
-Scoped conclusions from the evidence:
+Scoped conclusions (see [`docs/EVIDENCE.md`](docs/EVIDENCE.md) for the audit trail):
 
-1. **Eviction (strong on Qwen):** at matched keep budgets, structure-aware retention
-   beats role-blind keep and common attention eviction (SnapKV / Pyramid / hybrid).
-2. **Quantization (falsified):** soft INT4 at `int4_frac=0.75` does **not** open a
-   PriorityBench quality gap vs FullKV.
-3. **Systems:** packed storage cuts payload bytes; peak/latency are reported with the
-   FI cold-scratch caveat — not as a free VRAM win.
-4. **Transfer (honest):** Llama-3.1-8B at kf=0.25 is ceiling-saturated; do not claim a
-   universal structure≫SnapKV transfer.
+1. **Eviction vs position-blind (strong on Qwen):** at matched keep budgets, structure-aware
+   retention far exceeds uniform/random keep.
+2. **Vs SnapKV-class (Qwen, cautious):** structure **matches or slightly exceeds** SnapKV /
+   Pyramid / hybrid (0.933 vs 0.900, n=120; McNemar **p=0.125**, not significant). Hybrid
+   does **not** improve on SnapKV.
+3. **Vs FullKV:** **not claimed.** Mid-context control ties FullKV; buried control loses to it.
+4. **Quantization (falsified):** soft INT4 at `int4_frac=0.75` does not open a PriorityBench gap.
+5. **Transfer:** Llama kf=0.25 is saturated for all arms; at kf=0.05 SnapKV outperforms structure
+   (two slices). Treat as honest negative / non-discriminative until a gold-region audit.
+6. **Systems:** packed payload + frozen D4/MG latency/peak; P2 streamed-cold is **smoke only**
+   (~36 GiB peak in log).
 
 ## Key results
 
-Qwen3-8B (`b968826d…`) and Llama-3.1-8B-Instruct (`0e9e39f…`) on NVIDIA H200.
-Full tables and job IDs: [`RESULTS.md`](RESULTS.md) · [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
+Full tables, job IDs, and external-audit checklist: [`docs/EVIDENCE.md`](docs/EVIDENCE.md) · [`RESULTS.md`](RESULTS.md).
 
 | Experiment | Result |
 |---|---|
 | P0 token keep 25% (Qwen, n=120) | structure **0.933** vs uniform/random **~0.008** |
-| P1 vs SnapKV/H2O/Pyramid (Qwen, n=120) | structure **0.933** > SnapKV/Pyr/hybrid **0.900** > H2O **~0.68** |
-| P3 same protocol (Llama, n=120, kf=0.25) | all arms **1.000** (saturated / SnapKV matches) |
+| P0 mid-context control (s0) | structure = full = **0.975**; uniform/random **0.025** |
+| P0 buried control (s0) | structure **0.675** < full **0.900**; uniform/random **0** |
+| P1 vs SnapKV/Pyr/hybrid (Qwen, n=120) | **0.933** vs **0.900** (112 vs 108; McNemar **p=0.125**) |
+| P1 H2O chunked (pooled) | **0.683** = (0.725+0.625+0.700)/3 |
+| P3 Llama kf=0.25 (n=120) | all arms **1.000** (saturated) |
+| P3 Llama kf=0.05 (s0+s1) | SnapKV **1.0** > structure **0.875 / 0.900** |
 | Locked mixed quality (`n=240`) | FullKV **0.8875**, structure **0.8833**, uniform **0.8792** |
-| Packed payload / modeled bytes | **0.719× / 0.473×** FullKV |
-| Peak CUDA / E2E / TPOT | **0.868×** · **1.11–1.12×** · **1.20–1.21×** FullKV |
+| Packed payload / peak / E2E / TPOT | **0.719×** · **0.868×** · **1.11–1.12×** · **1.20–1.21×** (frozen D4/MG) |
 
 ![Matched keep-budget results](paper/figures/reliability_keep_sweep.svg)
 
@@ -47,8 +52,8 @@ Full tables and job IDs: [`RESULTS.md`](RESULTS.md) · [`docs/EVIDENCE.md`](docs
 
 | Artifact | Purpose |
 |---|---|
+| [`docs/EVIDENCE.md`](docs/EVIDENCE.md) | P0–P3 track + **external audit response** |
 | [`RESULTS.md`](RESULTS.md) | Canonical metrics and claim boundary |
-| [`docs/EVIDENCE.md`](docs/EVIDENCE.md) | P0–P3 evidence track and claim strength |
 | [`docs/DATASET.md`](docs/DATASET.md) | PriorityBench-A tasks, strata, and generation |
 | [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) | Frozen model, benchmark, configs, and job IDs |
 | [`paper/prioritykv.tex`](paper/prioritykv.tex) | Standalone arXiv source |
@@ -110,12 +115,11 @@ Do not run GPU code on a login node; use at most two H200 GPUs per job.
 ## Scope and limitations
 
 - PriorityBench-A is synthetic and agent-specific; it is not LongBench or RULER.
-- Early matched-eviction stress slices were small (n=14–16); P0/P1 now use n=120.
-- Qwen carries the positive structure≫SnapKV result; Llama at kf=0.25 is saturated.
-- The structure tagger is heuristic and misses some unmarked free-form state.
-- The current cold path expands INT4 pages into BF16 scratch before attention (P2 streams it).
-- The latency study is single-request and does not measure serving throughput or tail
-  latency under concurrency.
+- Structure≫SnapKV on Qwen is **directional, not significant** (McNemar p=0.125).
+- Structure>FullKV is **not** a supported claim after mid/buried controls.
+- Llama kf=0.25 saturation awaits a gold-in-kept-region audit before calling it a “ceiling.”
+- Soft INT4 quality win is falsified; FI cold scratch limits peak claims.
+- Latency study is single-request (no concurrent serving / tails).
 
 See the manuscript for the full threats-to-validity discussion.
 

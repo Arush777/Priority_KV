@@ -1,0 +1,15 @@
+{
+  "compare": "structure vs snapkv",
+  "n_paired": 120,
+  "b_structure_pass_snapkv_fail": 4,
+  "c_snapkv_pass_structure_fail": 0,
+  "mcnemar_exact_two_sided_p": 0.125,
+  "structure_passes": 112,
+  "snapkv_passes": 108,
+  "jobs": [
+    "p1_attn_baselines_s0_kf25_gpu1_r3",
+    "p1_attn_baselines_s1_kf25_gpu1_r1",
+    "p1_attn_baselines_s2_kf25_gpu1_r1"
+  ],
+  "note": "Not significant at alpha=0.05. Do not claim structure beats SnapKV."
+}
