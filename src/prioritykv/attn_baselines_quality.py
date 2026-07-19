@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from prioritybench.pins import qwen3_chat_template_kwargs
+from prioritybench.pins import chat_template_kwargs_for_tokenizer
 from prioritybench.scoring import score_example
 from prioritykv.baselines.attn_press import (
     AttnPressConfig,
@@ -229,9 +229,9 @@ def run_attn_baselines(
         _run_press("pyramid", make_pyramid_press(press_cfg), attn_impl="sdpa")
 
     if "hybrid" in arms_wanted:
-        chat_kwargs = dict(qwen3_chat_template_kwargs())
 
         def _hybrid_press(pr: PromptRow, n: int, tok) -> Any:
+            chat_kwargs = dict(chat_template_kwargs_for_tokenizer(tok))
             roles = assign_token_roles(tok, pr.messages, chat_kwargs=chat_kwargs)
             if len(roles) > n:
                 roles = roles[-n:]

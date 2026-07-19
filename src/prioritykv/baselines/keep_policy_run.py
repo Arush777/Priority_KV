@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from prioritybench.pins import qwen3_chat_template_kwargs
+from prioritybench.pins import chat_template_kwargs_for_tokenizer
 from prioritykv.baselines.keep_policy import (
     KeepPolicyConfig,
     apply_keep_indices,
@@ -60,7 +60,7 @@ def run_transformers_keep_policy(
             model_path, torch_dtype=torch.bfloat16, **load_kwargs
         )
     model.eval()
-    chat_kwargs = dict(qwen3_chat_template_kwargs())
+    chat_kwargs = dict(chat_template_kwargs_for_tokenizer(tok))
     print(
         f"[keep] policy={policy} gran={keep_cfg.granularity} "
         f"keep_frac={keep_cfg.keep_frac} page_tokens={keep_cfg.page_tokens} "
