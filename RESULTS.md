@@ -105,9 +105,12 @@ Job `p2_fi_stream_cold_16k_gpu1_r1`: exit=0. Log peak_gib ≈ **36.4** (structur
 
 | Setting | Result |
 |---|---|
-| kf=0.25 n=120 | all arms **1.000** (saturated / non-discriminative until gold-region audit) |
+| kf=0.25 n=120 | structure+attn arms **1.000** (easy-task ceiling) |
+| Retention audit s0 | gold in sink+recent **0.0**; structure gold kept **1.0**; uniform **0.0** → **not** a port artifact |
 | kf=0.05 s0 | SnapKV **1.0** > structure **0.875** |
 | kf=0.05 s1 | SnapKV **1.0** > structure **0.900** (replicate) |
+
+CPU artifacts: `jobs/results/audit_retention_{qwen,llama}_s0_kf25_summary.json`.
 
 ## What we are *not* claiming
 

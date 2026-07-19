@@ -25,8 +25,9 @@ Scoped conclusions (see [`docs/EVIDENCE.md`](docs/EVIDENCE.md) for the audit tra
    does **not** improve on SnapKV.
 3. **Vs FullKV:** **not claimed.** Mid-context control ties FullKV; buried control loses to it.
 4. **Quantization (falsified):** soft INT4 at `int4_frac=0.75` does not open a PriorityBench gap.
-5. **Transfer:** Llama kf=0.25 is saturated for all arms; at kf=0.05 SnapKV outperforms structure
-   (two slices). Treat as honest negative / non-discriminative until a gold-region audit.
+5. **Transfer:** Llama kf=0.25 is an easy-task ceiling among structure+attention arms (all 1.0);
+   a CPU gold-span audit shows gold is **not** in sink+recent (port-artifact hypothesis rejected).
+   At kf=0.05 SnapKV outperforms structure (two slices).
 6. **Systems:** packed payload + frozen D4/MG latency/peak; P2 streamed-cold is **smoke only**
    (~36 GiB peak in log).
 
@@ -41,8 +42,9 @@ Full tables, job IDs, and external-audit checklist: [`docs/EVIDENCE.md`](docs/EV
 | P0 buried control (s0) | structure **0.675** < full **0.900**; uniform/random **0** |
 | P1 vs SnapKV/Pyr/hybrid (Qwen, n=120) | **0.933** vs **0.900** (112 vs 108; McNemar **p=0.125**) |
 | P1 H2O chunked (pooled) | **0.683** = (0.725+0.625+0.700)/3 |
-| P3 Llama kf=0.25 (n=120) | all arms **1.000** (saturated) |
+| P3 Llama kf=0.25 (n=120) | structure+attn arms **1.000** (gold audit: **not** sink/recent port artifact) |
 | P3 Llama kf=0.05 (s0+s1) | SnapKV **1.0** > structure **0.875 / 0.900** |
+| Retention audit (Qwen/Llama s0) | gold in sink+recent ≈**0–1%**; structure keeps gold **1.0**; uniform ≈**0** |
 | Locked mixed quality (`n=240`) | FullKV **0.8875**, structure **0.8833**, uniform **0.8792** |
 | Packed payload / peak / E2E / TPOT | **0.719×** · **0.868×** · **1.11–1.12×** · **1.20–1.21×** (frozen D4/MG) |
 
@@ -117,7 +119,8 @@ Do not run GPU code on a login node; use at most two H200 GPUs per job.
 - PriorityBench-A is synthetic and agent-specific; it is not LongBench or RULER.
 - Structure≫SnapKV on Qwen is **directional, not significant** (McNemar p=0.125).
 - Structure>FullKV is **not** a supported claim after mid/buried controls.
-- Llama kf=0.25 saturation awaits a gold-in-kept-region audit before calling it a “ceiling.”
+- Llama kf=0.25 saturation is an easy-task ceiling among tested arms; gold-span audit
+  **rejects** “gold already in sink/recent” as the explanation.
 - Soft INT4 quality win is falsified; FI cold scratch limits peak claims.
 - Latency study is single-request (no concurrent serving / tails).
 
