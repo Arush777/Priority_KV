@@ -36,14 +36,14 @@ Artifacts: `jobs/results/audit_retention_{qwen,llama}_s{0,1,2}_kf25_summary.json
 | Slice | Middle (structure / full / uniform) | Buried (structure / full / uniform) |
 |---|---|---|
 | s0 | **0.975 / 0.975 / 0.025** (`p0a_…`) | **0.675 / 0.900 / 0.000** (`p0b_…`) |
-| s1 | queued `p0c_…_middle` | queued `p0d_…_buried` |
-| s2 | queued `p0e_…_middle` | queued `p0f_…_buried` |
+| s1 | **0.950 / 0.950 / 0.050** (`p0c_…`) | **0.650 / 0.875 / 0.000** (`p0d_…`) |
+| s2 | **0.950 / 0.950 / 0.000** (`p0e_…`) | **0.675 / 0.900 / 0.000** (`p0f_…`) |
 
-**No further claim-blocking work** beyond landing s1/s2 controls. Paper tex is intentionally untouched (stale vs evidence; packaging debt acknowledged).
+Pattern holds across **3/3** slices: middle ties FullKV; buried structure loses to FullKV; uniform ~0. Paper tex is intentionally untouched (stale vs evidence; packaging debt acknowledged).
 
 ## Honest claim (paste this)
 
-> On PriorityBench-A (synthetic agent traces), structure-aware retention at a 25% keep budget far exceeds position-blind eviction on Qwen (P0 n=120: structure **0.933** vs uniform/random **~0.008**). Mid-context relocation (s0) ties FullKV (both **0.975**); burying state hurts structure (**0.675** vs FullKV **0.900**) while uniform/random stay ~0 — so we do **not** claim structure beats FullKV. A CPU gold-span audit shows gold is **not** concentrated in sink+recent on Qwen or Llama (≈0–1% of gold tokens); structure keep retains essentially all gold tokens while uniform retains ≈0–1%, so the Qwen blind-eviction gap is retention-real, not a labeling leak into the always-kept window. Versus SnapKV-class selection on Qwen (n=120): structure **0.933** vs SnapKV/Pyramid/hybrid **0.900** (112/120 vs 108/120; McNemar **p=0.125**, not significant) — we claim only that it **matches or slightly exceeds** SnapKV-class methods while decisively beating position-only baselines. Hybrid did **not** beat SnapKV. Llama-3.1 at kf=0.25 is saturated among structure+attention arms (all **1.0**); the gold audit rules out “gold already in sink/recent” as the explanation — the task is too easy once any competent keep runs. At kf=0.05 SnapKV outperforms structure on **two** slices (s0: 1.0 vs 0.875; s1: 1.0 vs 0.900). P2 streamed-cold is a **smoke test** (~36 GiB peak in log), not a systems result.
+> On PriorityBench-A (synthetic agent traces), structure-aware retention at a 25% keep budget far exceeds position-blind eviction on Qwen (P0 n=120: structure **0.933** vs uniform/random **~0.008**). Mid-context relocation ties FullKV on s0/s1/s2 (e.g. s0 both **0.975**); burying state hurts structure on all three slices (s0 **0.675** vs FullKV **0.900**; s1 **0.650** vs **0.875**; s2 **0.675** vs **0.900**) while uniform/random stay ~0 — so we do **not** claim structure beats FullKV. A CPU gold-span audit shows gold is **not** concentrated in sink+recent on Qwen or Llama (≈0–1% of gold tokens); structure keep retains essentially all gold tokens while uniform retains ≈0–1%, so the Qwen blind-eviction gap is retention-real, not a labeling leak into the always-kept window. Versus SnapKV-class selection on Qwen (n=120): structure **0.933** vs SnapKV/Pyramid/hybrid **0.900** (112/120 vs 108/120; McNemar **p=0.125**, not significant) — we claim only that it **matches or slightly exceeds** SnapKV-class methods while decisively beating position-only baselines. Hybrid did **not** beat SnapKV. Llama-3.1 at kf=0.25 is saturated among structure+attention arms (all **1.0**); the gold audit rules out “gold already in sink/recent” as the explanation — the task is too easy once any competent keep runs. At kf=0.05 SnapKV outperforms structure on **two** slices (s0: 1.0 vs 0.875; s1: 1.0 vs 0.900). P2 streamed-cold is a **smoke test** (~36 GiB peak in log), not a systems result.
 
 ## What we ran
 
@@ -57,7 +57,7 @@ Artifacts: `jobs/results/audit_retention_{qwen,llama}_s{0,1,2}_kf25_summary.json
 | **P3** kf25 | `p3_llama31_attn_s{0,1,2}_kf25_*` | structure+attn arms **1.000** (n=120) |
 | **P3** kf05 | `p3_llama31_attn_s0_kf05_*`, `…_s1_kf05_*` | SnapKV > structure; hybrid **0.575 / 0.525** (worse than both parents) |
 | **Retention audit** | `audit_retention_{qwen,llama}_s{0,1,2}_kf25` | gold outside sink+recent; structure keeps gold, uniform does not |
-| **P0 mid/buried s1/s2** | `p0{c,d,e,f}_…` | extending s0 controls (queued) |
+| **P0 mid/buried s1/s2** | `p0{c,d,e,f}_…` | mid ties FullKV; buried structure < FullKV (3/3) |
 
 ## Strength table (revised)
 
