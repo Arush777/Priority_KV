@@ -94,13 +94,24 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
             raise ValueError(f"mixed.attn_backend must be sdpa|flashinfer, got {attn_backend}")
     fi_parity_every = int(mcfg.get("fi_parity_every", 1))
     fi_require_pass = bool(mcfg.get("fi_require_pass", True))
+    cold_attend = str(mcfg.get("cold_attend", "full")).lower()
+    cold_chunk_tokens = int(mcfg.get("cold_chunk_tokens", 1024))
     policies = list(mcfg.get("policies", ["full", "uniform", "structure"]))
 
     full_texts: dict[str, str] = {}
     arms: dict[str, Any] = {}
     seconds: dict[str, float] = {}
+    peak_alloc_gib: dict[str, float | None] = {}
     for policy in policies:
         t1 = time.time()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.reset_peak_memory_stats()
+                torch.cuda.empty_cache()
+        except Exception:  # noqa: BLE001
+            pass
         outs = run_transformers_mixed_kv(
             model_path,
             prompts,
@@ -113,9 +124,22 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
             attn_backend=attn_backend,
             fi_parity_every=fi_parity_every,
             fi_require_pass=fi_require_pass,
+            cold_attend=cold_attend,
+            cold_chunk_tokens=cold_chunk_tokens,
             max_model_len=int(vcfg["max_model_len"]),
         )
         seconds[policy] = time.time() - t1
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                peak_alloc_gib[policy] = round(
+                    torch.cuda.max_memory_allocated() / (1024**3), 4
+                )
+            else:
+                peak_alloc_gib[policy] = None
+        except Exception:  # noqa: BLE001
+            peak_alloc_gib[policy] = None
         if policy == "full":
             for ex, (txt, _, _) in zip(examples, outs, strict=True):
                 full_texts[ex.example_id] = txt
@@ -171,6 +195,8 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
             "degrade": degrade,
             "storage": storage,
             "attn_backend": attn_backend,
+            "cold_attend": cold_attend,
+            "cold_chunk_tokens": cold_chunk_tokens,
             "risk_fit_path": risk_path,
         },
         "policies": policies,
@@ -178,6 +204,7 @@ def run_mixed_serve(config_path: Path, out_path: Path | None = None) -> dict[str
         "arms": {p: {k: v for k, v in arms[p].items() if k != "rows"} for p in policies},
         "arms_detail": arms,
         "seconds": seconds,
+        "peak_alloc_gib": peak_alloc_gib,
         "selected_ids": [ex.example_id for ex in examples],
     }
 

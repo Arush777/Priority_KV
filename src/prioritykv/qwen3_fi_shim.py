@@ -166,6 +166,8 @@ def pack_prefill_to_fi_state(
     dtype: Any = None,
     int4_cfg: Optional[Int4KvConfig] = None,
     decode_tail_cap: int = 256,
+    cold_attend: str = "full",
+    cold_chunk_tokens: int = 1024,
 ) -> tuple[Any, FiMixedDecodeState]:
     """Pack HF prefill past → PackedMixedCache → FiMixedDecodeState (no materialize).
 
@@ -179,7 +181,12 @@ def pack_prefill_to_fi_state(
     _ = roles  # API compat / callers still pass roles for planning upstream
     packed = build_from_hf_prefill_batched(past, int4_mask, int4_cfg=cfg)
     state = build_from_packed_cache(
-        packed, device=device, dtype=dtype, decode_tail_cap=decode_tail_cap
+        packed,
+        device=device,
+        dtype=dtype,
+        decode_tail_cap=decode_tail_cap,
+        cold_attend=cold_attend,
+        cold_chunk_tokens=cold_chunk_tokens,
     )
     state.assert_no_materialize_path(False)
     return packed, state

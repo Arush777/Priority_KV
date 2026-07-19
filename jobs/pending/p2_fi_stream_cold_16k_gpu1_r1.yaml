@@ -1,0 +1,5 @@
+id: p2_fi_stream_cold_16k_gpu1_r1
+command: python scripts/run_mixed_serve.py --config configs/p2_fi_stream_cold_16k.yaml --out-tag p2_fi_stream_cold_16k_gpu1_r1
+gpus: "1"
+sync_cuda: false
+timeout_sec: 14400

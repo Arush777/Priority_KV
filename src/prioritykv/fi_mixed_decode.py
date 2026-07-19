@@ -64,6 +64,10 @@ class FiMixedDecodeState:
     forbid_materialize: bool = True
     device: Any = None
     dtype: Any = None
+    # P2: "full" materializes all cold BF16 once; "streamed" dequants cold in
+    # token chunks per attend and frees them (never holds full cold scratch).
+    cold_attend: str = "full"
+    cold_chunk_tokens: int = 1024
 
     def validate_geom(self) -> None:
         require_head_dim(self.head_dim)
@@ -205,6 +209,8 @@ def build_from_packed_cache(
     device: Any,
     dtype: Any = None,
     decode_tail_cap: int = 256,
+    cold_attend: str = "full",
+    cold_chunk_tokens: int = 1024,
 ) -> FiMixedDecodeState:
     """Upload coalesced hot (+ reserved tail) and retain cold pages for scratch.
 
@@ -213,6 +219,11 @@ def build_from_packed_cache(
     import torch
 
     dtype = dtype or torch.float16
+    mode = (cold_attend or "full").lower()
+    if mode not in ("full", "streamed"):
+        raise ValueError(f"cold_attend must be full|streamed, got {cold_attend}")
+    if int(cold_chunk_tokens) < 1:
+        raise ValueError("cold_chunk_tokens must be >= 1")
     if not cache.layers:
         raise ValueError("empty PackedMixedCache")
     n_layers = len(cache.layers)
@@ -244,6 +255,8 @@ def build_from_packed_cache(
         device=device,
         dtype=dtype,
         forbid_materialize=True,
+        cold_attend=mode,
+        cold_chunk_tokens=int(cold_chunk_tokens),
     )
 
     for layer in cache.layers:
@@ -337,41 +350,161 @@ def _fill_cold_scratch(buf: LayerMixedBuffers, *, device: Any, dtype: Any) -> No
 
 
 def eager_prepare_decode(state: FiMixedDecodeState) -> None:
-    """Dequant/upload all cold scratches before the first timed decode step.
+    """Dequant/upload cold scratches before the first timed decode step.
 
     Fable M1: lazy first-call dequant was polluting TTFT; call this after pack
     and *before* measuring first-token latency.
+
+    P2 streamed mode: skip — cold is dequanted per chunk inside attend.
     """
+    if (state.cold_attend or "full").lower() == "streamed":
+        return
     for buf in state.layers:
         _fill_cold_scratch(buf, device=state.device, dtype=state.dtype)
+
+
+def _page_n_tokens(page: Any) -> int:
+    n = getattr(page, "n_tokens", None)
+    if n is not None:
+        return int(n)
+    if getattr(page, "k_bf16", None) is not None:
+        return int(page.k_bf16.shape[1])
+    # INT4 packed: infer from materialize shape cheaply via page metadata if any
+    gs = getattr(page, "group_size", None)
+    packed = getattr(page, "k_packed", None)
+    if packed is not None and hasattr(packed, "shape"):
+        # Fallback: materialize is expensive; use n_tokens attr or 16 default page
+        return int(getattr(page, "n_tokens", 16) or 16)
+    return 16
+
+
+def _iter_cold_page_chunks(
+    pages: Sequence[Any], chunk_tokens: int
+) -> List[List[Any]]:
+    """Group cold pages so each group has ~chunk_tokens (whole pages, no split)."""
+    out: list[list[Any]] = []
+    cur: list[Any] = []
+    tok = 0
+    for p in pages:
+        n = _page_n_tokens(p)
+        if cur and tok + n > chunk_tokens:
+            out.append(cur)
+            cur, tok = [], 0
+        cur.append(p)
+        tok += n
+    if cur:
+        out.append(cur)
+    return out
+
+
+def _dequant_cold_chunk_fi_layout(
+    pages: Sequence[Any], *, device: Any, dtype: Any
+) -> Tuple[Any, Any]:
+    """Dequant a small cold page group → FI layout (tok, heads, dim)."""
+    import torch
+
+    use_gpu = any(
+        getattr(p.k_packed, "is_torch", lambda: False)() for p in pages
+    )
+    if use_gpu:
+        k_t, v_t = _dequant_cold_pages_torch(pages, device=device, dtype=dtype)
+    else:
+        k_np, v_np = _dequant_cold_pages(pages)
+        k_t = torch.from_numpy(k_np).to(device=device, dtype=dtype)
+        v_t = torch.from_numpy(v_np).to(device=device, dtype=dtype)
+    return k_t.permute(1, 0, 2).contiguous(), v_t.permute(1, 0, 2).contiguous()
 
 
 def fi_chunks_for_layer(
     state: FiMixedDecodeState,
     layer_idx: int,
 ) -> Tuple[List[Any], List[Any]]:
-    """Return ≤2 FI-layout chunks: hot+tail, then cold (if any)."""
+    """Return FI-layout chunks for this layer.
+
+    ``full`` mode: ≤2 chunks (hot+tail, cold scratch).
+    ``streamed`` mode: hot only here; cold is streamed inside ``attend_layer_flashinfer``.
+    """
     buf = state.layers[layer_idx]
-    _fill_cold_scratch(buf, device=state.device, dtype=state.dtype)
     k_pages: list[Any] = []
     v_pages: list[Any] = []
     live = buf.hot_len + state.decode_len + state.step_kv_len
     if live > 0:
-        # HF (heads, tok, dim) → FI (tok, heads, dim)
         k_ht = buf.k_hot[:, :live, :].permute(1, 0, 2).contiguous()
         v_ht = buf.v_hot[:, :live, :].permute(1, 0, 2).contiguous()
         k_pages.append(k_ht)
         v_pages.append(v_ht)
+    if (state.cold_attend or "full").lower() == "streamed":
+        return k_pages, v_pages
+    _fill_cold_scratch(buf, device=state.device, dtype=state.dtype)
     if buf.cold_len > 0:
         assert buf.k_cold_scratch is not None and buf.v_cold_scratch is not None
         k_pages.append(buf.k_cold_scratch)
         v_pages.append(buf.v_cold_scratch)
     if not k_pages:
         raise ValueError(f"layer {layer_idx} has empty hot and cold")
-    # Council: never more than 2 chunks.
     if len(k_pages) > 2:
         raise RuntimeError(f"FI chunk count {len(k_pages)} > 2 — coalesce failed")
     return k_pages, v_pages
+
+
+def attend_layer_flashinfer(
+    q: Any,
+    state: FiMixedDecodeState,
+    layer_idx: int,
+    *,
+    causal: bool = False,
+    fi: Any = None,
+) -> Any:
+    """FI multicall over hot (+ streamed or full cold) for one layer.
+
+    ``q``: ``(tq, num_qo_heads, head_dim)`` on CUDA.
+    """
+    import torch
+
+    fi = fi or try_import_flashinfer()
+    if fi is None:
+        raise RuntimeError("flashinfer not installed")
+    require_head_dim(int(q.shape[-1]))
+
+    if (state.cold_attend or "full").lower() != "streamed":
+        k_pages, v_pages = fi_chunks_for_layer(state, layer_idx)
+        return attend_pages_flashinfer(q, k_pages, v_pages, causal=causal, fi=fi)
+
+    # Streamed cold: merge hot then each cold page-chunk; free chunk after merge.
+    buf = state.layers[layer_idx]
+    out_t = None
+    lse_t = None
+
+    def _merge(o, l):
+        nonlocal out_t, lse_t
+        if out_t is None:
+            out_t, lse_t = o, l.float()
+        else:
+            out_t, lse_t = fi.merge_state(out_t, lse_t, o, l.float())
+
+    live = buf.hot_len + state.decode_len + state.step_kv_len
+    if live > 0:
+        k_ht = buf.k_hot[:, :live, :].permute(1, 0, 2).contiguous()
+        v_ht = buf.v_hot[:, :live, :].permute(1, 0, 2).contiguous()
+        o, lse = fi.single_prefill_with_kv_cache(
+            q, k_ht, v_ht, causal=causal, return_lse=True
+        )
+        _merge(o, lse)
+        del k_ht, v_ht
+
+    for chunk in _iter_cold_page_chunks(buf.cold_pages, state.cold_chunk_tokens):
+        k_c, v_c = _dequant_cold_chunk_fi_layout(
+            chunk, device=state.device, dtype=state.dtype
+        )
+        o, lse = fi.single_prefill_with_kv_cache(
+            q, k_c, v_c, causal=causal, return_lse=True
+        )
+        _merge(o, lse)
+        del k_c, v_c, o, lse
+
+    if out_t is None:
+        raise ValueError(f"layer {layer_idx} has empty hot and cold")
+    return out_t
 
 
 def append_decode_kv(
@@ -386,7 +519,6 @@ def append_decode_kv(
     """
     buf = state.layers[layer_idx]
     if k_new.dim() == 3 and k_new.shape[0] == 1:
-        # (1, heads, dim) → (heads, 1, dim)
         k_new = k_new.permute(1, 0, 2).contiguous()
         v_new = v_new.permute(1, 0, 2).contiguous()
     pos = buf.hot_len + state.decode_len
@@ -397,7 +529,6 @@ def append_decode_kv(
     n = int(k_new.shape[1])
     buf.k_hot[:, pos : pos + n, :] = k_new.to(dtype=buf.k_hot.dtype)
     buf.v_hot[:, pos : pos + n, :] = v_new.to(dtype=buf.v_hot.dtype)
-    # Record step width once (all layers must append the same n this forward).
     if state.step_kv_len == 0:
         state.step_kv_len = n
     elif state.step_kv_len != n:
@@ -414,31 +545,19 @@ def commit_decode_step(state: FiMixedDecodeState) -> None:
     state.step_kv_len = 0
 
 
-def attend_layer_flashinfer(
-    q: Any,
-    state: FiMixedDecodeState,
-    layer_idx: int,
-    *,
-    causal: bool = False,
-    fi: Any = None,
-) -> Any:
-    """FI multicall over coalesced hot+tail / cold for one layer.
-
-    ``q``: ``(tq, num_qo_heads, head_dim)`` on CUDA.
-    """
-    fi = fi or try_import_flashinfer()
-    if fi is None:
-        raise RuntimeError("flashinfer not installed")
-    require_head_dim(int(q.shape[-1]))
-    k_pages, v_pages = fi_chunks_for_layer(state, layer_idx)
-    return attend_pages_flashinfer(q, k_pages, v_pages, causal=causal, fi=fi)
-
-
 def dense_kv_from_state_layer(state: FiMixedDecodeState, layer_idx: int) -> Tuple[Any, Any]:
     """Concat hot+tail and cold into one dense FI-layout KV (parity oracle only)."""
     import torch
 
-    k_pages, v_pages = fi_chunks_for_layer(state, layer_idx)
+    # Parity oracle always uses full cold scratch (not streamed).
+    saved = state.cold_attend
+    state.cold_attend = "full"
+    try:
+        k_pages, v_pages = fi_chunks_for_layer(state, layer_idx)
+    finally:
+        state.cold_attend = saved
+    if not k_pages:
+        raise ValueError(f"layer {layer_idx} empty for dense parity")
     return torch.cat(k_pages, dim=0), torch.cat(v_pages, dim=0)
 
 
