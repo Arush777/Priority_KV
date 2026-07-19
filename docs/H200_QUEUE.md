@@ -26,10 +26,14 @@ Control GPU work from the agent box by **pushing jobs to GitHub**. H200 runs
 ```bash
 cd /data/anupam/scratch/Priority_KV
 git fetch origin && git reset --hard origin/main
-bash scripts/h200_bootstrap_pkworker.sh
-# or: tmux new -d -s pkworker './scripts/remote_worker.sh'
-tmux capture-pane -t pkworker -p | tail -20
+bash scripts/h200_bootstrap_pkworker.sh   # starts pkworker0 + pkworker1 (GPUs 0,1)
+# Override: PKWORKER_GPUS="0 7" bash scripts/h200_bootstrap_pkworker.sh
+tmux ls | grep pkworker
+tmux capture-pane -t pkworker0 -p | tail -20
 ```
+
+Each worker only claims jobs whose `gpus:` field equals its filter. Enqueue two
+1-GPU jobs on disjoint empty GPUs for parallelism (hard cap: 2 GPUs total).
 
 If you see `ff-only merge failed` forever: re-run bootstrap (`reset --hard origin/main`).
 
@@ -80,4 +84,5 @@ done'
 
 Enqueue `diag_nvidia_smi_*` — worker captures `nvidia-smi` into `jobs/results/<id>/`.
 After status push, agent reads that file via `pull_job.sh` (still no SSH).
-Latest free-GPU snapshot (r7): **GPU 7 free** — use `gpus: "7"` for new 1-GPU jobs.
+Latest free-GPU snapshot (user, 2026-07-19): **0, 1, 7 empty**; 2–6 busy.
+Prefer `gpus: "0"` / `"1"` with dual workers; leave 7 as spare.

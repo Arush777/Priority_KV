@@ -29,4 +29,6 @@ page_tokens: 16
 snapkv_window_size: 64
 snapkv_kernel_size: 5
 h2o_attn_implementation: eager
+# ObservedAttention (eager) OOMs on ~16k; score H2O on ≤8k subset only.
+h2o_max_prompt_tokens: 9000
 arms: [structure, snapkv, h2o, pyramid, hybrid]

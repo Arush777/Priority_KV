@@ -13,6 +13,8 @@ POLL_SEC="${REMOTE_WORKER_POLL_SEC:-45}"
 BRANCH="${REMOTE_WORKER_BRANCH:-main}"
 PUSH_STATUS="${REMOTE_WORKER_PUSH_STATUS:-1}"
 PUSH_RESULTS="${REMOTE_WORKER_PUSH_RESULTS:-1}"
+# If set (e.g. "0" or "7"), only claim jobs whose gpus: field equals this value.
+GPU_FILTER="${REMOTE_WORKER_GPU_FILTER:-}"
 SCRATCH="${PRIORITYKV_SCRATCH:-$ROOT/../prioritykv}"
 LOG_DIR="$SCRATCH/logs"
 STATUS_DIR="$ROOT/jobs/status"
@@ -23,8 +25,15 @@ LOG_HEAD_BYTES="${REMOTE_WORKER_LOG_HEAD_BYTES:-65536}"            # first 64 Ki
 LOG_FULL_MAX_BYTES="${REMOTE_WORKER_LOG_FULL_MAX_BYTES:-2097152}"  # ship full log if ≤2 MiB
 WORKER_SCRIPT="$ROOT/scripts/remote_worker.sh"
 WORKER_MTIME_FILE="${REMOTE_WORKER_MTIME_FILE:-$SCRATCH/.pkworker_mtime}"
-HEARTBEAT_FILE="${REMOTE_WORKER_HEARTBEAT:-$SCRATCH/pkworker_heartbeat.txt}"
 GIT_FETCH_TIMEOUT_SEC="${REMOTE_WORKER_GIT_FETCH_TIMEOUT_SEC:-90}"
+# Separate heartbeat per GPU filter so dual workers don't clobber each other.
+if [[ -n "${REMOTE_WORKER_HEARTBEAT:-}" ]]; then
+  HEARTBEAT_FILE="$REMOTE_WORKER_HEARTBEAT"
+elif [[ -n "$GPU_FILTER" ]]; then
+  HEARTBEAT_FILE="$SCRATCH/pkworker_heartbeat_gpu${GPU_FILTER}.txt"
+else
+  HEARTBEAT_FILE="$SCRATCH/pkworker_heartbeat.txt"
+fi
 
 
 mkdir -p "$LOG_DIR" \
@@ -34,7 +43,8 @@ mkdir -p "$LOG_DIR" \
 # Line-buffer to tmux + always mirror to a scratch heartbeat file (survives blank panes).
 log() {
   local msg
-  msg="$(printf '[remote_worker %s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*")"
+  local tag="${GPU_FILTER:-all}"
+  msg="$(printf '[remote_worker gpu=%s %s] %s\n' "$tag" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*")"
   printf '%s' "$msg" >&2
   printf '%s' "$msg" >>"$HEARTBEAT_FILE" 2>/dev/null || true
 }
@@ -295,6 +305,7 @@ EOF
 
 try_push_job_state() {
   local job_id="$1" dest_dir="$2"  # done or failed
+  local pending_path="${3:-}"
   if [[ "$PUSH_STATUS" != "1" ]]; then
     return 0
   fi
@@ -306,11 +317,18 @@ try_push_job_state() {
   if [[ "$PUSH_RESULTS" == "1" && -d "jobs/results/${job_id}" ]]; then
     git add "jobs/results/${job_id}" 2>/dev/null || true
   fi
-  if [[ -f "jobs/pending/${job_id}.yaml" ]]; then
-    git rm -f "jobs/pending/${job_id}.yaml" 2>/dev/null || true
-  else
-    git add -u "jobs/pending/${job_id}.yaml" 2>/dev/null || true
+  # Remove completed pending entries (handles numeric prefixes like 01_jobid.yaml).
+  git add -u "jobs/pending" 2>/dev/null || true
+  git rm -f "jobs/pending/${job_id}.yaml" 2>/dev/null || true
+  if [[ -n "$pending_path" ]]; then
+    git rm -f "$pending_path" 2>/dev/null || true
   fi
+  local leftover
+  shopt -s nullglob
+  for leftover in "$ROOT"/jobs/pending/*"${job_id}".yaml; do
+    git rm -f "$leftover" 2>/dev/null || true
+  done
+  shopt -u nullglob
   if git diff --cached --quiet 2>/dev/null; then
     return 0
   fi
@@ -478,7 +496,7 @@ run_one_job() {
   log "END ${job_id}: exit=${exit_code} → jobs/${dest}/"
 }
 
-log "starting poll=${POLL_SEC}s branch=${BRANCH} scratch=${SCRATCH} push_status=${PUSH_STATUS} push_results=${PUSH_RESULTS} log_full_max=${LOG_FULL_MAX_BYTES}"
+log "starting poll=${POLL_SEC}s branch=${BRANCH} scratch=${SCRATCH} push_status=${PUSH_STATUS} push_results=${PUSH_RESULTS} log_full_max=${LOG_FULL_MAX_BYTES} gpu_filter=${GPU_FILTER:-all}"
 
 # Seed mtime so first tick does not immediately re-exec.
 mkdir -p "$(dirname "$WORKER_MTIME_FILE")"
@@ -491,12 +509,20 @@ while true; do
   pending_files=("$ROOT"/jobs/pending/*.yaml)
   shopt -u nullglob
 
-  if [[ ${#pending_files[@]} -gt 0 ]]; then
-    log "claim ${pending_files[0]}"
-    # One job at a time (shared 2-GPU cap).
-    run_one_job "${pending_files[0]}"
-  else
-    log "idle — syncing git"
+  claimed=0
+  for pending in "${pending_files[@]}"; do
+    [[ -f "$pending" ]] || continue
+    job_gpus="$(yaml_get "$pending" gpus "")"
+    if [[ -n "$GPU_FILTER" && "$job_gpus" != "$GPU_FILTER" ]]; then
+      continue
+    fi
+    log "claim ${pending} (gpus=${job_gpus})"
+    run_one_job "$pending"
+    claimed=1
+    break
+  done
+  if [[ "$claimed" -eq 0 ]]; then
+    log "idle — syncing git (filter=${GPU_FILTER:-all})"
     sync_repo || log "WARN: sync_repo failed"
     maybe_reload_worker
   fi
