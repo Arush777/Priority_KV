@@ -15,20 +15,31 @@ Status for collaborators, agents, and external reviewers. Numbers from
 | 4 | kf05 SnapKV>structure one slice | **Addressed (GPU)** | s1 replicate: SnapKV **1.0** > structure **0.900**. |
 | 5 | H2O number mismatch | **Addressed (docs)** | Canonical **0.683** = (0.725+0.625+0.700)/3. Never cite obsolete s0 0.600. |
 | 6 | P2 is smoke | **Addressed (docs)** | exit=0; peak ≈**36.4 GiB** in log (not 59). |
-| 7 | Hybrid ≤ SnapKV kills complementarity | **Addressed (docs)** | hybrid=SnapKV=**0.900**. |
+| 7 | Hybrid ≤ SnapKV kills complementarity | **Addressed (docs)** | hybrid=SnapKV=**0.900** at Qwen kf25. At Llama kf05, hybrid collapses below both parents (s0 **0.575**, s1 **0.525** vs SnapKV/structure ≥0.875) — unclaimed; noted as a negative complementarity datapoint. |
 
-### Retention preflight (CPU items 2–3 from fix plan)
+### Retention preflight (CPU)
 
 | Audit | n | mean gold in sink+recent | structure gold kept | uniform gold kept | Verdict |
 |---|---|---|---|---|---|
 | Qwen s0 kf25 | 40 | **0.010** | **1.000** | **0.010** | `GOLD_MOSTLY_EVICTABLE` |
+| Qwen s1 kf25 | 40 | **0.013** | **1.000** | **0.013** | `GOLD_MOSTLY_EVICTABLE` |
+| Qwen s2 kf25 | 40 | **0.010** | **1.000** | **0.010** | `GOLD_MOSTLY_EVICTABLE` |
 | Llama s0 kf25 | 40 | **0.000** | **1.000** | **0.000** | `GOLD_MOSTLY_EVICTABLE` |
+| Llama s1 kf25 | 40 | **0.000** | **1.000** | **0.000** | `GOLD_MOSTLY_EVICTABLE` |
+| Llama s2 kf25 | 40 | **0.000** | **1.000** | **0.000** | `GOLD_MOSTLY_EVICTABLE` |
 
-Artifacts: `jobs/results/audit_retention_qwen_s0_kf25_summary.json`,
-`jobs/results/audit_retention_llama_s0_kf25_summary.json`,
-`scripts/audit_retention.py` (Codex patches: bury marker filter + random seed+row_index; Fable GO).
+Artifacts: `jobs/results/audit_retention_{qwen,llama}_s{0,1,2}_kf25_summary.json`,
+`scripts/audit_retention.py`.
 
-**No further claim-blocking work.** Optional polish only.
+### Placement controls (GPU) — mid / buried
+
+| Slice | Middle (structure / full / uniform) | Buried (structure / full / uniform) |
+|---|---|---|
+| s0 | **0.975 / 0.975 / 0.025** (`p0a_…`) | **0.675 / 0.900 / 0.000** (`p0b_…`) |
+| s1 | queued `p0c_…_middle` | queued `p0d_…_buried` |
+| s2 | queued `p0e_…_middle` | queued `p0f_…_buried` |
+
+**No further claim-blocking work** beyond landing s1/s2 controls. Paper tex is intentionally untouched (stale vs evidence; packaging debt acknowledged).
 
 ## Honest claim (paste this)
 
@@ -42,10 +53,11 @@ Artifacts: `jobs/results/audit_retention_qwen_s0_kf25_summary.json`,
 | **P0 middle** | `p0a_w5_s0_kf25_token_middle_gpu1_r1` | structure=full=**0.975**; uniform/random **0.025** |
 | **P0 buried** | `p0b_w5_s0_kf25_token_buried_gpu1_r1` | structure **0.675** < full **0.900**; uniform/random **0** |
 | **P1** | `p1_attn_baselines_s{0,1,2}_*` + `p1_h2o_chunked_s0_*` | structure 0.933 / SnapKV·Pyr·hyb 0.900 / H2O **0.683**; McNemar p=0.125 |
-| **P2** | `p2_fi_stream_cold_16k_gpu1_r1` | smoke exit=0; peak_gib≈36.4 in log |
+| **P2** | `p2_fi_stream_cold_16k_gpu1_r1` | smoke exit=0; peak_gib≈36.4; `summary.json` reconstructed from log |
 | **P3** kf25 | `p3_llama31_attn_s{0,1,2}_kf25_*` | structure+attn arms **1.000** (n=120) |
-| **P3** kf05 | `p3_llama31_attn_s0_kf05_*`, `…_s1_kf05_*` | SnapKV > structure on both slices |
-| **Retention audit** | `audit_retention_{qwen,llama}_s0_kf25` | gold outside sink+recent; structure keeps gold, uniform does not |
+| **P3** kf05 | `p3_llama31_attn_s0_kf05_*`, `…_s1_kf05_*` | SnapKV > structure; hybrid **0.575 / 0.525** (worse than both parents) |
+| **Retention audit** | `audit_retention_{qwen,llama}_s{0,1,2}_kf25` | gold outside sink+recent; structure keeps gold, uniform does not |
+| **P0 mid/buried s1/s2** | `p0{c,d,e,f}_…` | extending s0 controls (queued) |
 
 ## Strength table (revised)
 
@@ -70,4 +82,4 @@ Artifacts: `jobs/results/audit_retention_qwen_s0_kf25_summary.json`,
 
 - [`../RESULTS.md`](../RESULTS.md) · [`../README.md`](../README.md) · [`../FINAL_RUN_MANIFEST.yaml`](../FINAL_RUN_MANIFEST.yaml)  
 - McNemar: [`../jobs/results/p1_structure_vs_snapkv_mcnemar.json`](../jobs/results/p1_structure_vs_snapkv_mcnemar.json)  
-- Retention audits: [`../jobs/results/audit_retention_qwen_s0_kf25_summary.json`](../jobs/results/audit_retention_qwen_s0_kf25_summary.json), [`../jobs/results/audit_retention_llama_s0_kf25_summary.json`](../jobs/results/audit_retention_llama_s0_kf25_summary.json)
+- Retention audits: `jobs/results/audit_retention_{qwen,llama}_s{0,1,2}_kf25_summary.json`

@@ -1,0 +1,5 @@
+id: p0e_w5_s2_kf25_token_middle_gpu1_r1
+command: python scripts/run_stress_structured.py --config configs/p0_w5_s2_kf25_token_middle.yaml --out-tag p0e_w5_s2_kf25_token_middle_gpu1_r1
+gpus: "1"
+sync_cuda: false
+timeout_sec: 28800
