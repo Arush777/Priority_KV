@@ -29,7 +29,11 @@ mkdir -p "$LOG_DIR" \
   "$ROOT/jobs/pending" "$ROOT/jobs/running" "$ROOT/jobs/done" \
   "$ROOT/jobs/failed" "$STATUS_DIR" "$RESULTS_DIR"
 
-log() { printf '[remote_worker %s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
+# Always line-buffer logs (tmux capture was blank under full buffering).
+log() {
+  printf '[remote_worker %s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2
+}
+
 
 # Parse simple key: value YAML (no nested structures).
 yaml_get() {
@@ -62,12 +66,17 @@ command_allowed() {
 }
 
 sync_repo() {
-  git fetch origin "$BRANCH" --quiet
+  log "git fetch origin ${BRANCH}…"
+  if ! git fetch origin "$BRANCH" --quiet; then
+    log "WARN: git fetch failed"
+    return 1
+  fi
   # Never reset --hard here: that would wipe claimed/archived job files.
   if ! git merge --ff-only "origin/$BRANCH" >/dev/null 2>&1; then
     log "WARN: ff-only merge failed (local job commits or diverged history); skipping pull this tick"
     return 1
   fi
+  log "git sync ok ($(git rev-parse --short HEAD))"
 }
 
 # After git pull updates this script, re-exec so new debug/push logic applies

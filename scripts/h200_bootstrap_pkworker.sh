@@ -17,11 +17,14 @@ rm -f jobs/running/*.yaml 2>/dev/null || true
 echo "== head =="
 git log -1 --oneline
 echo "== starting pkworker =="
-tmux new -d -s pkworker './scripts/remote_worker.sh'
-sleep 3
+# Force line-buffered stderr/stdout so capture-pane shows progress immediately.
+tmux new -d -s pkworker "stdbuf -oL -eL ./scripts/remote_worker.sh"
+sleep 5
 tmux ls
 echo "== last pane lines =="
 tmux capture-pane -t pkworker -p | tail -40
 echo "== queue dirs =="
 ls jobs/pending jobs/running 2>/dev/null || true
+echo "== worker process =="
+pgrep -af remote_worker || echo "(no remote_worker process — session may have died)"
 echo "OK — leave this host; control from git on the agent box."
