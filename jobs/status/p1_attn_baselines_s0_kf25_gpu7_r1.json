@@ -1,0 +1,10 @@
+{
+  "job_id": "p1_attn_baselines_s0_kf25_gpu7_r1",
+  "exit": 0,
+  "finished_at": "2026-07-19T04:09:55Z",
+  "log": "/data/anupam/scratch/prioritykv/logs/p1_attn_baselines_s0_kf25_gpu7_r1.log",
+  "job_yaml": "jobs/done/p1_attn_baselines_s0_kf25_gpu7_r1.yaml",
+  "decision": "P1_PARTIAL \u2014 incomplete arms or errors; see arms.*.error",
+  "pass": null,
+  "results_dir": "jobs/results/p1_attn_baselines_s0_kf25_gpu7_r1"
+}
