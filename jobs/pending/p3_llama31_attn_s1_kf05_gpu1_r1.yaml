@@ -1,5 +1,0 @@
-id: p3_llama31_attn_s1_kf05_gpu1_r1
-command: python scripts/run_attn_baselines.py --config configs/p3_llama31_attn_s1_kf05.yaml --out-tag p3_llama31_attn_s1_kf05_gpu1_r1
-gpus: "1"
-sync_cuda: false
-timeout_sec: 28800
