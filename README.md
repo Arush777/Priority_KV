@@ -71,6 +71,8 @@ peak memory or speed.
 | [`docs/DATASET.md`](docs/DATASET.md) | PriorityBench-A task and split specification |
 | [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | Local, artifact, and H200 reproduction levels |
 | [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml) | Frozen model, benchmark, config, and job IDs |
+| [`docs/PRAJNA_BFCL_HANDOFF.md`](docs/PRAJNA_BFCL_HANDOFF.md) | Slurm/H100 handoff for external BFCL + CPU τ-bench audit |
+| [`docs/PRAJNA_CURSOR_PROMPT.md`](docs/PRAJNA_CURSOR_PROMPT.md) | Copy-paste prompt for the Cursor agent on Prajna |
 
 ## Repository layout
 
