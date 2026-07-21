@@ -1,0 +1,136 @@
+# EXTERNAL_BFCL_PRAJNA_V1 — frozen scientific settings.
+#
+# Post-freeze namespace. This file must NOT be used to alter any result under
+# FINAL_RUN_MANIFEST.yaml or any config under an existing job ID.
+#
+# Deviations from docs/PRAJNA_BFCL_HANDOFF.md, all forced by ground truth on the
+# Prajna cluster / in the BFCL release, are recorded under `deviations:` below.
+
+freeze_id: EXTERNAL_BFCL_PRAJNA_V1
+
+model:
+  model_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+  local_dir: ${PRIORITYKV_SCRATCH}/models/Qwen3-8B
+  dtype: bfloat16
+  attn_implementation: sdpa
+  enable_thinking: false          # existing project convention (prioritybench.pins)
+  max_model_len: 40960
+  max_new_tokens: 512
+  # Never silently truncate: prompts above this are excluded with a reason.
+  prompt_token_ceiling: 40000
+
+dataset:
+  # Source of record is the pinned Gorilla checkout, NOT the Hugging Face mirror.
+  # The mirror is stale: 23/200 `base` questions differ and travel_booking.json
+  # disagrees with the API class the official checker executes.
+  source: gorilla_repo
+  gorilla_revision: cd9429ccf3d4d04156affe883c495b3b047e6b64
+  gorilla_root: ${PRAJNA_ROOT}/gorilla
+  # BFCL V3 multi-turn has exactly four categories, 200 conversations each.
+  # There is no `composite` category in V3 (it is introduced in V4).
+  categories: [base, miss_param, miss_func, long_context]
+  hf_mirror_revision_unused: 61fc0608cfd831fcfbbaa676ebdfef0ed963eeda
+
+protocol:
+  # Full official multi-turn rollout, scored by the unmodified
+  # bfcl_eval multi_turn_checker. One verdict per conversation.
+  mode: full_official_multi_turn_rollout
+  unit_of_analysis: conversation
+  decision_turn: all
+  max_step_limit: 20              # official MAXIMUM_STEP_LIMIT
+  seed: 0
+
+sampling:
+  # Fully balanced across the four real categories.
+  target_n: 600
+  per_category_target: {base: 150, miss_param: 150, miss_func: 150, long_context: 150}
+  minimum_n: 400
+  per_category_minimum: {base: 100, miss_param: 100, miss_func: 100, long_context: 100}
+  seed: 0
+
+arms:
+  primary: [full, structure, uniform, snapkv, random]
+  keep_frac: 0.25
+  keep_policy:
+    sink_tokens: 16
+    force_recent: 128
+    granularity: token
+  snapkv:
+    window_size: 64
+    kernel_size: 5
+    # compression_ratio is derived per step from the shared keep budget so
+    # SnapKV evicts to the same token count the token-gather arms retain.
+    implementation: kvpress.SnapKVPress
+    allow_fallback: false
+  stress:
+    keep_frac: 0.10
+    n_tasks: 200
+    categories: [long_context]
+    arms: [full, structure, uniform, snapkv]
+
+cluster:
+  # Prajna has no H100 and no sm_90 device of any kind.
+  partition: l40
+  qos: l40
+  gpu_type: NVIDIA L40S
+  compute_capability: "8.9"
+  gpus_per_task: 1
+  max_concurrent_array_tasks: 2
+  shard_size: 25
+  task_walltime: "07:30:00"
+  torch_cuda_arch_list: "8.9"
+
+paths:
+  prajna_root: ${PRAJNA_ROOT}
+  results_root: ${PRAJNA_ROOT}/results/external_bfcl_prajna_v1
+  tau_dataset: ${PRAJNA_ROOT}/datasets/tau_bench_trajectories
+
+tau_audit:
+  dataset_repo: AgentSuite/tau-bench-trajectories
+  revision: 382e57d1784b55c5155f4ef394ef48f1c747a287
+  # Deterministic policies only; SnapKV needs realised attention (GPU).
+  policies: [structure, uniform, random]
+  keep_frac: 0.25
+  min_trajectories: 1000
+  manual_audit_sample: 200
+  seed: 0
+
+statistics:
+  paired_on: task_id
+  test: exact_mcnemar
+  bootstrap:
+    n_boot: 10000
+    alpha: 0.05
+    seed: 0
+  min_paired_completeness: 0.95
+
+budget:
+  max_gpu_hours: 72
+  max_concurrent_gpus: 2
+  storage_stop_gb: 400
+
+deviations:
+  - id: DEV_NO_H100
+    handoff_assumption: "72 H100 GPU-hours; compute capability 9.0; TORCH_CUDA_ARCH_LIST=9.0"
+    reality: "Prajna exposes only dgx (A100-class, saturated), a40 (sm_86), l40 (L40S sm_89)."
+    resolution: "Run on L40S/sm_89. FlashInfer packed parity is re-run on sm_89 and
+      PARITY_PASS is required there; the arch deviation is reported, and packed-cache
+      systems claims remain scoped to the original H200 results."
+  - id: DEV_NO_COMPOSITE
+    handoff_assumption: "BFCL V3 multi-turn has 1000 cases in 5 categories including composite."
+    reality: "BFCL V3 multi-turn has 800 cases in 4 categories; composite arrives in V4."
+    resolution: "Balanced 150/150/150/150 for n=600, 100 each for the n=400 floor."
+  - id: DEV_DATA_SOURCE
+    handoff_assumption: "Pin the Hugging Face BFCL dataset revision."
+    reality: "The HF mirror disagrees with the official repo the checker executes against."
+    resolution: "Pin the Gorilla repo commit; the HF revision is recorded but unused."
+  - id: DEV_NO_COMPUTE_NODE_INTERNET
+    handoff_assumption: "Discover whether compute nodes have outbound internet."
+    reality: "Compute nodes have no DNS/egress; login nodes do."
+    resolution: "Model, datasets, scorer, and the uv environment are staged on the
+      login node and referenced by local path in every job."
+  - id: DEV_TAU_SNAPKV
+    handoff_assumption: "CPU audit reports retention for each retention policy."
+    reality: "SnapKV scores tokens by realised attention and cannot run generation-free on CPU."
+    resolution: "Audit structure/uniform/random; state the SnapKV exclusion explicitly."
