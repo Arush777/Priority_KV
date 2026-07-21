@@ -47,3 +47,6 @@ data/prioritybench/manifests/page_perturb_labels.jsonl
 # Editor
 .cursor/agent-transcripts/
 .cursor/projects/
+
+# Prajna site-local config (never commit)
+cluster/prajna/config.env

@@ -31,7 +31,12 @@ dependencies = [
 # Install on H200 GPU nodes only: uv sync --extra gpu
 gpu = [
     "torch>=2.5.0",
-    "transformers>=4.51.0",
+    # Declared directly, not left transitive via vllm: [tool.uv.sources] only
+    # redirects direct dependencies, and these must come from the same CUDA
+    # index as torch or their compiled ops fail to register at import time.
+    "torchvision",
+    "torchaudio",
+    "transformers>=4.56.0,<5.3",
     "accelerate>=1.0",
     "datasets>=3.0",
     "huggingface-hub>=0.26",
@@ -40,11 +45,21 @@ gpu = [
 ]
 # SnapKV / presses — optional, W2–W3: uv sync --extra gpu --extra kvpress
 kvpress = [
-    "kvpress>=0.2.0",
+    "kvpress>=0.5.4",
 ]
 dev = [
     "pytest>=8.0",
     "ruff>=0.8",
+]
+# Runtime deps of the *official* BFCL scorer/parsers, imported from a pinned
+# Gorilla checkout rather than vendored: uv sync --extra external
+external = [
+    "tree_sitter==0.21.3",
+    "tree-sitter-java==0.21.0",
+    "tree-sitter-javascript==0.21.4",
+    "tenacity>=8.5.0",
+    "overrides>=7.4",
+    "pydantic>=2.8.2",
 ]
 
 [project.urls]
@@ -62,6 +77,22 @@ packages = ["src/prioritybench", "src/prioritykv"]
 
 [tool.uv]
 package = true
+
+# Prajna's GPU nodes run a CUDA 12.8 driver (reported 12080). PyPI's default
+# torch wheels are built against CUDA 13 and abort with "NVIDIA driver is too
+# old", so torch must come from the cu128 index.
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+# torchvision ships compiled ops linked against torch's CUDA build; if it comes
+# from PyPI (CUDA 13) while torch is cu128, `torchvision::nms` fails to register
+# and every `import transformers` dies. Both must track the same index.
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
