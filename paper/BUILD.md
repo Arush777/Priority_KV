@@ -10,16 +10,16 @@ export TECTONIC_CACHE_DIR="$PRAJNA_ROOT/tectonic-cache"
 
 cd paper
 mkdir -p build
-tectonic -X compile prioritykv.tex --outdir build --keep-logs
+tectonic -X compile prioritykv_arxiv.tex --outdir build --keep-logs
 ```
 
 First run downloads fonts and maps (a few minutes); later runs hit the cache.
 
 ## Verified build
 
-`tectonic 0.16.9`, 2026-07-23:
+`tectonic 0.15.0`, 2026-07-22:
 
-- 14 pages
+- 14 pages (arXiv target)
 - 0 errors, 0 undefined references, 0 missing figures
 - 0 overfull/underfull boxes
 
@@ -29,7 +29,7 @@ First run downloads fonts and maps (a few minutes); later runs hit the cache.
 # structure, before spending a compile
 python3 - <<'PY'
 import re
-s = open("paper/prioritykv.tex").read()
+s = open("paper/prioritykv_arxiv.tex").read() + open("paper/body.tex").read()
 assert s.count("{") == s.count("}"), "unbalanced braces"
 for env in ("figure", "table", "tabular", "equation", "abstract", "document"):
     assert s.count(rf"\begin{{{env}}}") == s.count(rf"\end{{{env}}}"), env
@@ -40,13 +40,14 @@ print("structure OK")
 PY
 
 # then the log
-grep -iE "^! |LaTeX Error|Undefined|Overfull" build/prioritykv.log
+grep -iE "^! |LaTeX Error|Undefined|Overfull" build/prioritykv_arxiv.log
 ```
 
-External figures are regenerated from tracked summary JSON, never hand-edited:
+All ten figures are regenerated and validated in one command.  External plots
+use the tracked submission snapshot when the cluster summaries are unavailable:
 
 ```bash
-uv run python scripts/make_external_figures.py --tag primary --llama-tag llama
+uv run python scripts/make_publication_figures.py
 ```
 
 It writes both PNG and PDF; the manuscript includes the PDF.

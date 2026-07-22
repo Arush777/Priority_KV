@@ -12,6 +12,7 @@ from __future__ import annotations
 import html
 import json
 import math
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -27,6 +28,7 @@ import numpy as np  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "paper" / "figures"
 QC_OUT = Path("/tmp/prioritykv-figure-qc")
+SVG_FONT_SCALE = 1.35
 
 FIGURES = (
     "agent_trace_failure_mode",
@@ -37,6 +39,16 @@ FIGURES = (
     "budget_and_transfer",
     "lock240_quality_by_length",
     "systems_tradeoff",
+)
+
+EXTERNAL_FIGURES = (
+    "protected_fraction_boundary",
+    "external_bfcl_arms",
+)
+
+EXTERNAL_FIGURES = (
+    "protected_fraction_boundary",
+    "external_bfcl_arms",
 )
 
 STALE = (
@@ -142,6 +154,7 @@ def configure_matplotlib() -> None:
             "savefig.bbox": "tight",
             "savefig.pad_inches": 0.04,
             "svg.fonttype": "none",
+            "svg.hashsalt": "prioritykv-publication-figures",
             "pdf.fonttype": 42,
             "lines.linewidth": 1.2,
         }
@@ -151,8 +164,11 @@ def configure_matplotlib() -> None:
 def save_plot(fig: plt.Figure, name: str) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     svg_path = OUT / f"{name}.svg"
-    fig.savefig(svg_path)
-    fig.savefig(OUT / f"{name}.pdf")
+    fig.savefig(svg_path, metadata={"Date": None})
+    fig.savefig(
+        OUT / f"{name}.pdf",
+        metadata={"CreationDate": None, "ModDate": None},
+    )
     plt.close(fig)
     normalize_svg(svg_path)
 
@@ -179,6 +195,7 @@ def stext(
     family: str = "Liberation Sans,Arial,sans-serif",
     italic: bool = False,
 ) -> str:
+    size *= SVG_FONT_SCALE
     style = ' font-style="italic"' if italic else ""
     return (
         f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="{anchor}" '
@@ -273,9 +290,12 @@ def write_diagram(name: str, width: int, height: int, title: str, body: Sequence
     converter = shutil.which("rsvg-convert")
     if converter is None:
         raise RuntimeError("rsvg-convert is required to emit diagram PDFs")
+    env = dict(os.environ)
+    env.setdefault("SOURCE_DATE_EPOCH", "0")
     subprocess.run(
         [converter, "--format=pdf", "--output", str(OUT / f"{name}.pdf"), str(svg_path)],
         check=True,
+        env=env,
     )
 
 
@@ -314,28 +334,23 @@ def token_cells(
 
 def agent_trace_failure_mode() -> None:
     width, height = 1200, 505
-    roles = list("SSTTTTFFFFDDFFCCFFFFRRRR")
+    roles = list("SSTTTTFFFFDDFFCCFFFFFFRRRR")
     blind = {0, 1, 6, 7, 8, 9, 12, 13, 16, 17, 22, 23, 24, 25}
     structure = {0, 1, 2, 3, 4, 5, 10, 11, 14, 15, 22, 23, 24, 25}
+    assert len(roles) == 26
+    assert len(blind) == len(structure) == 14
+    assert max(blind | structure) < len(roles)
     body = [
-        stext(42, 34, "WHY STRUCTURE MATTERS", size=13, anchor="start", weight=700, fill=COLORS["structure"]),
-        stext(42, 59, "Equal token budgets can preserve very different agent state", size=19, anchor="start", weight=700),
-        stext(
-            42,
-            82,
-            "Illustrative trace · hatched cells are evicted",
-            size=12.5,
-            anchor="start",
-            fill=COLORS["muted"],
-        ),
+        stext(42, 39, "Illustrative agent trace", size=15, anchor="start", weight=700),
+        stext(42, 70, "Matched 14/26-token budgets; hatched cells are evicted.", size=12.5, anchor="start", fill=COLORS["muted"]),
     ]
     labels = [
         (0, 2, "system"),
         (2, 6, "tool schema"),
         (6, 10, "filler"),
-        (10, 12, "state: ORDER_ID"),
+        (10, 12, "ORDER_ID"),
         (12, 14, "filler"),
-        (14, 16, "new instruction"),
+        (14, 16, "constraint"),
         (16, 22, "filler"),
         (22, 26, "final request"),
     ]
@@ -348,10 +363,10 @@ def agent_trace_failure_mode() -> None:
         body.append(sline(x2, 115, x2, 123, width=0.9))
         body.append(stext((x1 + x2) / 2, 108, label, size=11.5, fill=COLORS["muted"]))
     token_cells(body, x=x0, y=130, roles=roles, cell_w=cw, cell_h=28)
-    body.append(stext(42, 150, "INPUT", size=11.5, anchor="start", weight=700, fill=COLORS["muted"]))
+    body.append(stext(68, 150, "INPUT", size=11.5, anchor="end", weight=700, fill=COLORS["muted"]))
 
     body.append(stext(42, 231, "A", size=16, anchor="start", weight=700, fill=COLORS["blind"]))
-    body.append(stext(76, 200, "role-blind selection", size=14, anchor="start", weight=700, fill=COLORS["blind"]))
+    body.append(stext(76, 200, "position-blind selection", size=14, anchor="start", weight=700, fill=COLORS["blind"]))
     body.append(stext(1116, 200, "14 / 26 kept", size=12, anchor="end", fill=COLORS["muted"]))
     token_cells(body, x=x0, y=211, roles=roles, kept=blind, cell_w=cw, cell_h=30)
 
@@ -428,7 +443,7 @@ def _page_allocation_architecture_legacy() -> None:
         ("p1", "[16,32)", "TOOL", "retain / hot", "BF16", "K_bf16 | V_bf16", COLORS["tool"]),
         ("p2", "[32,48)", "FILLER", "demote", "INT4", "K_uint8 + scale_fp32 | V_uint8 + scale_fp32", COLORS["int4"]),
         ("p3", "[48,64)", "STATE", "retain / hot", "BF16", "K_bf16 | V_bf16", COLORS["state"]),
-        ("p4", "[64,80)", "FILLER", "evict or demote", "INT4", "packed values + per-group metadata", COLORS["int4"]),
+        ("p4", "[64,80)", "FILLER", "evict or demote", "INT4", "uint8 codes + per-group metadata", COLORS["int4"]),
         ("pN", "recent", "RECENT", "mandatory M", "BF16", "decode-local tail", COLORS["recent"]),
     ]
     for ri, row in enumerate(rows):
@@ -440,7 +455,7 @@ def _page_allocation_architecture_legacy() -> None:
             body.append(stext(x + 8, y + 22, row[ci], size=11.7, anchor="start", fill=fill_text, weight=700 if ci in (0, 4) else 400))
 
     body.append(stext(52, 704, "Eviction experiment: selected A is gathered and re-prefilled.", size=12.5, anchor="start", fill=COLORS["muted"]))
-    body.append(stext(1128, 704, "Mixed path: all positions remain; f=0.75 positions are packed INT4.", size=12.5, anchor="end", fill=COLORS["muted"]))
+    body.append(stext(1128, 704, "Mixed path: all positions remain; f=0.75 use uint8-backed INT4 codes.", size=12.5, anchor="end", fill=COLORS["muted"]))
     write_diagram("page_allocation_architecture", width, height, "PriorityKV page allocation architecture", body)
 
 
@@ -481,7 +496,7 @@ def _decode_memory_lifetime_legacy() -> None:
         body.append(stext(x, 393, label, size=11.5, fill=COLORS["muted"]))
 
     lifetimes = [
-        ("packed payload", 260, 1090, 425, COLORS["structure"], "0.719× vs BF16 model"),
+        ("implemented payload", 260, 1090, 425, COLORS["structure"], "0.719× vs FullKV"),
         ("BF16 cold scratch", 445, 1090, 468, COLORS["int4"], "drives 0.868× peak"),
         ("decode tail", 650, 1090, 511, COLORS["recent"], "grows token by token"),
     ]
@@ -515,7 +530,7 @@ def _hypothesis_split_legacy() -> None:
     panels = [
         (38, "H1 · eviction reliability", "SUPPORTED (SCOPED)", COLORS["structure"], ["Qwen, k=0.25, n=120", "structure 112/120", "uniform/random 1/120", "buried: structure < FullKV"]),
         (382, "H2 · role-aware INT4 quality", "FALSIFIED", COLORS["negative"], ["Qwen, f=0.75, n=240", "FullKV 0.8875", "uniform 0.8792", "structure 0.8833"]),
-        (726, "H3 · packed systems path", "BYTES WIN · LATENCY COST", COLORS["attention"], ["H200, single request", "payload 0.719×", "peak 0.868×", "TPOT 1.200–1.215×"]),
+        (726, "H3 · mixed-code systems path", "BYTES WIN · LATENCY COST", COLORS["attention"], ["H200, single request", "payload 0.719×", "peak 0.868×", "TPOT 1.200–1.215×"]),
     ]
     for x, title, verdict, color, lines in panels:
         body.append(srect(x, 100, 316, 330, fill="white", stroke=color, stroke_width=1.8))
@@ -602,198 +617,137 @@ def _eviction_and_baselines_legacy() -> None:
 
 
 def page_allocation_architecture() -> None:
-    """Two-panel policy-to-storage architecture with direct role/dtype labels."""
-    width, height = 1200, 582
+    """Keep retention and mixed-precision controllers visually separate."""
+    width, height = 1200, 545
     body = [
-        stext(42, 34, "(a) Policy allocation", size=15, anchor="start", weight=700),
-        stext(42, 56, "Metadata determines token roles; the allocator never uses future attention.", size=12, anchor="start", fill=COLORS["muted"]),
+        stext(42, 34, "Two uses of the same structural tags", size=19, anchor="start", weight=700),
+        stext(42, 61, "Eviction removes positions; mixed precision retains positions and changes storage.", size=15, anchor="start", fill=COLORS["muted"]),
+        sline(600, 84, 600, 508, stroke=COLORS["grid"], width=1.2),
     ]
 
-    stages = [
-        (44, 88, 220, "chat spans", ("system", "tool schema", "state / constraint"), COLORS["system"]),
-        (326, 88, 220, "token tags", ("SINK · SYSTEM · TOOL", "OTHER · CONSTRAINT", "RECENT · FILLER"), COLORS["tool"]),
-        (608, 88, 220, "physical pages", ("16 tokens per page", "majority role", "protected-role tie"), COLORS["state"]),
-        (890, 88, 266, "budget controller", ("M = sink ∪ recent", "|A| = max(round(kn), |M|)", "demote low-priority pages"), COLORS["structure"]),
+    panels = [
+        (
+            42,
+            "(a) PriorityBench-A eviction path",
+            COLORS["structure"],
+            [
+                ("Tag tokens", "sink · recent · system · tool · constraint · other · filler"),
+                ("Set token budget", "B = max(round(kn), |M|);  M = sink + recent"),
+                ("Rank and select B", "M → structural roles / other → recent-edge filler"),
+                ("Gather selected positions", "Re-prefill the shortened trace; omitted KV is absent"),
+            ],
+        ),
+        (
+            632,
+            "(b) Mixed-precision page path",
+            COLORS["attention"],
+            [
+                ("Tag and group", "≤16-token pages; protected role wins ties"),
+                ("Assign representation", "Prefer structural roles in BF16; low-risk → codes"),
+                ("Enforce byte budget", "Demote by risk; sink + recent remain BF16"),
+                ("Decode from dtype runs", "FP32 scale / zero point; all positions remain"),
+            ],
+        ),
     ]
-    for x, y, w, title, lines, color in stages:
-        body.append(sline(x, y, x + w, y, stroke=color, width=3.0))
-        body.append(stext(x, y + 26, title, size=14, anchor="start", weight=700, fill=color))
-        for i, value in enumerate(lines):
-            body.append(stext(x, y + 52 + i * 22, value, size=11.8, anchor="start"))
-    for x1, x2 in ((264, 326), (546, 608), (828, 890)):
-        body.append(sline(x1 + 7, 148, x2 - 7, 148, arrow=True))
-
-    body.append(stext(42, 204, "priority", size=11.5, anchor="start", weight=700, fill=COLORS["muted"]))
-    priority = [
-        ("sink", COLORS["sink"]),
-        ("recent", COLORS["recent"]),
-        ("system", COLORS["system"]),
-        ("tool", COLORS["tool"]),
-        ("constraint", COLORS["constraint"]),
-        ("other", COLORS["filler"]),
-        ("generated", COLORS["filler"]),
-        ("filler", COLORS["evicted"]),
-    ]
-    for i, (label, color) in enumerate(priority):
-        x = 122 + i * 130
-        body.append(srect(x, 185, 112, 29, fill=color, stroke="white"))
-        dark_text = color in {COLORS["filler"], COLORS["evicted"], COLORS["int4"]}
-        body.append(stext(x + 56, 205, label, size=11.3, weight=700, fill=COLORS["ink"] if dark_text else "white"))
-        if i < len(priority) - 1:
-            body.append(sline(x + 116, 199, x + 126, 199, width=0.8, arrow=True))
-    body.append(stext(122, 231, "protect first", size=10.8, anchor="start", fill=COLORS["muted"]))
-    body.append(stext(1154, 231, "evict / demote first", size=10.8, anchor="end", fill=COLORS["muted"]))
-
-    body.extend([
-        sline(38, 258, 1162, 258, stroke=COLORS["grid"]),
-        stext(42, 286, "(b) Physical page stack", size=15, anchor="start", weight=700),
-        stext(42, 307, "Policy labels become page metadata; storage remains contiguous within each dtype run.", size=12, anchor="start", fill=COLORS["muted"]),
-    ])
-    page_rows = [
-        ("p0", "0–15", "SINK", "BF16", COLORS["sink"]),
-        ("p1", "16–31", "TOOL", "BF16", COLORS["tool"]),
-        ("p2", "32–47", "FILLER", "INT4", COLORS["int4"]),
-        ("p3", "48–63", "OTHER", "BF16", COLORS["state"]),
-        ("p4", "64–79", "FILLER", "INT4", COLORS["int4"]),
-        ("pN", "tail", "RECENT", "BF16", COLORS["recent"]),
-    ]
-    for i, (page, span, role, dtype, color) in enumerate(page_rows):
-        x = 50 + i * 184
-        body.append(srect(x, 337, 166, 88, fill="white", stroke=COLORS["ink"], stroke_width=0.9))
-        body.append(srect(x, 337, 166, 23, fill=COLORS["neutral"], stroke=COLORS["ink"], stroke_width=0.9))
-        body.append(stext(x + 9, 353, page, size=11.3, anchor="start", weight=700))
-        body.append(stext(x + 157, 353, span, size=10.8, anchor="end", fill=COLORS["muted"]))
-        body.append(stext(x + 83, 382, role, size=12, weight=700, fill=color if dtype == "BF16" else COLORS["ink"]))
-        body.append(srect(x + 8, 393, 150, 24, fill=color, stroke="white"))
-        body.append(stext(x + 83, 410, dtype, size=11, weight=700, fill="white" if dtype == "BF16" else COLORS["ink"]))
-
-    body.append(sline(598, 432, 598, 468, arrow=True))
-    body.append(spolyline([(598, 468), (310, 468), (310, 485)], arrow=True))
-    body.append(spolyline([(598, 468), (890, 468), (890, 485)], arrow=True))
-    body.append(stext(310, 478, "EVICTION STUDY", size=10.8, weight=700, fill=COLORS["structure"]))
-    body.append(srect(85, 490, 450, 78, fill="white", stroke=COLORS["structure"], stroke_width=1.3))
-    body.append(stext(105, 516, "gather selected positions A", size=12.2, anchor="start", weight=700))
-    body.append(sline(285, 524, 340, 524, arrow=True))
-    body.append(stext(360, 516, "re-prefill shortened trace", size=12.2, anchor="start", weight=700))
-    body.append(stext(105, 549, "unselected state is absent", size=11.2, anchor="start", fill=COLORS["muted"]))
-    body.append(stext(515, 549, "matched token budget", size=11.2, anchor="end", fill=COLORS["muted"]))
-
-    body.append(stext(890, 478, "MIXED-PRECISION STUDY", size=10.8, weight=700, fill=COLORS["attention"]))
-    body.append(srect(665, 490, 450, 78, fill="white", stroke=COLORS["attention"], stroke_width=1.3))
-    body.append(srect(682, 507, 130, 28, fill=COLORS["bf16"], stroke="white"))
-    body.append(stext(747, 526, "hot K/V · BF16", size=11.3, weight=700, fill="white"))
-    body.append(srect(825, 507, 170, 28, fill=COLORS["int4"], stroke="white"))
-    body.append(stext(910, 526, "cold K/V · packed INT4", size=11.1, weight=700))
-    body.append(srect(1008, 507, 90, 28, fill=COLORS["neutral"], stroke=COLORS["grid"]))
-    body.append(stext(1053, 526, "scales", size=11.1, weight=700))
-    body.append(stext(682, 555, "all token positions remain; only representation changes", size=11.2, anchor="start", fill=COLORS["muted"]))
+    for x, title, color, rows in panels:
+        body.append(stext(x, 105, title, size=18, anchor="start", weight=700, fill=color))
+        for i, (head, detail) in enumerate(rows):
+            y = 132 + i * 92
+            body.append(srect(x, y, 526, 72, fill="white", stroke=color, stroke_width=1.25))
+            body.append(srect(x, y, 12, 72, fill=color, stroke=color))
+            body.append(stext(x + 31, y + 28, f"{i + 1}. {head}", size=16.2, anchor="start", weight=700))
+            body.append(stext(x + 31, y + 55, detail, size=14.8, anchor="start", fill=COLORS["muted"]))
+            if i < len(rows) - 1:
+                body.append(sline(x + 263, y + 73, x + 263, y + 88, arrow=True))
+    body.append(stext(600, 530, "evaluated independently", size=14.8, weight=700, fill=COLORS["muted"]))
     write_diagram("page_allocation_architecture", width, height, "PriorityKV policy and physical page architecture", body)
 
 
 def decode_memory_lifetime() -> None:
-    """Decode lifecycle with persistent, transient, and growing allocations."""
-    width, height = 1200, 625
+    """Decode ordering and allocation lifetimes, matching the FI shim."""
+    width, height = 1200, 590
     body = [
-        stext(42, 34, "Per-layer mixed decode", size=15, anchor="start", weight=700),
-        stext(42, 55, "The packed payload persists; eager BF16 cold scratch is transient implementation overhead.", size=12, anchor="start", fill=COLORS["muted"]),
-        stext(42, 91, "PERSISTENT CACHE", size=10.8, anchor="start", weight=700, fill=COLORS["muted"]),
+        stext(42, 35, "Mixed decode: append, attend twice, then merge", size=19, anchor="start", weight=700),
+        stext(42, 63, "The new token joins the BF16 tail before either attention call.", size=15, anchor="start", fill=COLORS["muted"]),
     ]
-    body.append(srect(42, 106, 215, 62, fill="white", stroke=COLORS["bf16"], stroke_width=1.3))
-    body.append(stext(58, 131, "hot pages + decode tail", size=12.2, anchor="start", weight=700, fill=COLORS["bf16"]))
-    body.append(stext(58, 153, "BF16 · GPU resident", size=11.2, anchor="start"))
-    body.append(srect(42, 190, 215, 62, fill="white", stroke=COLORS["int4"], stroke_width=1.3))
-    body.append(stext(58, 215, "cold pages", size=12.2, anchor="start", weight=700, fill=COLORS["structure"]))
-    body.append(stext(58, 237, "packed INT4 + scales", size=11.2, anchor="start"))
 
-    body.append(stext(322, 91, "MATERIALIZE", size=10.8, anchor="start", weight=700, fill=COLORS["muted"]))
-    body.append(srect(322, 190, 180, 62, fill=COLORS["neutral"], stroke=COLORS["int4"], stroke_width=1.3))
-    body.append(stext(412, 215, "cold scratch", size=12.2, weight=700, fill=COLORS["structure"]))
-    body.append(stext(412, 237, "INT4 → BF16", size=11.2))
-    body.append(sline(257, 221, 316, 221, arrow=True))
+    # Implemented per-layer order.
+    steps = [
+        (42, 94, 190, "1  project q, k, v", "Qwen3 norms + RoPE", COLORS["ink"]),
+        (270, 94, 210, "2  append k / v", "BF16 decode tail", COLORS["recent"]),
+        (836, 133, 172, "4  LSE merge", "partial states", COLORS["attention"]),
+        (1046, 133, 112, "5  output", "next layer", COLORS["ink"]),
+    ]
+    for x, y, w, head, detail, color in steps:
+        body.append(srect(x, y, w, 76, fill="white", stroke=color, stroke_width=1.35))
+        body.append(stext(x + w / 2, y + 31, head, size=16.2, weight=700, fill=color))
+        body.append(stext(x + w / 2, y + 58, detail, size=14.8, fill=COLORS["muted"]))
+    body.append(sline(232, 132, 264, 132, arrow=True))
 
-    body.append(stext(566, 91, "≤ 2 HOMOGENEOUS CALLS", size=10.8, anchor="start", weight=700, fill=COLORS["muted"]))
-    body.append(srect(566, 106, 188, 62, fill="white", stroke=COLORS["bf16"], stroke_width=1.3))
-    body.append(stext(660, 131, "FlashInfer A", size=12.2, weight=700, fill=COLORS["bf16"]))
-    body.append(stext(660, 153, "q × hot + tail", size=11.2))
-    body.append(srect(566, 190, 188, 62, fill="white", stroke=COLORS["int4"], stroke_width=1.3))
-    body.append(stext(660, 215, "FlashInfer B", size=12.2, weight=700, fill=COLORS["structure"]))
-    body.append(stext(660, 237, "q × cold scratch", size=11.2))
-    body.append(sline(257, 137, 560, 137, arrow=True))
-    body.append(sline(502, 221, 560, 221, arrow=True))
-    body.append(stext(534, 171, "q", size=12, weight=700))
-    body.append(spolyline([(534, 176), (534, 221), (560, 221)], arrow=True))
-
-    body.append(srect(824, 148, 154, 70, fill="white", stroke=COLORS["attention"], stroke_width=1.4))
-    body.append(stext(901, 176, "LSE merge", size=12.8, weight=700, fill=COLORS["attention"]))
-    body.append(stext(901, 199, "two partial states", size=11.2))
-    body.append(spolyline([(754, 137), (790, 137), (790, 174), (818, 174)], arrow=True))
-    body.append(spolyline([(754, 221), (790, 221), (790, 192), (818, 192)], arrow=True))
-    body.append(srect(1042, 148, 116, 70, fill="white", stroke=COLORS["ink"], stroke_width=1.3))
-    body.append(stext(1100, 176, "append K/V", size=12.2, weight=700))
-    body.append(stext(1100, 199, "next token", size=11.2))
-    body.append(sline(978, 183, 1036, 183, arrow=True))
-    body.append(spolyline([(1100, 218), (1100, 275), (150, 275), (150, 174)], dash="5,4", arrow=True))
-    body.append(stext(621, 292, "decode loop: tail grows by one token", size=11.2, fill=COLORS["muted"]))
+    body.append(srect(524, 84, 250, 76, fill="white", stroke=COLORS["bf16"], stroke_width=1.35))
+    body.append(stext(649, 115, "3a  FlashInfer hot", size=16.2, weight=700, fill=COLORS["bf16"]))
+    body.append(stext(649, 142, "q × (hot pages + tail)", size=14.8, fill=COLORS["muted"]))
+    body.append(srect(524, 190, 250, 76, fill="white", stroke=COLORS["structure"], stroke_width=1.35))
+    body.append(stext(649, 221, "3b  FlashInfer cold", size=16.2, weight=700, fill=COLORS["structure"]))
+    body.append(stext(649, 248, "q × BF16 cold scratch", size=14.8, fill=COLORS["muted"]))
+    body.append(spolyline([(480, 132), (501, 132), (501, 122), (518, 122)], arrow=True))
+    body.append(spolyline([(480, 132), (501, 132), (501, 228), (518, 228)], arrow=True))
+    body.append(spolyline([(774, 122), (804, 122), (804, 157), (830, 157)], arrow=True))
+    body.append(spolyline([(774, 228), (804, 228), (804, 185), (830, 185)], arrow=True))
+    body.append(sline(1008, 171, 1040, 171, arrow=True))
+    body.append(stext(42, 226, "Cold cache", size=15.5, anchor="start", weight=700, fill=COLORS["structure"]))
+    body.append(stext(42, 251, "uint8 codes + FP32 scale / zero point", size=14.8, anchor="start", fill=COLORS["muted"]))
+    body.append(sline(332, 238, 518, 238, arrow=True))
+    body.append(stext(42, 286, "The sequence length is committed after all layers; the loop then advances one token.", size=14.8, anchor="start", fill=COLORS["muted"]))
 
     body.extend([
-        sline(38, 314, 1162, 314, stroke=COLORS["grid"]),
-        stext(42, 340, "Request lifetime", size=15, anchor="start", weight=700),
+        sline(38, 315, 1162, 315, stroke=COLORS["grid"]),
+        stext(42, 345, "Request-lifetime allocations", size=18, anchor="start", weight=700),
     ])
-    x0, x1 = 205, 1142
-    ticks = [(205, "prefill"), (390, "pack"), (565, "prepare"), (750, "decode 1"), (960, "decode 2…T"), (1142, "free")]
-    body.append(sline(x0, 371, x1, 371, width=0.9, arrow=True))
+    x0, x1 = 270, 1140
+    ticks = [(270, "prefill"), (450, "pack"), (630, "prepare"), (810, "decode"), (1140, "free")]
+    body.append(sline(x0, 376, x1, 376, width=1.0, arrow=True))
     for x, label in ticks:
-        body.append(sline(x, 365, x, 378, width=0.8))
-        body.append(stext(x, 394, label, size=10.8, fill=COLORS["muted"]))
+        body.append(sline(x, 369, x, 384, width=0.9))
+        body.append(stext(x, 403, label, size=14.8, fill=COLORS["muted"]))
     lifetimes = [
-        ("packed payload", 390, 1142, 424, COLORS["structure"], "persistent · 0.719× payload"),
-        ("BF16 cold scratch", 565, 1142, 470, COLORS["int4"], "transient · drives 0.868× peak"),
-        ("decode tail", 750, 1142, 516, COLORS["recent"], "grows each step"),
+        ("implemented code + metadata", 450, 1140, 438, COLORS["structure"], "persistent · payload ratio 0.719×"),
+        ("BF16 cold scratch", 630, 1140, 490, COLORS["int4"], "transient · allocated peak ratio 0.868×"),
+        ("BF16 decode tail", 810, 1140, 542, COLORS["recent"], "grows one token per step"),
     ]
     for label, start, end, y, color, value in lifetimes:
-        body.append(stext(42, y + 5, label, size=11.5, anchor="start", weight=700))
-        body.append(srect(start, y - 12, end - start, 22, fill=color, stroke=color))
-        body.append(stext((start + end) / 2, y + 5, value, size=11, weight=700, fill="white" if color != COLORS["int4"] else COLORS["ink"]))
-    body.append(sline(1142, 406, 1142, 532, stroke=COLORS["negative"], width=1.2))
-    body.append(stext(1142, 552, "request state released", size=10.8, anchor="end", fill=COLORS["negative"]))
-    body.append(stext(42, 596, "Measured per-token latency: 1.200–1.215× FullKV", size=11.8, anchor="start", fill=COLORS["negative"], weight=700))
+        body.append(stext(42, y + 6, label, size=15, anchor="start", weight=700))
+        body.append(srect(start, y - 14, end - start, 27, fill=color, stroke=color))
+        body.append(stext((start + end) / 2, y + 6, value, size=14.5, weight=700, fill="white" if color != COLORS["int4"] else COLORS["ink"]))
     write_diagram("decode_memory_lifetime", width, height, "PriorityKV mixed decode and memory lifetime", body)
 
 
 def hypothesis_split() -> None:
-    """Compact common-input DAG for the three independent hypotheses."""
-    width, height = 1200, 445
+    """Compact claim matrix for the three independently evaluated studies."""
+    width, height = 1200, 385
     body = [
-        stext(42, 35, "One frozen benchmark, three independent questions", size=17, anchor="start", weight=700),
-        srect(42, 75, 190, 80, fill="white", stroke=COLORS["ink"], stroke_width=1.2),
-        stext(137, 103, "COMMON INPUT", size=11.2, weight=700, fill=COLORS["muted"]),
-        stext(137, 127, "PriorityBench-A", size=13.2, weight=700),
-        stext(137, 146, "frozen model + seeds", size=10.8),
-        sline(232, 115, 275, 115, arrow=True),
-        sline(275, 115, 275, 345, width=1.0),
+        stext(42, 35, "Three experiment families answer three different questions", size=19, anchor="start", weight=700),
+        stext(42, 67, "Study", size=15, anchor="start", weight=700, fill=COLORS["muted"]),
+        stext(190, 67, "Question and comparison", size=15, anchor="start", weight=700, fill=COLORS["muted"]),
+        stext(636, 67, "Measured endpoint", size=15, anchor="start", weight=700, fill=COLORS["muted"]),
+        stext(922, 67, "Interpretation", size=15, anchor="start", weight=700, fill=COLORS["muted"]),
+        sline(42, 80, 1158, 80, stroke=COLORS["ink"], width=1.1),
     ]
     rows = [
-        (82, "H1", "Which tokens survive?", "evict to k=0.25", "blind + attention", "112 vs 1 (blind)", "108 attention · p=.125", COLORS["structure"]),
-        (198, "H2", "How are tokens stored?", "pack f=0.75 INT4", "uniform placement", "0.8833 vs 0.8792", "no quality gain", COLORS["negative"]),
-        (314, "H3", "What does it cost?", "packed H200 path", "FullKV", "0.719× bytes", "1.20× TPOT", COLORS["attention"]),
+        (91, "H1", "Retention · W5, n=120", "Which positions survive at k=0.25?", "112/120 vs 1/120", "In-regime structural win", COLORS["structure"]),
+        (183, "H2", "INT4 quality · W3, n=240", "Does role-aware placement beat uniform?", "0.8833 vs 0.8792", "No quality separation", COLORS["negative"]),
+        (275, "H3", "Systems · H200, n=18", "Mixed FlashInfer vs FullKV/SDPA", "0.719× / 1.200–1.215×", "Payload–latency trade-off", COLORS["attention"]),
     ]
-    for y, tag, question, intervention, comparator, result, verdict, color in rows:
-        body.append(sline(275, y + 40, 307, y + 40, arrow=True))
-        body.append(srect(312, y, 78, 80, fill=color, stroke=color))
-        body.append(stext(351, y + 47, tag, size=16, weight=700, fill="white"))
-        body.append(srect(390, y, 240, 80, fill="white", stroke=COLORS["grid"], stroke_width=1.0))
-        body.append(stext(408, y + 29, question, size=12.2, anchor="start", weight=700))
-        body.append(stext(408, y + 55, intervention, size=11.1, anchor="start", fill=COLORS["muted"]))
-        body.append(sline(630, y + 40, 662, y + 40, arrow=True))
-        body.append(srect(667, y, 196, 80, fill="white", stroke=COLORS["grid"], stroke_width=1.0))
-        body.append(stext(682, y + 27, "against", size=10.2, anchor="start", fill=COLORS["muted"])),
-        body.append(stext(682, y + 54, comparator, size=12.2, anchor="start", weight=700))
-        body.append(sline(863, y + 40, 895, y + 40, arrow=True))
-        body.append(srect(900, y, 258, 80, fill="white", stroke=color, stroke_width=1.3))
-        body.append(stext(920, y + 29, result, size=13, anchor="start", weight=700, fill=color))
-        body.append(stext(920, y + 57, verdict, size=11.5, anchor="start", weight=700))
-    body.append(stext(42, 423, "The eviction verdict does not imply an INT4-quality or latency verdict.", size=11.5, anchor="start", fill=COLORS["muted"]))
-    body.append(stext(1158, 423, "Hybrid = SnapKV at k=0.25", size=11.5, anchor="end", fill=COLORS["muted"]))
+    for y, tag, study, question, endpoint, verdict, color in rows:
+        body.append(srect(42, y, 120, 76, fill=color, stroke=color))
+        body.append(stext(102, y + 47, tag, size=20, weight=700, fill="white"))
+        body.append(stext(190, y + 28, study, size=16, anchor="start", weight=700))
+        body.append(stext(190, y + 57, question, size=15, anchor="start", fill=COLORS["muted"]))
+        body.append(stext(636, y + 28, endpoint, size=15.5, anchor="start", weight=700, fill=color))
+        body.append(stext(636, y + 57, "fixed manifests and seeds", size=15, anchor="start", fill=COLORS["muted"]))
+        body.append(stext(922, y + 42, verdict, size=15.2, anchor="start", weight=700))
+        if y != rows[-1][0]:
+            body.append(sline(42, y + 84, 1158, y + 84, stroke=COLORS["grid"], width=0.9))
     write_diagram("hypothesis_split", width, height, "Three independent PriorityKV hypotheses", body)
 
 
@@ -814,17 +768,20 @@ def eviction_and_baselines() -> None:
         p1_files[1],
         p1_files[2],
     ]
+    uniform = pooled_arm(p0_files, "uniform")
+    random = pooled_arm(p0_files, "random")
+    if uniform != random:
+        raise AssertionError("released position-blind controls must have identical counts")
     values = [
         ("FullKV", *pooled_full(p0_files), COLORS["full"], "o"),
-        ("Uniform", *pooled_arm(p0_files, "uniform"), COLORS["blind"], "s"),
-        ("Random", *pooled_arm(p0_files, "random"), COLORS["random"], "D"),
+        ("Position-blind†", *uniform, COLORS["blind"], "s"),
         ("Structure", *pooled_arm(p0_files, "structure"), COLORS["structure"], "o"),
         ("SnapKV", *pooled_arm(p1_files, "snapkv"), COLORS["attention"], "s"),
         ("PyramidKV", *pooled_arm(p1_files, "pyramid"), COLORS["attention_alt"], "D"),
         ("Hybrid", *pooled_arm(p1_files, "hybrid"), "#80648C", "^"),
         ("H2O*", *pooled_arm(h2o_files, "h2o"), COLORS["h2o"], "v"),
     ]
-    ypos = np.array([8.6, 7.25, 6.25, 4.85, 3.85, 2.85, 1.85, 0.85])
+    ypos = np.array([7.6, 6.25, 4.85, 3.85, 2.85, 1.85, 0.85])
     fig, ax = plt.subplots(figsize=(5.8, 3.05))
     for y, (label, successes, n, color, marker) in zip(ypos, values, strict=True):
         value = successes / n
@@ -844,25 +801,26 @@ def eviction_and_baselines() -> None:
             capthick=0.8,
             zorder=3,
         )
-        ax.text(1.11, y, f"{successes}/{n}", va="center", ha="right", fontsize=7.5, fontweight="bold")
+        ax.text(1.04, y, f"{successes}/{n}", transform=ax.get_yaxis_transform(), clip_on=False, va="center", ha="left", fontsize=7.5, fontweight="bold")
     ax.set_yticks(ypos, [row[0] for row in values])
-    ax.set_xlim(-0.02, 1.28)
-    ax.set_ylim(0.25, 9.18)
+    ax.set_xlim(-0.02, 1.0)
+    ax.set_ylim(0.25, 8.18)
     ax.set_xlabel("PriorityBench-A pass rate (Wilson 95% CI)")
     ax.grid(axis="y", visible=False)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
-    ax.axhline(7.78, color=COLORS["grid"], linewidth=0.6)
+    ax.axhline(6.88, color=COLORS["grid"], linewidth=0.6)
     ax.axhline(5.55, color=COLORS["grid"], linewidth=0.6)
-    ax.text(-0.018, 8.98, "reference", fontsize=6.7, color=COLORS["muted"], va="bottom")
-    ax.text(-0.018, 7.66, "role blind", fontsize=6.7, color=COLORS["muted"], va="bottom")
+    ax.text(-0.018, 7.98, "reference", fontsize=6.7, color=COLORS["muted"], va="bottom")
+    ax.text(-0.018, 6.76, "position blind", fontsize=6.7, color=COLORS["muted"], va="bottom")
     ax.text(-0.018, 5.43, "selectors", fontsize=6.7, color=COLORS["muted"], va="bottom")
-    ax.text(1.11, 8.98, "passes", fontsize=6.7, color=COLORS["muted"], va="bottom", ha="right")
-    bracket_x = 1.145
-    struct_y, snap_y = ypos[3], ypos[4]
-    ax.plot([bracket_x - 0.012, bracket_x, bracket_x, bracket_x - 0.012], [struct_y, struct_y, snap_y, snap_y], color=COLORS["ink"], lw=0.75)
-    ax.text(1.158, (struct_y + snap_y) / 2, "paired\np=.125", va="center", ha="left", fontsize=6.8)
-    fig.subplots_adjust(left=0.19, right=0.985, top=0.98, bottom=0.19)
+    ax.text(1.04, 7.98, "passes", transform=ax.get_yaxis_transform(), clip_on=False, fontsize=6.7, color=COLORS["muted"], va="bottom", ha="left")
+    struct_y, snap_y = ypos[2], ypos[3]
+    trans = ax.get_yaxis_transform()
+    ax.plot([1.22, 1.24, 1.24, 1.22], [struct_y, struct_y, snap_y, snap_y], transform=trans, clip_on=False, color=COLORS["ink"], lw=0.75)
+    ax.text(1.255, (struct_y + snap_y) / 2, "paired\np=.125", transform=trans, clip_on=False, va="center", ha="left", fontsize=6.8)
+    fig.subplots_adjust(left=0.25, right=0.74, top=0.97, bottom=0.19)
+    fig.text(0.01, 0.012, "† Released Uniform and Random select byte-identical indices.", fontsize=6.6, color=COLORS["muted"])
     save_plot(fig, "eviction_and_baselines")
 
 
@@ -1100,7 +1058,7 @@ def _systems_tradeoff_legacy() -> None:
         for yi, value in zip(y, values, strict=True):
             ax.text(value + 0.025, yi, f"{value:.3f}×", va="center", fontsize=7.2)
     axes[1].set_xlim(0, 1.32)
-    axes[1].set_xlabel("Structure-aware packed path / FullKV")
+    axes[1].set_xlabel("Structure-aware mixed-code path / FullKV")
     fig.suptitle("Measured H200 systems trade-off (single request)", x=0.02, ha="left", fontsize=9.2, fontweight="bold")
     fig.text(
         0.01,
@@ -1164,7 +1122,7 @@ def lock240_quality_by_length() -> None:
     ax.set_xlim(-0.42, 2.42)
     ax.set_ylim(0.43, 1.10)
     ax.set_xticks(range(3), ["8k", "16k", "32k"])
-    ax.set_xlabel("Prompt length")
+    ax.set_xlabel("Nominal context stratum")
     ax.set_ylabel("Pass rate (Wilson 95% CI)")
     ax.grid(axis="x", visible=False)
     ax.spines[["top", "right"]].set_visible(False)
@@ -1180,16 +1138,16 @@ def systems_tradeoff() -> None:
     latency = read_json("jobs/results/d4_latency_m3c_gpu56_r1/summary.json")
     struct_peak = peak["arms"]["mixed_structure_fi_shim"]
     memory = [
-        ("modeled", float(struct_peak["compression_ratio_modeled_mean"]), COLORS["attention"], "D"),
-        ("payload", float(struct_peak["payload_ratio_measured_mean"]), COLORS["structure"], "o"),
-        ("peak", float(peak["structure_vs_fullkv_peak_ratio"]), COLORS["negative"], "s"),
+        ("Idealized nibble KV", float(struct_peak["compression_ratio_modeled_mean"]), COLORS["attention"], "D"),
+        ("Implemented payload", float(struct_peak["payload_ratio_measured_mean"]), COLORS["structure"], "o"),
+        ("CUDA allocated peak", float(peak["structure_vs_fullkv_peak_ratio"]), COLORS["negative"], "s"),
     ]
     latency_points = []
     for label, metric, context in (
-        ("E2E · 8k", "e2e_ttft_ms_mean", "8000"),
-        ("E2E · 16k", "e2e_ttft_ms_mean", "16000"),
-        ("TPOT · 8k", "tpot_ms_mean", "8000"),
-        ("TPOT · 16k", "tpot_ms_mean", "16000"),
+        ("E2E · nominal 8k", "e2e_ttft_ms_mean", "8000"),
+        ("E2E · nominal 16k", "e2e_ttft_ms_mean", "16000"),
+        ("TPOT · nominal 8k", "tpot_ms_mean", "8000"),
+        ("TPOT · nominal 16k", "tpot_ms_mean", "16000"),
     ):
         full = float(latency["by_context"][context]["fullkv_sdpa"][metric])
         struct = float(latency["by_context"][context]["mixed_structure_fi_shim"][metric])
@@ -1207,8 +1165,8 @@ def systems_tradeoff() -> None:
     ax.axvline(1.0, color=COLORS["ink"], lw=0.7, ls="--")
     ax.set_yticks(y, [row[0] for row in memory])
     ax.set_xlim(0.36, 1.08)
-    ax.set_title("(a) Memory / bytes", loc="left", fontsize=8.6, pad=4)
-    ax.set_xlabel("ratio vs FullKV")
+    ax.set_title("(a) Storage and memory", loc="left", fontsize=8.6, pad=4)
+    ax.set_xlabel("ratio vs BF16 KV / FullKV peak")
     ax.grid(axis="y", visible=False)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
@@ -1225,11 +1183,11 @@ def systems_tradeoff() -> None:
     ax.set_yticks(y, [row[0] for row in latency_points])
     ax.set_xlim(0.98, 1.27)
     ax.set_title("(b) Latency", loc="left", fontsize=8.6, pad=4)
-    ax.set_xlabel("ratio vs FullKV")
+    ax.set_xlabel("mixed FlashInfer / FullKV SDPA")
     ax.grid(axis="y", visible=False)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
-    fig.subplots_adjust(left=0.105, right=0.98, top=0.86, bottom=0.23, wspace=0.48)
+    fig.subplots_adjust(left=0.205, right=0.98, top=0.86, bottom=0.25, wspace=0.58)
     save_plot(fig, "systems_tradeoff")
 
 
@@ -1255,8 +1213,8 @@ def budget_and_transfer() -> None:
         ("Hybrid", "hybrid", "#80648C", "^", 0.17),
     ]
     panels = [
-        ("(a) 25%: Qwen gap, Llama ceiling", [("Qwen", qwen_files), ("Llama", llama25_files)]),
-        ("(b) Llama 5%: SnapKV wins both", [("slice 0", [llama05_files[0]]), ("slice 1", [llama05_files[1]])]),
+        ("(a) Qwen and Llama, k=0.25", [("Qwen", qwen_files), ("Llama", llama25_files)]),
+        ("(b) Llama, k=0.05", [("slice 0", [llama05_files[0]]), ("slice 1", [llama05_files[1]])]),
     ]
     fig, axes = plt.subplots(1, 2, figsize=(5.75, 2.55), sharey=True)
     for panel_idx, (ax, (title, scenarios)) in enumerate(zip(axes, panels, strict=True)):
@@ -1332,11 +1290,11 @@ def remove_stale_outputs() -> None:
 
 def validate_outputs() -> None:
     expected = {f"{name}.{suffix}" for name in FIGURES for suffix in ("svg", "pdf")}
-    actual = {path.name for path in OUT.iterdir() if path.suffix in {".svg", ".pdf"}}
-    if actual != expected:
-        missing = sorted(expected - actual)
-        extra = sorted(actual - expected)
-        raise RuntimeError(f"figure output mismatch; missing={missing}, extra={extra}")
+    expected |= {f"{name}.{suffix}" for name in EXTERNAL_FIGURES for suffix in ("png", "pdf")}
+    actual = {path.name for path in OUT.iterdir() if path.suffix in {".svg", ".png", ".pdf"}}
+    missing = sorted(expected - actual)
+    if missing:
+        raise RuntimeError(f"figure output mismatch; missing={missing}")
 
 
 def render_qc_pngs(names: Iterable[str]) -> None:
@@ -1376,9 +1334,16 @@ def main() -> None:
     budget_and_transfer()
     lock240_quality_by_length()
     systems_tradeoff()
+    # The external cluster filesystem is not part of the submission checkout.
+    # Render the exact tracked submission snapshot in this complete build.
+    from make_external_figures import fig_arms, fig_boundary, paper_snapshot
+
+    protected, qwen, llama = paper_snapshot()
+    fig_boundary(protected, OUT / "protected_fraction_boundary.png")
+    fig_arms([("Qwen3-8B", qwen), ("Llama-3.1-8B", llama)], OUT / "external_bfcl_arms.png")
     validate_outputs()
     render_qc_pngs(FIGURES)
-    print(f"wrote {len(FIGURES)} SVG/PDF figures to {OUT}")
+    print(f"wrote all {len(FIGURES) + len(EXTERNAL_FIGURES)} publication figures to {OUT}")
     print(f"wrote full-size and column-width PNG review renders to {QC_OUT}")
 
 
