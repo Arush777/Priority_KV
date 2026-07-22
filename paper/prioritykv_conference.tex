@@ -1,0 +1,68 @@
+% Conference build: two-column, page-limited.
+%
+% VENUE STYLE. This uses a neutral two-column layout so the paper compiles
+% anywhere. When the venue is fixed, drop its official .sty beside this file and
+% replace the \documentclass/geometry block with, e.g.:
+%     \usepackage{iclr2027_conference,times}   % ICLR
+%     \usepackage[final]{neurips_2026}         % NeurIPS
+% The body is shared with the arXiv build via body_conf.tex, so content cannot
+% drift between the two targets.
+%
+%   tectonic -X compile prioritykv_conference.tex --outdir build
+\documentclass[10pt,twocolumn]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{authblk}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{stfloats}
+\usepackage{seqsplit}
+% Two-column measure is narrow: allow generous stretch, break long verbatim
+% identifiers and reproducibility paths, and let the ADAPT equation reflow.
+\sloppy
+\emergencystretch=3em
+\hbadness=10000
+\setlength{\tabcolsep}{4.5pt}
+\usepackage{etoolbox}
+\AtBeginEnvironment{tabular}{\small}
+\graphicspath{{figures/}{paper/figures/}}
+\captionsetup{font=small,labelfont=bf,skip=4pt}
+\hypersetup{
+  colorlinks=true, linkcolor=black, citecolor=black, urlcolor=black,
+  pdftitle={PriorityKV: When Structure-Aware KV Retention Helps, and the Measurable Threshold Where It Stops},
+  pdfauthor={Arush Sharma; Anupam Rawat}
+}
+\frenchspacing
+\renewcommand\Authfont{\normalsize}
+\renewcommand\Affilfont{\small}
+\setlength{\affilsep}{0.3em}
+\setlength{\parindent}{1em}
+\setlength{\parskip}{0pt plus 0.2pt}
+\setlength{\columnsep}{0.28in}
+\renewcommand{\arraystretch}{1.02}
+\clubpenalty=5000 \widowpenalty=5000 \displaywidowpenalty=5000
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.7}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.7}
+\setcounter{topnumber}{3}\setcounter{totalnumber}{5}
+
+\title{\vspace{-1.2em}PriorityKV: When Structure-Aware KV Retention Helps,\\and the Measurable Threshold Where It Stops\vspace{-0.3em}}
+\author[1]{Arush Sharma}
+\author[2]{Anupam Rawat}
+\affil[1]{Indian Institute of Technology (Indian School of Mines) Dhanbad}
+\affil[2]{Indian Institute of Technology Bombay}
+\date{}
+
+\begin{document}
+\twocolumn[
+  \begin{@twocolumnfalse}
+    \maketitle
+  \end{@twocolumnfalse}
+]
+\input{body_conf}
+\end{document}

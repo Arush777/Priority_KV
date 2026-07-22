@@ -1,0 +1,44 @@
+% arXiv preprint build. Single column, full length, no page limit.
+%   tectonic -X compile prioritykv_arxiv.tex --outdir build
+\documentclass[10pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{authblk}
+\usepackage{hyperref}
+\usepackage{microtype}
+\graphicspath{{figures/}{paper/figures/}}
+\captionsetup{font=small,labelfont=bf,skip=5pt}
+\hypersetup{
+  colorlinks=true, linkcolor=black, citecolor=black, urlcolor=black,
+  pdftitle={PriorityKV: When Structure-Aware KV Retention Helps, and the Measurable Threshold Where It Stops},
+  pdfauthor={Arush Sharma; Anupam Rawat}
+}
+\frenchspacing
+\renewcommand\Authfont{\large}
+\renewcommand\Affilfont{\small}
+\setlength{\affilsep}{0.35em}
+\setlength{\parindent}{1em}
+\setlength{\parskip}{0pt plus 0.2pt}
+\renewcommand{\arraystretch}{1.06}
+\clubpenalty=5000 \widowpenalty=5000 \displaywidowpenalty=5000
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.75}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}\setcounter{totalnumber}{5}
+
+\title{PriorityKV: When Structure-Aware KV Retention Helps,\\and the Measurable Threshold Where It Stops}
+\author[1]{Arush Sharma}
+\author[2]{Anupam Rawat}
+\affil[1]{Indian Institute of Technology (Indian School of Mines) Dhanbad}
+\affil[2]{Indian Institute of Technology Bombay}
+\date{}
+
+\begin{document}
+\maketitle
+\input{body}
+\end{document}

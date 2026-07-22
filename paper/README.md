@@ -1,49 +1,62 @@
 # Paper source
 
-`prioritykv.tex` is the canonical handwritten arXiv source. It is synchronized with
-`prioritykv_manuscript.md` and uses only tracked PDF figures under `figures/`.
+Two build targets share one body, so content cannot drift between them.
 
-Build from this directory:
+| File | Target | Layout |
+|---|---|---|
+| `prioritykv_arxiv.tex` | arXiv preprint | single column, no page limit |
+| `prioritykv_conference.tex` | conference submission | two column, page-limited |
+| `body.tex` | shared prose, tables, floats | edit **here** |
+| `body_conf.tex` | generated from `body.tex` | wide floats promoted to `figure*`/`table*` |
+
+**Edit `body.tex` only.** Regenerate the conference body afterwards:
 
 ```bash
-latexmk -pdf -interaction=nonstopmode -halt-on-error prioritykv.tex
+uv run python scripts/make_conference_body.py
 ```
 
-Or build from the repository root:
+## Build
 
 ```bash
-latexmk -pdf -interaction=nonstopmode -halt-on-error -cd paper/prioritykv.tex
+export PATH="$PRAJNA_ROOT/texenv/bin:$PATH"
+export TECTONIC_CACHE_DIR="$PRAJNA_ROOT/tectonic-cache"
+mkdir -p build
+tectonic -X compile prioritykv_arxiv.tex      --outdir build --keep-logs
+tectonic -X compile prioritykv_conference.tex --outdir build --keep-logs
 ```
 
-The source intentionally contains:
+Verified with `tectonic 0.16.9` on 2026-07-23:
 
-```tex
-\graphicspath{{figures/}{paper/figures/}}
-```
+| Target | Pages | Errors | Overfull |
+|---|---:|---:|---:|
+| arXiv | 15 | 0 | 0 |
+| conference | 13 | 0 | 4 |
 
-This resolves figures when either `paper/` or the repository root is the TeX/Overleaf
-project root.
+The conference target uses a neutral two-column layout so it compiles anywhere.
+When the venue is fixed, drop its official `.sty` beside the file and swap the
+`\documentclass`/`geometry` block — the header comment in
+`prioritykv_conference.tex` shows the exact replacement for ICLR and NeurIPS.
+At 13 two-column pages it is over a typical 9-page main-text limit; trim from
+Sections 5 and 6, which carry the most detail already covered by the appendix
+material in `docs/`.
 
-Regenerate all eight SVG/PDF figure pairs and both PNG review scales from the repository
-root:
+## Figures
+
+Eight conceptual/systems figures come from the frozen core:
 
 ```bash
 uv run python scripts/make_publication_figures.py
 ```
 
-The required figure set is:
+The two external-evaluation figures are regenerated from tracked summary JSON,
+never hand-edited:
 
-- `agent_trace_failure_mode`
-- `page_allocation_architecture`
-- `decode_memory_lifetime`
-- `hypothesis_split`
-- `eviction_and_baselines`
-- `budget_and_transfer`
-- `lock240_quality_by_length`
-- `systems_tradeoff`
+```bash
+uv run python scripts/make_external_figures.py --tag primary --llama-tag llama
+```
 
-`prioritykv.pdf` is the compiled canonical manuscript.  The former pre-P0–P3
-draft export has been retired so GitHub exposes only the evidence-current paper.
+`\graphicspath{{figures/}{paper/figures/}}` resolves figures whether `paper/`
+or the repository root is the project root.
 
-Before submission, both authors must verify name spelling, affiliation, author order,
-the compiled PDF, and the claim boundary in `../docs/EVIDENCE.md`.
+Before submission, both authors must verify name spelling, affiliation, author
+order, the compiled PDF, and the claim boundary in `../docs/EVIDENCE.md`.

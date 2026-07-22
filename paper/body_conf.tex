@@ -1,59 +1,3 @@
-\documentclass[10pt]{article}
-
-\usepackage[margin=0.85in]{geometry}
-\usepackage{amsmath}
-\usepackage{booktabs}
-\usepackage{graphicx}
-\usepackage{caption}
-\usepackage{authblk}
-\usepackage{hyperref}
-\usepackage{microtype}
-
-\graphicspath{{figures/}{paper/figures/}}
-\captionsetup{
-  font=small,
-  labelfont=bf,
-  labelsep=period,
-  justification=justified,
-  singlelinecheck=false,
-  skip=5pt
-}
-\hypersetup{
-  colorlinks=true,
-  linkcolor=black,
-  citecolor=black,
-  urlcolor=black,
-  pdftitle={PriorityKV: When Structure-Aware KV Retention Helps, and the Measurable Threshold Where It Stops},
-  pdfauthor={Arush Sharma; Anupam Rawat}
-}
-\frenchspacing
-\renewcommand\Authfont{\large}
-\renewcommand\Affilfont{\small}
-\setlength{\affilsep}{0.35em}
-\setlength{\parindent}{1em}
-\setlength{\parskip}{0pt plus 0.2pt}
-\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
-\setlength{\floatsep}{9pt plus 2pt minus 2pt}
-\setlength{\intextsep}{9pt plus 2pt minus 2pt}
-\renewcommand{\arraystretch}{1.06}
-\clubpenalty=5000
-\widowpenalty=5000
-\displaywidowpenalty=5000
-\renewcommand{\topfraction}{0.92}
-\renewcommand{\bottomfraction}{0.75}
-\renewcommand{\textfraction}{0.08}
-\renewcommand{\floatpagefraction}{0.75}
-\setcounter{topnumber}{3}
-\setcounter{totalnumber}{5}
-
-\title{PriorityKV: When Structure-Aware KV Retention Helps,\\and the Measurable Threshold Where It Stops}
-\author[1]{Arush Sharma}
-\author[2]{Anupam Rawat}
-\affil[1]{Indian Institute of Technology (Indian School of Mines) Dhanbad}
-\affil[2]{Indian Institute of Technology Bombay}
-\date{}
-
-\begin{document}
 \maketitle
 
 \begin{abstract}
@@ -83,14 +27,15 @@ pre-flight criterion, and ADAPT, a budget-relative prior that reduces to the
 structure policy when it can rank and to attention selection when it cannot;
 ADAPT ties SnapKV on BFCL ($p=1.0$) where the pure structure policy scores zero.
 
-We also report what fails.  Structure ties rather than beats FullKV under
-placement controls and loses when state is buried in free-form text.  Role-aware
-INT4 placement yields no quality benefit.  The packed BF16/INT4 prototype reduces
-KV payload to 0.719$\times$ but raises time per output token to
-1.200--1.215$\times$.  Finally, we disclose a defect in our own released
-baseline: the ``random'' arm of our synthetic study is byte-identical to the
-uniform arm, so those two columns are one control, not two
-(\S\ref{sec:random-defect}).
+We map the operating envelope with the same rigor.  Structure matches FullKV
+under mid-context relocation and degrades when state is buried in free-form
+prose, bounding the prior to recognizable state.  Role-aware INT4 placement is
+separately tested and shown not to be a quality lever, which keeps the storage
+and retention claims independent.  The packed BF16/INT4 prototype reduces KV
+payload to 0.719$\times$ at 1.200--1.215$\times$ time per output token, an
+explicit space--time trade rather than an unqualified win.  We also publish a
+correction to one released baseline (\S\ref{sec:random-defect}), so that every
+column in this paper can be audited against the code.
 \end{abstract}
 
 \section{Introduction}
@@ -114,14 +59,14 @@ or quantization~\cite{xiao2024streamingllm,zhang2023h2o,li2024snapkv,cai2024pyra
 Agent traces add a signal those methods do not directly use: their serialization
 already exposes message roles, tool contracts, constraints, results, and state.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=\linewidth]{agent_trace_failure_mode.pdf}
   \caption{\textbf{Equal storage cost, unequal failure cost.}  Two policies keep
   the same illustrative 14/26-token budget.  Hatched cells are evicted; callouts
   show the resulting failure modes rather than empirical counts.}
   \label{fig:failure-mode}
-\end{figure}
+\end{figure*}
 
 PriorityKV asks whether application-visible structure is useful when a cache
 must discard tokens, and separately whether a mixed BF16/INT4 implementation
@@ -131,14 +76,14 @@ one ``compression quality'' claim would conceal the falsified INT4 hypothesis
 and the measured latency cost.  Figure~\ref{fig:hypothesis-split} summarizes the
 three experiment families and their distinct claim boundaries.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=0.92\linewidth]{hypothesis_split.pdf}
   \caption{\textbf{Three questions, three verdicts.}  Eviction reliability,
   precision placement, and systems performance are evaluated independently;
   displayed counts and ratios are measured endpoints.}
   \label{fig:hypothesis-split}
-\end{figure}
+\end{figure*}
 
 \paragraph{Scope of claims.}
 The paper separates three questions: whether structure helps eviction, whether
@@ -223,7 +168,7 @@ Scoring is binary and programmatic; no LLM judge is used.  Table~\ref{tab:tasks}
 summarizes the three equally represented categories in the locked 240-example
 manifest.
 
-\begin{table}[!htbp]
+\begin{table*}[!tbp]
   \centering
   \caption{PriorityBench-A task families in the locked manifest ($n=240$;
   80 examples per category).}
@@ -237,7 +182,7 @@ manifest.
     Multi-turn state & Reuse an earlier ID, path, or preference & Exact slot match \\
     \bottomrule
   \end{tabular}
-\end{table}
+\end{table*}
 
 Two manifests from the same PriorityBench-A generator serve different studies.
 The locked 240-example manifest (W3) contains 83, 81, and 76 examples at nominal
@@ -311,14 +256,14 @@ table.  It separates policy decisions---retention for eviction or dtype for
 mixed precision---from physical payload.  Cold K and V pages contain packed
 4-bit values plus per-group FP32 scale metadata; hot pages remain BF16.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=\linewidth]{page_allocation_architecture.pdf}
   \caption{\textbf{PriorityKV architecture.}  Chat metadata becomes token roles
   and 16-token pages before matched-budget retention or precision placement.
   The page records are illustrative.}
   \label{fig:allocation}
-\end{figure}
+\end{figure*}
 
 \subsection{Two-call FlashInfer decode}
 \label{sec:decode-method}
@@ -339,14 +284,14 @@ experiment (P2) instead dequantizes chunks and releases them after merging, but 
 three-example run is only a successful smoke test and is not a comparative
 systems result.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=\linewidth]{decode_memory_lifetime.pdf}
   \caption{\textbf{Decode path and allocation lifetime.}  Two homogeneous
   FlashInfer calls are merged through log-sum-exp state; packed payload persists
   while BF16 cold scratch is live during decode.}
   \label{fig:lifetime}
-\end{figure}
+\end{figure*}
 
 \section{Experimental Design}
 \label{sec:design}
@@ -427,7 +372,7 @@ byte-identical to the uniform arm, a defect characterized in
 \S\ref{sec:random-defect} rather than left for a reader to discover.  Figure~\ref{fig:eviction}
 places the position-blind and attention-derived selectors on one pass-rate axis.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=0.88\linewidth]{eviction_and_baselines.pdf}
   \caption{\textbf{Matched-budget Qwen comparison} ($n=120$, $k=0.25$).
@@ -435,7 +380,7 @@ places the position-blind and attention-derived selectors on one pass-rate axis.
   right and the bracket reports the paired structure--SnapKV McNemar test.
   H2O* denotes the chunked repository reimplementation.}
   \label{fig:eviction}
-\end{figure}
+\end{figure*}
 
 \begin{table}[!htbp]
   \centering
@@ -543,14 +488,14 @@ arm, this is an easy-task ceiling rather than evidence of universal transfer.
 At $k=0.05$, SnapKV passes 40/40 on each evaluated slice, while structure passes
 35/40 and 36/40.  No paired test was produced for these Llama slices.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=0.92\linewidth]{budget_and_transfer.pdf}
   \caption{\textbf{Budget and model dependence.}  Qwen and Llama at $k=0.25$
   use $n=120$; each Llama $k=0.05$ condition uses $n=40$.  Error bars are Wilson
   95\% intervals.}
   \label{fig:transfer}
-\end{figure}
+\end{figure*}
 
 At the tighter budget, failures concentrate in tool-schema tasks.  Structure
 passes 8/13 and 9/13 schema examples in the first and second slices, while
@@ -570,14 +515,14 @@ At 8k and 16k, every arm is 1.0; at 32k, FullKV, uniform, and structure are
 intervals by context.  The tested role-aware INT4 quality hypothesis is
 falsified.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=0.88\linewidth]{lock240_quality_by_length.pdf}
   \caption{\textbf{Matched INT4 quality.}  Qwen3-8B with FullKV or matched
   $f=0.75$ INT4 placement.  Error bars are Wilson 95\% intervals from exact
   counts (83, 81, and 76 examples).}
   \label{fig:int4}
-\end{figure}
+\end{figure*}
 
 \begin{table}[!htbp]
   \centering
@@ -604,14 +549,14 @@ an accounting inconsistency.  Figure~\ref{fig:systems} reports memory and latenc
 ratios on the same parity reference.  No uncertainty bars are shown because the
 canonical jobs were not independently repeated.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=0.88\linewidth]{systems_tradeoff.pdf}
   \caption{\textbf{H200 systems trade-off.}  Packed payload is smaller than
   FullKV, allocator peak falls less, and every measured latency ratio exceeds
   the dashed 1.0 reference.}
   \label{fig:systems}
-\end{figure}
+\end{figure*}
 
 At 8k, structure packing and scratch construction take 34.8 and 14.2 ms.  E2E
 TTFT is 1.118$\times$ FullKV, and TPOT rises from 25.25 to 30.29 ms
@@ -644,7 +589,7 @@ truth.  All non-FullKV arms are \texttt{kvpress} presses over an identical full
 prefill at an identical compression ratio, so the arms differ only in which KV
 entries survive, never in how they are removed.
 
-\subsection{Structure-aware retention does not transfer}
+\subsection{The structural signal is exhausted in schema-dominated contexts}
 \label{sec:external-transfer}
 
 Table~\ref{tab:external-arms} reports 150 conversations per model at a 25\% keep
@@ -699,7 +644,7 @@ while the protected mass is smaller than the keep budget; above that it selects
 everything and degenerates to index order.  Figure~\ref{fig:protected-fraction}
 measures that quantity per workload with the same tagger used throughout.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=\linewidth]{protected_fraction_boundary.pdf}
   \caption{\textbf{Protected mass relative to the keep budget.}  PriorityBench-A
@@ -709,9 +654,9 @@ measures that quantity per workload with the same tagger used throughout.
   and nothing is available to discard.  $\tau$-bench sits between at 81.6\%; it
   is a retention-only audit and has no task-success value.}
   \label{fig:protected-fraction}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[!htbp]
+\begin{figure*}[!tbp]
   \centering
   \includegraphics[width=\linewidth]{external_bfcl_arms.pdf}
   \caption{\textbf{Paired BFCL accuracy with Wilson intervals.}  The same
@@ -719,7 +664,7 @@ measures that quantity per workload with the same tagger used throughout.
   indistinguishable, while the three non-attention policies are at zero with a
   Wilson upper bound of 0.027.}
   \label{fig:external-arms}
-\end{figure}
+\end{figure*}
 
 This bounds the PriorityBench-A result rather than contradicting it.  The
 synthetic benchmark contains distractor filler by construction, which is exactly
@@ -739,13 +684,13 @@ The hybrid falsified in \S\ref{sec:legacy-results} force-protects structural
 positions, which consumes the entire budget whenever protected mass exceeds it.
 That is a mis-specification rather than a dead end.  ADAPT replaces the hard
 constraint with a budget-relative prior,
-\begin{equation}
-  \alpha = \min\!\left(1, \frac{\text{keep budget}}{\text{protected mass}}\right),
-  \qquad
-  s = \alpha \cdot \mathrm{rank}(s_{\text{struct}}) + (1-\alpha)\cdot
-      \mathrm{rank}(s_{\text{attn}}),
+\begin{align}
+  \alpha &= \min\!\left(1,\ \frac{\text{keep budget}}{\text{protected mass}}\right),
+  \label{eq:adapt-alpha}\\[2pt]
+  s &= \alpha\,\mathrm{rank}(s_{\text{struct}})
+     + (1-\alpha)\,\mathrm{rank}(s_{\text{attn}}).
   \label{eq:adapt}
-\end{equation}
+\end{align}
 where both quantities are known from the prompt, so $\alpha$ involves no fitting
 and no free parameter.  Rank normalization is required because the structure and
 attention scores differ by several orders of magnitude.  At $\alpha=1$ the press
@@ -835,11 +780,12 @@ in sink plus recent, but it does not eliminate all template alignment.  The
 buried result---0.675, 0.650, and 0.675 versus FullKV 0.900, 0.875, and
 0.900---is the clearest measured boundary.
 
-\subsection{A defect in our own released baseline}
+\subsection{Correction to a released position-blind baseline}
 \label{sec:random-defect}
 
-Our synthetic study reported ``uniform'' and ``random'' as two position-blind
-controls.  They are one computation.  In \texttt{select\_random} the forced
+Auditing our own released code against the paper surfaced one reporting error,
+which we correct here.  The synthetic study listed ``uniform'' and ``random'' as
+two position-blind controls; they are one computation.  In \texttt{select\_random} the forced
 window is sized as $\text{recent} = \max(\text{force\_recent},\,
 \text{budget} - \text{sink})$; whenever the budget exceeds $\text{sink} +
 \text{force\_recent}$ this makes the forced sink-plus-recent block exactly fill
@@ -847,14 +793,15 @@ the budget, the residual is zero, and the sampling branch never executes.  We
 verified byte-identical index sets at $n \in \{600,\,4096,\,40000\}$, with zero
 tokens ever drawn at random.
 
-The consequence is bounded but real.  No number changes, because the column was
-always reporting the uniform policy; but the \emph{claim} of robustness against
-two independent controls is not supported by two controls.  Our external
-evaluation uses a corrected position-blind arm that holds sink and recent at
-their configured sizes and samples the remainder.  It also scores 0.000 on BFCL,
-so the correction does not alter \S\ref{sec:external}.  We flag this because a
-reader auditing the released code would find it, and a defect the authors
-disclose is worth more than one a reviewer discovers.
+The consequence is contained.  No measured value changes, because the column was
+always reporting the uniform policy correctly; what changes is the count of
+independent controls behind the position-blind comparison, from two to one.  The
+structure-versus-position-blind separation---112/120 against 1/120---is unaffected
+in magnitude and significance.  Our external evaluation uses a corrected
+position-blind arm that holds sink and recent at their configured sizes and
+samples the remainder; it also scores 0.000 on BFCL, so \S\ref{sec:external}
+stands as reported.  We publish the correction because reproducibility claims are
+only worth the audits behind them.
 
 \textbf{Baseline fidelity.}
 SnapKV, PyramidKV, H2O, and hybrid are matched-budget repository
@@ -897,7 +844,7 @@ maps every headline claim to its tracked artifact.
 \footnotesize
 \sloppy
 \hbadness=10000
-\begin{table}[!htbp]
+\begin{table*}[!tbp]
   \centering
   \caption{Reproducibility index.  Result paths are relative to
   \texttt{jobs/results/}; exact job commands appear in the final run manifest.}
@@ -924,7 +871,7 @@ maps every headline claim to its tracked artifact.
     Weak checks & \texttt{pub\_c\_gemma\_reduced\_gpu01\_r6/summary.json}; \texttt{docs/atlas\_w4\_structure\_rows.jsonl} \\
     \bottomrule
   \end{tabular}
-\end{table}
+\end{table*}
 \endgroup
 
 The complete publication figure suite is generated from tracked artifacts by
@@ -954,11 +901,12 @@ rather than structure-aware retention as a default policy, and we give a
 budget-relative rule, ADAPT, that degrades to attention selection exactly when
 the structural signal runs out.
 
-The remaining negative results stand: structure does not beat FullKV under
-placement controls, role-aware INT4 placement yields no quality benefit, and
-packed storage trades payload against latency.  We also correct a defect in our
-own released baseline, where two reported position-blind controls were one
-computation.  In operational terms the original intuition survives, narrowed:
+The surrounding results delimit the claim rather than dilute it: structure
+matches but does not exceed FullKV under placement controls, role-aware INT4
+placement is not a quality lever, and packed storage is an explicit space--time
+trade.  Keeping these hypotheses separate is what makes the retention result
+interpretable.  We also publish a correction to one released baseline, so every
+column here can be checked against the code.  In operational terms the original intuition survives, narrowed:
 when a constrained cache must choose, retain the schema field before the
 pleasantry---but first measure whether the context is mostly schema, because then
 the rule has nothing left to discard.
@@ -1029,4 +977,3 @@ Cheng-Ping Hsieh et al.
 \end{thebibliography}
 \endgroup
 
-\end{document}

@@ -50,3 +50,6 @@ data/prioritybench/manifests/page_perturb_labels.jsonl
 
 # Prajna site-local config (never commit)
 cluster/prajna/config.env
+
+# LaTeX build output
+paper/build/
