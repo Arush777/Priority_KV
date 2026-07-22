@@ -112,6 +112,26 @@ def main() -> int:
         workloads.append(summarise(f"BFCL-{c}", f, b, m))
     workloads.append(summarise("BFCL-all", all_f, all_b, all_mix))
 
+    # PriorityBench-A: the frozen synthetic core, where structure wins. This is
+    # the low-protected-fraction end of the boundary and the reason the frozen
+    # result and the external result do not contradict each other.
+    try:
+        from prioritybench.generate import generate_w3_lock_pilot
+
+        pf, pb, pmix = [], [], Counter()
+        for e in generate_w3_lock_pilot()[: args.per_category * 2]:
+            msgs = e.messages if hasattr(e, "messages") else e["messages"]
+            roles = assign_token_roles(tok, msgs, chat_kwargs=chat_kwargs)
+            n = len(roles)
+            if not n:
+                continue
+            pf.append(sum(1 for r in roles if r in STRUCTURE_ROLES) / n)
+            pb.append(keep_budget(n, keep_cfg) / n)
+            pmix.update(r.value for r in roles)
+        workloads.append(summarise("PriorityBench-A", pf, pb, pmix))
+    except Exception as exc:  # noqa: BLE001
+        print(f"[pf] PriorityBench-A unavailable: {exc}", flush=True)
+
     # tau-bench: same measurement on real agent transcripts.
     trajs = load_trajectories(cfg["paths"]["tau_dataset"])
     trajs = stratified_sample(trajs, n=args.tau_limit, seed=0)

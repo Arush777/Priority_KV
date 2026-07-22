@@ -123,6 +123,91 @@ CPU artifacts: `jobs/results/audit_retention_{qwen,llama}_s0_kf25_summary.json`.
 - Statistically significant structure≫SnapKV on Qwen  
 - Universal Llama transfer / hybrid complementarity
 
+## External evaluation — `EXTERNAL_BFCL_PRAJNA_V1`
+
+**Separate freeze. Does not modify any number above.** Benchmarks we did not author:
+BFCL V3 multi-turn (Gorilla `cd9429cc`, official `multi_turn_checker`, unmodified)
+and public τ-bench trajectories (`AgentSuite/tau-bench-trajectories` `382e57d1`).
+Qwen3-8B, 25% keep, L40S/sm_89. All non-FullKV arms are kvpress presses over an
+identical full prefill, so arms differ only in *which* KV entries survive.
+
+### BFCL V3 multi-turn — n=141 paired conversations
+
+| Arm | Accuracy |
+|---|---:|
+| FullKV | **0.192** |
+| SnapKV (attention) | **0.135** |
+| Structure | **0.000** |
+| Uniform | 0.000 |
+| Random (corrected) | 0.000 |
+
+Paired completeness 0.94 · 16 exclusions, all `MODEL_CONTEXT_LIMIT`.
+
+| Comparison | exact McNemar | Δ | 95% CI |
+|---|---:|---:|---|
+| FullKV vs Structure | **1.5e-08** | +0.191 | [+0.128, +0.262] |
+| FullKV vs SnapKV | **0.152** (n.s.) | +0.057 | [−0.007, +0.128] |
+| Structure vs SnapKV | **3.8e-06** | −0.135 | [−0.191, −0.078] |
+
+**Structure-aware retention does not transfer to BFCL.** SnapKV is statistically
+indistinguishable from FullKV at a 4× budget; structure is significantly worse
+than both. This does not contradict PriorityBench-A — it bounds it.
+
+### The boundary condition (why)
+
+Structure can only express a preference while protected mass stays *under* the
+keep budget. Measured at `keep_frac=0.25`:
+
+| Workload | Protected tokens | Oversubscribed | Structure |
+|---|---:|---:|---:|
+| PriorityBench-A | **6.1%** | 0% | **0.933** |
+| τ-bench | 79.5% | 99% | retention-only |
+| BFCL | **98.8%** | 100% | **0.000** |
+
+PriorityBench-A is **94.9% filler** — exactly the regime where "protect structure,
+drop filler" wins. A BFCL system prompt *is* 32 JSON tool schemas, so ~98% of
+tokens carry the protected `TOOL` role and the policy has nothing to discard;
+it degenerates to index order. See `scripts/analyze_protected_fraction.py`.
+
+### τ-bench gold-span retention — 4,856 trajectories, 828k spans
+
+Generation-free, CPU-only. **Mechanistic evidence, not task success.**
+
+| Span class | n | Structure | Uniform |
+|---|---:|---:|---:|
+| **explicit policy** | 82,971 | **0.820** | 0.001 |
+| tool name | 37,161 | 0.128 | 0.222 |
+| tool-call argument | 47,441 | 0.131 | 0.293 |
+| reused identifier | 276,237 | 0.055 | 0.315 |
+| reused tool result | 383,364 | 0.069 | 0.140 |
+| correction | 1,682 | 0.064 | 0.392 |
+
+Structure retains durable policy constraints ~680× better; recency wins on
+recently-referenced values. Same boundary, independent measurement.
+
+### Defects found in the frozen core
+
+1. **The published `random` baseline is byte-identical to `uniform`.**
+   `select_random` sets `recent = budget - sink_tokens`, so the forced block fills
+   the budget and the RNG branch never executes. The `~0.008` random column above
+   is therefore *not* an independent control. Frozen code left untouched; this
+   namespace uses a corrected `select_random_external`.
+2. **Reasoning blocks were discarded.** A `<think>…</think>` prefix was passed
+   whole to the official decoder, so correct tool calls decoded to nothing.
+   Fixing it moved FullKV 0.000 → 0.105.
+3. **Arms compared two different mechanisms** (prompt deletion vs KV eviction).
+   Rebuilt as kvpress presses throughout.
+
+### Not claimed from the external evaluation
+
+- Structure beats SnapKV on any external benchmark — the opposite is measured
+- τ-bench task success (the audit is retention-only; no simulator, no generation)
+- Cross-model generality (Qwen3-8B only at time of writing)
+- Any revision to the frozen PriorityBench-A numbers above
+
+Artifacts: `configs/external_bfcl_prajna_v1.yaml` (incl. all deviations),
+`$PRAJNA_ROOT/results/external_bfcl_prajna_v1/summaries/`.
+
 ## Source of truth
 
 - Evidence track: [`docs/EVIDENCE.md`](docs/EVIDENCE.md)  
