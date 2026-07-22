@@ -289,6 +289,7 @@ def main() -> int:  # noqa: C901
                 "model_result_decoded": rollout.model_result_decoded,
                 "raw_outputs": rollout.raw_outputs,
                 "timings": rollout.timings,
+                "rollout_extra": rollout.extra,
                 "memory": peak,
                 "wall_seconds": time.perf_counter() - t0,
             }

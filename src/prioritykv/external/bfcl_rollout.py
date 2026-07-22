@@ -121,6 +121,7 @@ def run_rollout(
     total_sel = 0.0
     steps_used = 0
     force_quit = False
+    step_extras: list[dict[str, Any]] = []
 
     t_start = time.perf_counter()
 
@@ -148,6 +149,8 @@ def run_rollout(
             total_gen += result.timings.get("generate_s", 0.0)
             total_sel += result.timings.get("select_s", 0.0)
             steps_used += 1
+            if result.extra:
+                step_extras.append(dict(result.extra))
 
             raw = result.text
             turn_raw.append(raw)
@@ -208,7 +211,13 @@ def run_rollout(
             "select_s": total_sel,
             "end_to_end_s": time.perf_counter() - t_start,
         },
-        extra={"turns": len(all_decoded), "n_turns_expected": task.n_turns},
+        extra={
+            "turns": len(all_decoded),
+            "n_turns_expected": task.n_turns,
+            # Per-step press metadata (press class, compression ratio, and for
+            # ADAPT the alpha actually used) so the policy is auditable.
+            "step_extras": step_extras,
+        },
     )
 
 

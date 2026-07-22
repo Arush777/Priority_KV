@@ -170,7 +170,7 @@ def expected_kept(n_tokens: int, compression_ratio: float) -> int:
     return int(n_tokens * (1 - compression_ratio))
 
 
-PRESS_ARMS: tuple[str, ...] = ("structure", "uniform", "random", "snapkv")
+PRESS_ARMS: tuple[str, ...] = ("structure", "uniform", "random", "snapkv", "adapt")
 
 
 def press_class_name(arm: str) -> str:
@@ -179,4 +179,95 @@ def press_class_name(arm: str) -> str:
         "uniform": "kvpress.StreamingLLMPress",
         "random": "kvpress.RandomPress",
         "snapkv": "kvpress.SnapKVPress",
+        "adapt": "prioritykv.external.presses.AdaptiveStructurePress",
     }[arm]
+
+
+# --------------------------------------------------------------------------- #
+# Adaptive structure prior (ADAPT arm)
+# --------------------------------------------------------------------------- #
+#
+# The frozen core's hybrid_press force-protects structural positions (a hard
+# union) and lets SnapKV fill the residual. EVIDENCE.md records that this failed:
+# hybrid == SnapKV on Qwen kf25 ("no complementarity"), and at Llama kf05 it
+# collapsed *below both parents*. The protected-fraction measurement explains
+# why: a hard union swallows the entire budget whenever protected mass exceeds
+# it, which is exactly the small-budget / structure-heavy regime.
+#
+# ADAPT treats structure as a budget-relative *prior* instead of a constraint:
+#
+#     alpha = min(1, keep_budget / protected_mass)
+#     score = alpha * rank(structure) + (1 - alpha) * rank(attention)
+#
+# alpha is computed from the prompt alone -- no tuning, no fitting, and nothing
+# downstream of any outcome. Where structure can express a preference
+# (protected_mass <= budget) alpha = 1 and ADAPT reduces to pure structure;
+# where it is oversubscribed alpha falls toward 0 and ADAPT reduces to SnapKV.
+
+
+def adaptive_alpha(protected_mass: int, budget: int) -> float:
+    """Mixing weight for the structure prior, from measurable quantities only.
+
+    ``protected_mass`` is the count of tokens carrying a protected role;
+    ``budget`` is the shared keep budget. Both are known before generation.
+    """
+    if protected_mass <= 0:
+        return 1.0
+    return float(min(1.0, budget / protected_mass))
+
+
+def protected_mass_from_roles(roles: Sequence[PageRole]) -> int:
+    return sum(1 for r in roles if r in _STRUCTURE_ROLES)
+
+
+def _rank_normalise(x, dim: int = -1):
+    """Map scores to uniform [0, 1] ranks along ``dim``.
+
+    Structure bands live around 1e6 while attention scores are ~1e-3, so a raw
+    weighted sum would be meaningless. Rank normalisation is scale-free, which
+    is what makes ``alpha`` an honest mixing weight rather than a fudge factor.
+    """
+    import torch
+
+    n = x.shape[dim]
+    if n <= 1:
+        return torch.zeros_like(x)
+    ranks = x.argsort(dim=dim).argsort(dim=dim).to(torch.float32)
+    return ranks / (n - 1)
+
+
+def make_adaptive_press(compression_ratio: float, *, window_size: int = 64,
+                        kernel_size: int = 5):
+    """SnapKV attention blended with the structure prior at weight ``alpha``."""
+    from kvpress import SnapKVPress
+
+    @dataclass
+    class AdaptiveStructurePress(SnapKVPress):
+        compression_ratio: float = 0.0
+        window_size: int = 64
+        kernel_size: int = 5
+        token_scores: np.ndarray | None = None
+        alpha: float = 1.0
+
+        def score(self, module, hidden_states, keys, values, attentions, kwargs):
+            import torch
+
+            attn = super().score(module, hidden_states, keys, values, attentions, kwargs)
+            if self.token_scores is None:
+                raise RuntimeError("adaptive press used before token_scores was set")
+            k_len = keys.shape[2]
+            s = np.asarray(self.token_scores, dtype=np.float32)
+            if s.shape[0] != k_len:
+                raise RuntimeError(
+                    f"structure score length {s.shape[0]} != KV length {k_len}; "
+                    "role alignment is broken"
+                )
+            struct = torch.as_tensor(s, device=attn.device, dtype=torch.float32)
+            struct = _rank_normalise(struct.view(1, 1, k_len)).expand_as(attn)
+            return self.alpha * struct + (1.0 - self.alpha) * _rank_normalise(attn)
+
+    return AdaptiveStructurePress(
+        compression_ratio=float(compression_ratio),
+        window_size=window_size,
+        kernel_size=kernel_size,
+    )
