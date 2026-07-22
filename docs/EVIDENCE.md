@@ -71,6 +71,42 @@ Pattern holds across **3/3** slices: middle ties FullKV; buried structure loses 
 | Llama @ kf05 | **Honest negative** | SnapKV > structure on s0+s1 |
 | P2 systems | **Smoke only** | no FullKV/TPOT frontier |
 
+## External evaluation — `EXTERNAL_BFCL_PRAJNA_V1`
+
+Separate freeze; nothing below modifies a frozen claim. Full detail in
+[`../RESULTS.md`](../RESULTS.md).
+
+| # | Claim under test | Verdict | Evidence |
+|---|---|---|---|
+| E1 | Structure ≫ blind eviction transfers to an externally authored benchmark | **Falsified** | BFCL V3 multi-turn, n=141 paired, official checker: structure **0.000** vs FullKV **0.192** (exact McNemar **p=1.5e-08**). Uniform and corrected-random also 0.000. |
+| E2 | Structure matches SnapKV externally | **Falsified** | SnapKV **0.135** vs structure **0.000**, **p=3.8e-06**, Δ −0.135 CI [−0.191, −0.078]. |
+| E3 | Attention-based eviction preserves agent capability at 4× | **Supported** | FullKV 0.192 vs SnapKV 0.135, **p=0.152 (n.s.)**, CI spans zero. |
+| E4 | Structure's advantage is bounded by protected fraction | **Supported** | PriorityBench-A 6.1% protected → 0.933; BFCL 98.8% → 0.000. BFCL is 100% oversubscribed at kf=0.25. PB-A is 94.9% FILLER. |
+| E5 | Structure preserves durable constraints better than recency | **Supported (retention only)** | τ-bench, 828k spans: explicit-policy any-retained **0.820** vs uniform **0.001**; loses on reused identifiers (0.055 vs 0.315). Not task success. |
+| E6 | The frozen `random` arm is an independent control | **Falsified** | `select_random` is byte-identical to `select_uniform` at every context length; the RNG branch never executes. The published `~0.008` random column is not independent of uniform. |
+
+### Negative results and corrections
+
+- **`random` ≡ `uniform` in the frozen core** (E6). Affects `RESULTS.md` P0. Frozen
+  code deliberately untouched; corrected only in the external namespace.
+- **Thinking-disabled Qwen3 scores 0.000 on BFCL** for *every* arm including
+  FullKV, so the benchmark cannot discriminate. Thinking is enabled externally and
+  the reasoning block is stripped before decoding, as the official handler does.
+- **`hybrid_press` failed for a diagnosable reason.** Its hard union force-protects
+  structural positions, which swallows the entire budget whenever protected mass
+  exceeds it — consistent with the recorded Llama kf05 collapse below both parents.
+- **FullKV capability ceiling is real**: 16 conversations exceeded Qwen3-8B's
+  40,960-token context and were excluded with `MODEL_CONTEXT_LIMIT`, concentrated on
+  the arms that actually make working tool calls (their conversations grow).
+
+### Scope limits
+
+- Qwen3-8B only; L40S/sm_89 (Prajna has no H100 — see `DEV_NO_H100`).
+- `keep_frac=0.25` only; no budget sweep yet.
+- BFCL V3 has four categories, not five — there is no `composite` split in V3.
+- The τ audit excludes SnapKV: it needs realised attention and cannot run
+  generation-free on CPU.
+
 ## Not claimed
 
 - Structure beats FullKV or SnapKV in general  

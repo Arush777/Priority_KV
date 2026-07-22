@@ -97,7 +97,10 @@ def main() -> int:  # noqa: C901
             continue
         req = p.get("requested_keep") or []
         real = p.get("realized_keep") or []
-        tol = int(cfg["arms"]["snapkv"].get("match_tolerance", 0)) if p["arm"] == "snapkv" else 0
+        # kvpress keeps int(k_len * (1 - ratio)) entries for EVERY press, so a
+        # 1-token integer-rounding drift is expected on all press arms, not just
+        # snapkv. Always downward, so no arm is ever advantaged.
+        tol = int(cfg["arms"]["snapkv"].get("match_tolerance", 0))
         bad = [
             {"step": i, "requested": q, "realized": r}
             for i, (q, r) in enumerate(zip(req, real))
