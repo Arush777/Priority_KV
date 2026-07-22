@@ -23,7 +23,7 @@
   linkcolor=black,
   citecolor=black,
   urlcolor=black,
-  pdftitle={PriorityKV: Structure-Aware KV Retention for Long Agent Traces},
+  pdftitle={PriorityKV: When Structure-Aware KV Retention Helps, and the Measurable Threshold Where It Stops},
   pdfauthor={Arush Sharma; Anupam Rawat}
 }
 \frenchspacing
@@ -46,7 +46,7 @@
 \setcounter{topnumber}{3}
 \setcounter{totalnumber}{5}
 
-\title{PriorityKV: Structure-Aware KV Retention for Long Agent Traces}
+\title{PriorityKV: When Structure-Aware KV Retention Helps,\\and the Measurable Threshold Where It Stops}
 \author[1]{Arush Sharma}
 \author[2]{Anupam Rawat}
 \affil[1]{Indian Institute of Technology (Indian School of Mines) Dhanbad}
@@ -59,35 +59,38 @@
 \begin{abstract}
 Long agent traces pack tool schemas, persistent identifiers, superseding
 instructions, and filler into one key--value (KV) cache.  Every token has the
-same storage cost, but not the same failure cost: losing a schema field can break
-a tool call, while losing filler changes nothing.  We test whether visible trace
-structure is a useful prior for deciding what to evict.  On a synthetic stress
-benchmark with Qwen3-8B and a matched 25\% keep budget, structure-aware retention
-passes 112/120 examples, compared with 1/120 for both uniform and random
-eviction.  It matches or slightly exceeds repository reimplementations of
-SnapKV, PyramidKV, and a structure--SnapKV hybrid, each at 108/120, although the
-paired advantage over SnapKV is not significant (exact two-sided McNemar
-$p=0.125$).
+same storage cost, but not the same failure cost.  This motivates evicting by
+\emph{application-visible structure}: protect schemas, constraints, sinks, and
+the recent window; discard the rest.  We show that this works dramatically in one
+regime, fails completely in another, and that a single measurable quantity
+predicts which regime a workload is in.
 
-We also report where the idea fails.  Placement controls show that structure
-ties, rather than beats, FullKV when state is moved to the middle and loses when
-state is buried in free-form text.  On Llama-3.1-8B at a 5\% budget, SnapKV wins
-on both evaluated slices.  A separate mixed-precision study finds no quality
-benefit from role-aware INT4 placement.  The packed BF16/INT4 prototype reduces
-measured KV payload to 0.719$\times$ FullKV, but BF16 cold scratch raises time per
-output token to 1.200--1.215$\times$.
+On a synthetic stress benchmark (Qwen3-8B, matched 25\% keep), structure-aware
+retention passes 112/120 examples against 1/120 for position-blind eviction, and
+is statistically indistinguishable from reimplementations of SnapKV, PyramidKV,
+and a structure--SnapKV hybrid at 108/120 (exact McNemar $p=0.125$).  On BFCL V3
+multi-turn, scored by the unmodified official checker, the same policy scores
+\textbf{0.000} on both Qwen3-8B ($n{=}140$) and Llama-3.1-8B ($n{=}143$), while
+attention-based eviction remains indistinguishable from FullKV at the same
+budget ($p=0.152$ and $p=1.0$).
 
-An external evaluation sharpens the boundary.  On BFCL V3 multi-turn, scored by
-the official checker, structure-aware retention scores 0.000 on both Qwen3-8B and
-Llama-3.1-8B, while attention selection is statistically indistinguishable from
-FullKV at the same budget.  The cause is measurable: a role-based policy can rank
-only while protected content is a minority of context, and 98.8\% of BFCL prompt
-tokens carry a protected role against 6.1\% in our synthetic benchmark.  We
-report this protected fraction as a pre-flight criterion, and a budget-relative
-variant that ties attention selection where the pure structure policy fails.  The
-result supports visible agent structure as a scoped eviction prior, valid below a
-measurable threshold, not as a universal selector, an INT4 quality win, or a
-latency win.
+The cause is measurable before any generation.  A role-based policy can rank only
+while protected content is a \emph{minority} of context; above that it selects
+everything and degenerates to index order.  Our synthetic benchmark is 94.9\%
+filler (6.1\% protected); a BFCL system prompt \emph{is} 32 JSON tool schemas
+(98.8\% protected).  We propose this protected fraction as a CPU-computable
+pre-flight criterion, and ADAPT, a budget-relative prior that reduces to the
+structure policy when it can rank and to attention selection when it cannot;
+ADAPT ties SnapKV on BFCL ($p=1.0$) where the pure structure policy scores zero.
+
+We also report what fails.  Structure ties rather than beats FullKV under
+placement controls and loses when state is buried in free-form text.  Role-aware
+INT4 placement yields no quality benefit.  The packed BF16/INT4 prototype reduces
+KV payload to 0.719$\times$ but raises time per output token to
+1.200--1.215$\times$.  Finally, we disclose a defect in our own released
+baseline: the ``random'' arm of our synthetic study is byte-identical to the
+uniform arm, so those two columns are one control, not two
+(\S\ref{sec:random-defect}).
 \end{abstract}
 
 \section{Introduction}
@@ -416,9 +419,12 @@ uses Qwen-tuned prompts and has a low FullKV score.
 \subsection{Structure protects state that blind eviction drops}
 \label{sec:p0-results}
 
-At matched 25\% token keep, structure passes 112/120 Qwen examples while uniform
-and random each pass 1/120 (Table~\ref{tab:qwen-main}).  The corresponding
-Wilson intervals do not come close to overlapping.  Figure~\ref{fig:eviction}
+At matched 25\% token keep, structure passes 112/120 Qwen examples while the
+position-blind control passes 1/120 (Table~\ref{tab:qwen-main}).  The
+corresponding Wilson intervals do not come close to overlapping.  We report a
+single position-blind control rather than two: our released ``random'' arm is
+byte-identical to the uniform arm, a defect characterized in
+\S\ref{sec:random-defect} rather than left for a reader to discover.  Figure~\ref{fig:eviction}
 places the position-blind and attention-derived selectors on one pass-rate axis.
 
 \begin{figure}[!htbp]
@@ -442,8 +448,7 @@ places the position-blind and attention-derived selectors on one pass-rate axis.
     \midrule
     FullKV & 107/120 & 0.892 & [0.823, 0.936] \\
     Structure & 112/120 & 0.933 & [0.874, 0.966] \\
-    Uniform & 1/120 & 0.008 & [0.002, 0.046] \\
-    Random & 1/120 & 0.008 & [0.002, 0.046] \\
+    Position-blind$^{\dagger}$ & 1/120 & 0.008 & [0.002, 0.046] \\
     \midrule
     SnapKV & 108/120 & 0.900 & [0.833, 0.942] \\
     PyramidKV & 108/120 & 0.900 & [0.833, 0.942] \\
@@ -451,6 +456,13 @@ places the position-blind and attention-derived selectors on one pass-rate axis.
     H2O (chunked) & 82/120 & 0.683 & [0.596, 0.760] \\
     \bottomrule
   \end{tabular}
+
+  \vspace{0.35em}
+  \parbox{0.86\linewidth}{\footnotesize $^{\dagger}$Earlier versions of this
+  table reported ``uniform'' and ``random'' as two arms, both at 1/120.  They are
+  a single computation: our \texttt{select\_random} is byte-identical to
+  \texttt{select\_uniform} at every context length (\S\ref{sec:random-defect}).
+  We report one row rather than double-count one control.}
 \end{table}
 
 The CPU audit confirms that this gap reflects retention rather than an easy
@@ -502,8 +514,15 @@ arbitrarily embedded state.
   \end{tabular}
 \end{table}
 
-\subsection{Structure matches attention selection; the hybrid does not help}
+\subsection{Structure matches attention selection on this benchmark; the hybrid does not help}
 \label{sec:p1-results}
+
+\emph{Scope note.}  The parity reported here is specific to PriorityBench-A and
+does not survive transfer.  \S\ref{sec:external} measures the same two policies
+on an externally authored benchmark and finds attention selection intact while
+the structure policy collapses to zero.  The two results are consistent once the
+protected fraction is measured (\S\ref{sec:external-boundary}); readers should
+carry the qualifier, not the headline.
 
 Structure passes 112/120, while SnapKV, PyramidKV, and hybrid each pass 108/120
 (Table~\ref{tab:qwen-main}).  The structure interval overlaps every 0.900 arm.
@@ -651,6 +670,19 @@ budget, scored per conversation.
   \end{tabular}
 \end{table}
 
+\textbf{Is the harness sound?}  FullKV itself reaches only 0.193 and 0.077, so a
+reader should ask whether the pipeline is broken rather than the policy.  Four
+checks argue otherwise.  (i)~Scoring is the unmodified upstream checker, and
+replaying the dataset's own ground truth through our rollout scores \emph{valid},
+while corrupted arguments and dropped turns score invalid.  (ii)~BFCL V3
+multi-turn is known-hard for 8B models in prompting mode; low absolute accuracy
+is expected at this scale.  (iii)~The arms separate far above the floor: a Wilson
+upper bound of 0.027 on the zero arms excludes the FullKV rate on both models.
+(iv)~An earlier configuration \emph{did} return 0.000 for every arm including
+FullKV; we traced it to reasoning blocks reaching the decoder unstripped, fixed
+it, and FullKV rose to a non-degenerate rate.  We report the diagnostic because
+it is the exact failure mode a skeptical reader should suspect.
+
 Structure-aware retention scores zero on every conversation, on both models.
 Exact paired McNemar gives FullKV versus structure $p=1.5\times10^{-8}$ (Qwen)
 and $p=9.8\times10^{-4}$ (Llama).  Attention selection, by contrast, is
@@ -755,7 +787,11 @@ On Qwen, hybrid equals SnapKV; on Llama at 5\%, it is below both parents.  A uni
 of protected positions with attention-ranked positions changes the residual
 budget and can inherit the weaknesses of both rules.  Any future hybrid claim
 requires a new allocation rule and new evidence rather than reinterpretation of
-the current comparison.
+the current comparison.  \S\ref{sec:external-adapt} supplies exactly that: the
+failure is that a hard union consumes the whole budget once protected mass
+exceeds it, and replacing the union with a budget-relative weight removes the
+pathology.  We present ADAPT as a distinct rule tested on new data, not as a
+reinterpretation of the falsified hybrid.
 
 \textbf{The protected fraction is the operative variable.}
 The external evaluation (\S\ref{sec:external}) turns the model-and-budget
@@ -798,6 +834,27 @@ generator's visible templates.  The gold audit rules out answer labels already
 in sink plus recent, but it does not eliminate all template alignment.  The
 buried result---0.675, 0.650, and 0.675 versus FullKV 0.900, 0.875, and
 0.900---is the clearest measured boundary.
+
+\subsection{A defect in our own released baseline}
+\label{sec:random-defect}
+
+Our synthetic study reported ``uniform'' and ``random'' as two position-blind
+controls.  They are one computation.  In \texttt{select\_random} the forced
+window is sized as $\text{recent} = \max(\text{force\_recent},\,
+\text{budget} - \text{sink})$; whenever the budget exceeds $\text{sink} +
+\text{force\_recent}$ this makes the forced sink-plus-recent block exactly fill
+the budget, the residual is zero, and the sampling branch never executes.  We
+verified byte-identical index sets at $n \in \{600,\,4096,\,40000\}$, with zero
+tokens ever drawn at random.
+
+The consequence is bounded but real.  No number changes, because the column was
+always reporting the uniform policy; but the \emph{claim} of robustness against
+two independent controls is not supported by two controls.  Our external
+evaluation uses a corrected position-blind arm that holds sink and recent at
+their configured sizes and samples the remainder.  It also scores 0.000 on BFCL,
+so the correction does not alter \S\ref{sec:external}.  We flag this because a
+reader auditing the released code would find it, and a defect the authors
+disclose is worth more than one a reviewer discovers.
 
 \textbf{Baseline fidelity.}
 SnapKV, PyramidKV, H2O, and hybrid are matched-budget repository
@@ -882,18 +939,29 @@ appropriate figure directory in both layouts.
 \section{Conclusion}
 \label{sec:conclusion}
 
-On synthetic Qwen agent traces, visible structure is a strong retention prior
-against position-blind eviction and matches or slightly exceeds the tested
-SnapKV-class reimplementations at a 25\% budget, without a significant paired
-advantage.  It does not beat FullKV under placement controls, does not transfer
-universally to Llama at a 5\% budget, and does not combine complementarily with
-SnapKV in the tested hybrid.  The separate mixed-precision study falsifies a
-role-aware INT4 quality win.  Packed storage reduces payload, but BF16 scratch
-limits peak reduction and produces a TPOT regression.  Taken together, the
-evidence supports a bounded principle: use application-visible structure when
-state must be discarded, and measure precision, payload, peak, and latency as
-separate hypotheses.  In operational terms, when a constrained cache must
-choose, it should retain the schema field before the pleasantry.
+Application-visible structure is a strong retention prior \emph{in a regime we
+can now identify in advance}.  On synthetic agent traces it passes 112/120 at a
+25\% budget against 1/120 for position-blind eviction and is indistinguishable
+from SnapKV-class selection.  On externally authored BFCL multi-turn traces the
+same policy scores 0.000 on two different 8B models, while attention selection
+remains indistinguishable from FullKV.
+
+The reconciling variable is measurable without running the model: structure can
+rank only while protected content is a minority of the context.  Our synthetic
+benchmark is 94.9\% filler; real tool-calling prompts are almost entirely
+schema.  We therefore recommend the protected fraction as a pre-flight check
+rather than structure-aware retention as a default policy, and we give a
+budget-relative rule, ADAPT, that degrades to attention selection exactly when
+the structural signal runs out.
+
+The remaining negative results stand: structure does not beat FullKV under
+placement controls, role-aware INT4 placement yields no quality benefit, and
+packed storage trades payload against latency.  We also correct a defect in our
+own released baseline, where two reported position-blind controls were one
+computation.  In operational terms the original intuition survives, narrowed:
+when a constrained cache must choose, retain the schema field before the
+pleasantry---but first measure whether the context is mostly schema, because then
+the rule has nothing left to discard.
 
 \begingroup
 \small
