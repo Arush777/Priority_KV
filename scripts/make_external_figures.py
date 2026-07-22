@@ -111,6 +111,7 @@ def fig_boundary(pf: dict, structure_outcomes: dict, out: Path) -> Path:
     fig.tight_layout()
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, bbox_inches="tight", facecolor="white")
+    fig.savefig(out.with_suffix(".pdf"), bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return out
 
@@ -159,6 +160,7 @@ def fig_arms(panels: list[tuple[str, dict]], out: Path) -> Path:
                  fontsize=11.5, y=1.03, x=0.02, ha="left", color=INK)
     fig.tight_layout()
     fig.savefig(out, bbox_inches="tight", facecolor="white")
+    fig.savefig(out.with_suffix(".pdf"), bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return out
 
