@@ -117,10 +117,17 @@ def fig_boundary(pf: dict, structure_outcomes: dict, out: Path) -> Path:
 
 def fig_arms(panels: list[tuple[str, dict]], out: Path) -> Path:
     """One panel per model so the cross-model replication is visible."""
-    fig, axes = plt.subplots(1, len(panels), figsize=(3.6 * len(panels), 3.3),
-                             dpi=200, sharex=True)
+    fig, axes = plt.subplots(1, len(panels), figsize=(4.1 * len(panels), 3.3), dpi=200)
     if len(panels) == 1:
         axes = [axes]
+
+    # One shared limit computed from every panel's upper CI. sharex plus a
+    # per-panel set_xlim silently clipped the tallest bar in the first panel.
+    xmax = max(
+        summary["overall"][a]["wilson_ci_high"]
+        for _, summary in panels for a in summary["overall"]
+    )
+    xlim = xmax * 1.55
 
     for ax, (title, summary) in zip(axes, panels):
         order = [a for a in ("full", "snapkv", "adapt", "structure", "uniform", "random")
@@ -134,15 +141,17 @@ def fig_arms(panels: list[tuple[str, dict]], out: Path) -> Path:
         ax.barh(y, vals, color=colors, height=0.55, zorder=3)
         ax.errorbar(vals, y, xerr=[lo, hi], fmt="none", ecolor="#6b737c",
                     elinewidth=1.1, capsize=3, zorder=4)
-        for yi, v in zip(y, vals):
-            ax.text(v + 0.012, yi, f"{v:.3f}", va="center", fontsize=9, color=INK)
+        for yi, v, h in zip(y, vals, hi):
+            # Sit the label clear of the error-bar cap, never on top of it.
+            ax.text(v + h + xlim * 0.035, yi, f"{v:.3f}", va="center",
+                    fontsize=9, color=INK)
 
         ax.set_yticks(y)
         ax.set_yticklabels([ARM_LABEL[a] for a in order], fontsize=9.5, color=INK)
         n = summary.get("n_tasks_paired", 0)
         ax.set_title(f"{title}  ·  n={n} paired", fontsize=10.5, pad=8,
                      color=INK, loc="left")
-        ax.set_xlim(0, max(vals + [0.05]) * 1.45)
+        ax.set_xlim(0, xlim)
         _style(ax, xgrid=True)
 
     axes[0].set_xlabel("BFCL V3 multi-turn accuracy", fontsize=10)

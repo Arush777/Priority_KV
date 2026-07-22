@@ -83,6 +83,9 @@ Separate freeze; nothing below modifies a frozen claim. Full detail in
 | E3 | Attention-based eviction preserves agent capability at 4× | **Supported** | FullKV 0.192 vs SnapKV 0.135, **p=0.152 (n.s.)**, CI spans zero. |
 | E4 | Structure's advantage is bounded by protected fraction | **Supported** | PriorityBench-A 6.1% protected → 0.933; BFCL 98.8% → 0.000. BFCL is 100% oversubscribed at kf=0.25. PB-A is 94.9% FILLER. |
 | E5 | Structure preserves durable constraints better than recency | **Supported (retention only)** | τ-bench, 828k spans: explicit-policy any-retained **0.820** vs uniform **0.001**; loses on reused identifiers (0.055 vs 0.315). Not task success. |
+| E7 | The boundary is a Qwen artifact | **Falsified** | Llama-3.1-8B, n=143: FullKV 0.077 vs SnapKV 0.084 (**p=1.0**), structure 0.000 (**p=9.8e-04** vs FullKV). Same signs, same zeros, second architecture. |
+| E8 | ADAPT beats SnapKV | **Not established** | ADAPT 0.129 vs SnapKV 0.136, **p=1.0**, Δ −0.007 CI [−0.057, +0.071]. ADAPT *ties* SnapKV and is indistinguishable from FullKV (p=0.108) while beating structure/uniform/random (**p=7.6e-06**). Claim only "never worse". |
+| E9 | ADAPT's alpha is a fitted parameter | **Falsified** | Formula frozen in config before any ADAPT run. Predicted ~0.25 from the protected fraction; measured mean **0.267** over 833 steps. |
 | E6 | The frozen `random` arm is an independent control | **Falsified** | `select_random` is byte-identical to `select_uniform` at every context length; the RNG branch never executes. The published `~0.008` random column is not independent of uniform. |
 
 ### Negative results and corrections
