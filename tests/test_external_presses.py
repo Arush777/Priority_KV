@@ -197,3 +197,106 @@ def test_random_press_selects_a_spread_not_a_contiguous_block():
     # A contiguous block would put nearly all of its mass in one region.
     thirds = [len([i for i in kept if lo <= i < lo + 334]) for lo in (0, 334, 668)]
     assert all(t > 40 for t in thirds), f"mask is not position-blind: {thirds}"
+
+
+# --------------------------------------------------------------------------- #
+# ADAPT: adaptive structure prior
+# --------------------------------------------------------------------------- #
+
+
+def test_alpha_is_one_when_structure_fits_the_budget():
+    """Under-subscribed => pure structure, so ADAPT reduces to the frozen policy."""
+    from prioritykv.external.presses import adaptive_alpha
+
+    assert adaptive_alpha(protected_mass=100, budget=1000) == 1.0
+    assert adaptive_alpha(protected_mass=1000, budget=1000) == 1.0
+
+
+def test_alpha_falls_toward_zero_as_structure_oversubscribes():
+    """Oversubscribed => attention dominates, so ADAPT reduces toward SnapKV."""
+    from prioritykv.external.presses import adaptive_alpha
+
+    assert adaptive_alpha(protected_mass=4000, budget=1000) == pytest.approx(0.25)
+    assert adaptive_alpha(protected_mass=100000, budget=1000) == pytest.approx(0.01)
+
+
+def test_alpha_matches_the_measured_workloads():
+    """The three measured regimes must land where the paper claims."""
+    from prioritykv.external.presses import adaptive_alpha
+
+    # PriorityBench-A: 6.1% protected, 25% budget -> structure can rank freely.
+    assert adaptive_alpha(int(0.061 * 10000), 2500) == 1.0
+    # BFCL: 98.8% protected -> mostly attention.
+    assert adaptive_alpha(int(0.988 * 10000), 2500) == pytest.approx(0.253, abs=1e-2)
+    # tau-bench: 79.5% protected -> blend.
+    assert adaptive_alpha(int(0.795 * 10000), 2500) == pytest.approx(0.314, abs=1e-2)
+
+
+def test_alpha_is_degenerate_safe():
+    from prioritykv.external.presses import adaptive_alpha
+
+    assert adaptive_alpha(0, 1000) == 1.0
+    assert 0.0 <= adaptive_alpha(10**9, 1) <= 1.0
+
+
+def test_protected_mass_counts_only_structure_roles():
+    from prioritykv.external.presses import protected_mass_from_roles
+
+    roles = [PageRole.TOOL, PageRole.FILLER, PageRole.CONSTRAINT,
+             PageRole.GENERATED, PageRole.OTHER]
+    assert protected_mass_from_roles(roles) == 3
+
+
+def test_rank_normalise_maps_to_unit_interval_preserving_order():
+    torch = pytest.importorskip("torch")
+    from prioritykv.external.presses import _rank_normalise
+
+    x = torch.tensor([[[5.0, 1.0, 3.0, 9.0]]])
+    r = _rank_normalise(x)
+    assert float(r.min()) == 0.0 and float(r.max()) == 1.0
+    # order preserved: 1 < 3 < 5 < 9
+    assert r[0, 0, 1] < r[0, 0, 2] < r[0, 0, 0] < r[0, 0, 3]
+
+
+def test_rank_normalise_is_scale_free():
+    """This is what makes alpha an honest weight rather than a fudge factor."""
+    torch = pytest.importorskip("torch")
+    from prioritykv.external.presses import _rank_normalise
+
+    x = torch.tensor([[[1e-3, 2e-3, 3e-3]]])
+    y = x * 1e9
+    assert torch.allclose(_rank_normalise(x), _rank_normalise(y))
+
+
+def test_adapt_at_alpha_one_selects_exactly_what_structure_selects():
+    """alpha=1 must reproduce the structure arm, not merely approximate it."""
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("kvpress")
+    from prioritykv.external.presses import _rank_normalise
+
+    n = 4096
+    roles = _roles(n)
+    budget = keep_budget(n, CFG)
+    s = structure_token_scores(n, roles, CFG)
+    ranked = _rank_normalise(torch.as_tensor(s, dtype=torch.float32).view(1, 1, n))
+    top = set(torch.topk(ranked[0, 0], budget).indices.tolist())
+    ref = set(np.argsort(-s)[:budget].tolist())
+    assert top == ref
+
+
+def test_adapt_press_requires_scores_and_checks_alignment():
+    pytest.importorskip("kvpress")
+    pytest.importorskip("torch")
+    from prioritykv.external.presses import make_adaptive_press
+
+    press = make_adaptive_press(0.75)
+    assert press.alpha == 1.0
+    assert press.token_scores is None
+    assert press.compression_ratio == 0.75
+
+
+def test_adapt_is_registered_as_a_press_arm():
+    from prioritykv.external.presses import PRESS_ARMS, press_class_name
+
+    assert "adapt" in PRESS_ARMS
+    assert "AdaptiveStructurePress" in press_class_name("adapt")
