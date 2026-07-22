@@ -218,6 +218,139 @@ class TokenGatherGenerator:
 
 
 # --------------------------------------------------------------------------- #
+# Press-based arms (all policies, one mechanism)
+# --------------------------------------------------------------------------- #
+
+
+class PressGenerator:
+    """Every non-FullKV arm, as a kvpress press over the same full prefill.
+
+    The model always sees the complete prompt; arms differ only in which KV
+    entries survive compression. That isolates the retention policy from the
+    mechanism, which a token-gather-vs-kvpress comparison cannot do.
+    """
+
+    def __init__(
+        self,
+        model,
+        tokenizer,
+        *,
+        arm: str,
+        keep_cfg: KeepPolicyConfig,
+        window_size: int = 64,
+        kernel_size: int = 5,
+        max_model_len: int = 40960,
+        enable_thinking: bool | None = None,
+    ):
+        from prioritykv.external.presses import PRESS_ARMS
+
+        if arm not in PRESS_ARMS:
+            raise ValueError(f"{arm!r} is not a press arm; expected one of {PRESS_ARMS}")
+        self.model = model
+        self.tok = tokenizer
+        self.arm = arm
+        self.keep_cfg = keep_cfg
+        self.window_size = window_size
+        self.kernel_size = kernel_size
+        self.max_model_len = max_model_len
+        self.chat_kwargs = _chat_kwargs(tokenizer, enable_thinking)
+        self._step = 0
+        if arm == "snapkv":
+            assert_real_snapkv(make_snapkv_press(0.5, window_size=window_size,
+                                                 kernel_size=kernel_size))
+
+    def _build_press(self, n: int, budget: int, messages):
+        from prioritykv.external.presses import (
+            compression_ratio_for_budget,
+            make_random_press,
+            make_snapkv_press_ext,
+            make_structure_press,
+            make_uniform_press,
+        )
+
+        ratio = compression_ratio_for_budget(n, budget)
+        if self.arm == "snapkv":
+            press = make_snapkv_press_ext(ratio, window_size=self.window_size,
+                                          kernel_size=self.kernel_size)
+            assert_real_snapkv(press)
+            return press
+        if self.arm == "uniform":
+            return make_uniform_press(ratio, n_sink=self.keep_cfg.sink_tokens)
+        if self.arm == "random":
+            # Decorrelate across steps while staying reproducible from the seed.
+            return make_random_press(ratio, seed=self.keep_cfg.seed + self._step)
+
+        from prioritykv.external.presses import structure_token_scores
+
+        roles = assign_token_roles(self.tok, list(messages), chat_kwargs=self.chat_kwargs)
+        if len(roles) != n:
+            raise RuntimeError(
+                f"structure role/token misalignment: roles={len(roles)} n={n}"
+            )
+        press = make_structure_press(ratio)
+        press.token_scores = structure_token_scores(n, roles, self.keep_cfg)
+        return press
+
+    def generate(self, messages: Sequence[dict], max_new_tokens: int) -> GenerationResult:
+        import torch
+
+        t0 = time.perf_counter()
+        text = self.tok.apply_chat_template(
+            list(messages), tokenize=False, add_generation_prompt=True, **self.chat_kwargs
+        )
+        ids = self.tok(text, add_special_tokens=False, return_tensors="pt")["input_ids"][0]
+        n = int(ids.numel())
+        requested = keep_budget(n, self.keep_cfg)
+        press = self._build_press(n, requested, messages)
+
+        inputs = {
+            "input_ids": ids.unsqueeze(0).to(self.model.device),
+            "attention_mask": torch.ones(1, n, dtype=torch.long, device=self.model.device),
+        }
+        t_sel = time.perf_counter()
+        with torch.no_grad(), press(self.model):
+            gen = self.model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                do_sample=False,
+                temperature=None,
+                top_p=None,
+                pad_token_id=self.tok.pad_token_id or self.tok.eos_token_id,
+                return_dict_in_generate=True,
+            )
+        sequences = gen.sequences
+        new_ids = sequences[0, n:].tolist()
+        out_text = self.tok.decode(new_ids, skip_special_tokens=True)
+        t_end = time.perf_counter()
+        self._step += 1
+
+        realized = measure_cache_length(gen, self.model, n, len(new_ids))
+        if realized < 0:
+            raise SnapKVUnavailableError(
+                f"could not measure the compressed KV length for arm {self.arm!r}; "
+                "the realised keep count cannot be verified against the budget"
+            )
+
+        from prioritykv.external.presses import press_class_name
+
+        return GenerationResult(
+            text=out_text,
+            prompt_tokens=n,
+            requested_keep=requested,
+            realized_keep=realized,
+            kept_indices=None,
+            timings={"select_s": t_sel - t0, "generate_s": t_end - t_sel,
+                     "total_s": t_end - t0},
+            extra={
+                "mechanism": "kv_press",
+                "press_class": press_class_name(self.arm),
+                "compression_ratio": float(getattr(press, "compression_ratio", 0.0)),
+                "new_tokens": len(new_ids),
+            },
+        )
+
+
+# --------------------------------------------------------------------------- #
 # Real attention-based SnapKV
 # --------------------------------------------------------------------------- #
 

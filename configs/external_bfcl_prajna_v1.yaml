@@ -66,6 +66,10 @@ arms:
     # SnapKV evicts to the same token count the token-gather arms retain.
     implementation: kvpress.SnapKVPress
     allow_fallback: false
+    # kvpress keeps int(q_len * (1 - ratio)) entries, so exact equality with the
+    # requested budget is unattainable. Measured drift is 1-2 tokens in ~1400
+    # (0.1%) and always *downward*, so SnapKV is never advantaged.
+    match_tolerance: 4
   stress:
     keep_frac: 0.10
     n_tasks: 200
@@ -151,6 +155,29 @@ deviations:
     resolution: "Use a corrected select_random_external in this namespace only, holding
       sink and recent at their configured sizes and drawing the rest at random. The
       frozen core is left untouched; the defect is documented, not silently rewritten."
+  - id: DEV_ARM_MECHANISM
+    handoff_assumption: "Arms differ only in which tokens they retain at a matched budget."
+    reality: "They also differed in *how*. The repo's token-gather path rewrites the
+      prompt to the kept tokens and regenerates, so the model never sees the dropped
+      text; kvpress prefills the full prompt and evicts KV entries afterwards. Deleting
+      text is strictly more destructive than dropping a computed KV entry, so a
+      token-gather `structure` versus a kvpress `snapkv` measures mechanism, not policy.
+      Pilot 268474 showed exactly this: snapkv tied FullKV at 0.105 while structure,
+      uniform and random all scored 0.000."
+    resolution: "Every non-FullKV arm is now a kvpress press over the same prefill at
+      the same compression ratio: structure -> role-scored ScorerPress, uniform ->
+      StreamingLLMPress, random -> RandomPress, snapkv -> SnapKVPress. The structure
+      press reproduces the frozen select_structure selection exactly (verified over
+      seven context sizes and mixed protected roles), so only the mechanism changed."
+  - id: DEV_TRANSFORMERS_PIN_SIDE_EFFECT
+    handoff_assumption: "The locked environment reproduces all repository tests."
+    reality: "kvpress 0.5.4 requires transformers<5.3. Pinning it downgrades
+      transformers 5.13.1 -> 4.57.6, which changes the DynamicCache layout and breaks
+      tests/test_mixed_kv.py::test_apply_packed_int4_saves_bytes_and_roundtrips in the
+      frozen core's packed-INT4 path."
+    resolution: "Accepted: SnapKV is mandatory for this evaluation and the BFCL path
+      never touches the packed cache. The frozen packed-cache results were produced on
+      the original H200 environment and are unaffected. Recorded, not hidden."
   - id: DEV_TAU_SNAPKV
     handoff_assumption: "CPU audit reports retention for each retention policy."
     reality: "SnapKV scores tokens by realised attention and cannot run generation-free on CPU."
