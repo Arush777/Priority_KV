@@ -255,6 +255,8 @@ class PressGenerator:
         self.max_model_len = max_model_len
         self.chat_kwargs = _chat_kwargs(tokenizer, enable_thinking)
         self._step = 0
+        self._last_alpha = None
+        self._last_protected_mass = None
         if arm == "snapkv":
             assert_real_snapkv(make_snapkv_press(0.5, window_size=window_size,
                                                  kernel_size=kernel_size))
@@ -280,15 +282,35 @@ class PressGenerator:
             # Decorrelate across steps while staying reproducible from the seed.
             return make_random_press(ratio, seed=self.keep_cfg.seed + self._step)
 
-        from prioritykv.external.presses import structure_token_scores
+        from prioritykv.external.presses import (
+            adaptive_alpha,
+            make_adaptive_press,
+            protected_mass_from_roles,
+            structure_token_scores,
+        )
 
         roles = assign_token_roles(self.tok, list(messages), chat_kwargs=self.chat_kwargs)
         if len(roles) != n:
             raise RuntimeError(
                 f"structure role/token misalignment: roles={len(roles)} n={n}"
             )
+        scores = structure_token_scores(n, roles, self.keep_cfg)
+
+        if self.arm == "adapt":
+            # alpha comes from the prompt alone: no tuning, nothing downstream
+            # of any outcome. Recorded per step so it is auditable after the fact.
+            mass = protected_mass_from_roles(roles)
+            alpha = adaptive_alpha(mass, budget)
+            press = make_adaptive_press(ratio, window_size=self.window_size,
+                                        kernel_size=self.kernel_size)
+            press.token_scores = scores
+            press.alpha = alpha
+            self._last_alpha = alpha
+            self._last_protected_mass = mass
+            return press
+
         press = make_structure_press(ratio)
-        press.token_scores = structure_token_scores(n, roles, self.keep_cfg)
+        press.token_scores = scores
         return press
 
     def generate(self, messages: Sequence[dict], max_new_tokens: int) -> GenerationResult:
@@ -346,6 +368,9 @@ class PressGenerator:
                 "press_class": press_class_name(self.arm),
                 "compression_ratio": float(getattr(press, "compression_ratio", 0.0)),
                 "new_tokens": len(new_ids),
+                **({"alpha": self._last_alpha,
+                    "protected_mass": self._last_protected_mass}
+                   if self.arm == "adapt" else {}),
             },
         )
 
