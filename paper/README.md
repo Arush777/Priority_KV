@@ -25,11 +25,11 @@ tectonic -X compile prioritykv_arxiv.tex      --outdir build --keep-logs
 tectonic -X compile prioritykv_conference.tex --outdir build --keep-logs
 ```
 
-Verified with `tectonic 0.16.9` on 2026-07-23:
+Verified with `tectonic 0.15.0` on 2026-07-22:
 
 | Target | Pages | Errors | Overfull |
 |---|---:|---:|---:|
-| arXiv | 15 | 0 | 0 |
+| arXiv | 14 | 0 | 0 |
 | conference | 13 | 0 | 4 |
 
 The conference target uses a neutral two-column layout so it compiles anywhere.
@@ -42,17 +42,12 @@ material in `docs/`.
 
 ## Figures
 
-Eight conceptual/systems figures come from the frozen core:
+One command regenerates and validates all ten figures.  The two external plots
+use the tracked submission snapshot because the originating cluster filesystem
+is not part of this checkout:
 
 ```bash
 uv run python scripts/make_publication_figures.py
-```
-
-The two external-evaluation figures are regenerated from tracked summary JSON,
-never hand-edited:
-
-```bash
-uv run python scripts/make_external_figures.py --tag primary --llama-tag llama
 ```
 
 `\graphicspath{{figures/}{paper/figures/}}` resolves figures whether `paper/`

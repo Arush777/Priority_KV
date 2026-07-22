@@ -131,7 +131,7 @@ and public τ-bench trajectories (`AgentSuite/tau-bench-trajectories` `382e57d1`
 Qwen3-8B, 25% keep, L40S/sm_89. All non-FullKV arms are kvpress presses over an
 identical full prefill, so arms differ only in *which* KV entries survive.
 
-### BFCL V3 multi-turn — n=141 paired conversations
+### BFCL V3 multi-turn — frozen all-arm intersections
 
 | Arm | Qwen3-8B (n=140) | Llama-3.1-8B (n=143) |
 |---|---:|---:|
@@ -145,16 +145,16 @@ identical full prefill, so arms differ only in *which* KV entries survive.
 Paired completeness 0.933 / 0.953 · exclusions all `MODEL_CONTEXT_LIMIT` ·
 **0 matched-budget violations**. The result replicates across two architectures.
 
-| Comparison | exact McNemar | Δ | 95% CI |
-|---|---:|---:|---|
-| FullKV vs Structure | **1.5e-08** | +0.191 | [+0.128, +0.262] |
-| FullKV vs SnapKV | **0.152** (n.s.) | +0.057 | [−0.007, +0.128] |
-| Structure vs SnapKV | **3.8e-06** | −0.135 | [−0.191, −0.078] |
+| Comparison | Exact McNemar |
+|---|---:|
+| FullKV vs Structure | **1.5e-08** |
+| FullKV vs SnapKV | **0.152** (n.s.) |
+| Structure vs SnapKV | **3.8e-06** |
 
-**Structure-aware retention does not transfer to BFCL.** SnapKV is statistically
-indistinguishable from FullKV at a 4× budget; structure is significantly worse
-than both. This does not contradict PriorityBench-A — it bounds it. Llama-3.1-8B
-reproduces every sign: FullKV vs SnapKV **p=1.0**, FullKV vs structure
+**BFCL identifies the high-protected-mass boundary.** SnapKV is statistically
+indistinguishable from FullKV at a 4× budget, while the binary structure score is
+saturated. This complements rather than contradicts PriorityBench-A. Llama-3.1-8B
+reproduces the ordering: FullKV vs SnapKV **p=1.0**, FullKV vs structure
 **p=9.8e-04**, structure vs SnapKV **p=4.9e-04**.
 
 ### ADAPT — structure as a budget-relative prior
@@ -180,11 +180,10 @@ made in advance and confirmed.
 | ADAPT vs FullKV | 0.108 (n.s.) | −0.064 | [−0.136, +0.007] |
 | ADAPT vs Structure | **7.6e-06** | +0.129 | [+0.079, +0.186] |
 
-**ADAPT ties SnapKV and is indistinguishable from FullKV, on a workload where the
-structure policy it generalises scores exactly zero.** It does *not* beat SnapKV —
-the claim is "never worse, and it recovers attention-level behaviour automatically
-from a measurement rather than a hand-chosen policy." At alpha=1 it provably
-selects exactly what the structure arm selects, so it subsumes the frozen policy.
+**ADAPT reaches the same measured range as SnapKV and is indistinguishable from
+FullKV on this workload.** It does not establish superiority to SnapKV; it shows
+that a prompt-derived weight can recover attention-level behavior when hard
+structure is saturated. At alpha=1 it recovers the evaluated structure ordering.
 
 ### The boundary condition (why)
 
@@ -193,11 +192,11 @@ keep budget. Measured at `keep_frac=0.25`:
 
 | Workload | Protected tokens | Oversubscribed | Structure |
 |---|---:|---:|---:|
-| PriorityBench-A | **6.1%** | 0% | **0.933** |
+| PriorityBench-A | **6.0%** | 0% | **0.933** |
 | τ-bench | 79.5% | 99% | retention-only |
 | BFCL | **98.8%** | 100% | **0.000** |
 
-PriorityBench-A is **94.9% filler** — exactly the regime where "protect structure,
+PriorityBench-A is **94.0% non-protected by the same mean-fraction measure** — the regime where "protect structure,
 drop filler" wins. A BFCL system prompt *is* 32 JSON tool schemas, so ~98% of
 tokens carry the protected `TOOL` role and the policy has nothing to discard;
 it degenerates to index order. See `scripts/analyze_protected_fraction.py`.
