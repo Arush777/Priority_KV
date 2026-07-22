@@ -121,10 +121,33 @@ def make_uniform_press(compression_ratio: float, *, n_sink: int = 16):
 
 
 def make_random_press(compression_ratio: float, *, seed: int = 0):
-    """Seeded position-blind control. Genuinely random, unlike the frozen core's."""
-    from kvpress import RandomPress
+    """Seeded position-blind control. Genuinely random, unlike the frozen core's.
 
-    return RandomPress(compression_ratio=float(compression_ratio), seed=int(seed))
+    kvpress's own ``RandomPress(seed=...)`` builds a CPU ``torch.Generator`` and
+    then samples against CUDA keys, which raises "Expected a 'cuda' device type
+    for generator but found 'cpu'". Scores are drawn here with a NumPy RNG and
+    moved to the keys' device instead, which is both device-agnostic and exactly
+    reproducible from the seed.
+    """
+    from kvpress import ScorerPress
+
+    @dataclass
+    class SeededRandomPress(ScorerPress):
+        """Position-blind random keep, reproducible and device-safe."""
+
+        compression_ratio: float = 0.0
+        seed: int = 0
+
+        def score(self, module, hidden_states, keys, values, attentions, kwargs):
+            import torch
+
+            bsz, n_kv_heads, k_len, _ = keys.shape
+            rng = np.random.default_rng(self.seed)
+            s = rng.random(k_len, dtype=np.float32)
+            t = torch.as_tensor(s, device=keys.device, dtype=torch.float32)
+            return t.view(1, 1, k_len).expand(bsz, n_kv_heads, k_len)
+
+    return SeededRandomPress(compression_ratio=float(compression_ratio), seed=int(seed))
 
 
 def make_snapkv_press_ext(compression_ratio: float, *, window_size: int = 64,
