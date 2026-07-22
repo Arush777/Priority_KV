@@ -161,7 +161,14 @@ reproduces every sign: FullKV vs SnapKV **p=1.0**, FullKV vs structure
 
 `alpha = min(1, keep_budget / protected_mass)`, blending rank-normalised structure
 and attention scores. Alpha uses only quantities known from the prompt: no tuning,
-no fitting. The formula was frozen in the config *before* any ADAPT result existed.
+no fitting, no free parameter.
+
+**Pre-registration caveat.** The formula was written before the ADAPT run, but the
+commit that was meant to freeze it timed out and did not land, so it was committed
+*after* the results were seen. The prediction is therefore pre-specified **by
+construction** — alpha is a closed form over two measured quantities with nothing
+to fit — but not by commit timestamp. Weigh the "~0.25 predicted, 0.267 measured"
+agreement accordingly.
 
 Measured alpha on BFCL: **mean 0.267** (min 0.250, max 0.401) over 833 generation
 steps, against **~0.25 predicted** from the 98.8% protected fraction — a prediction
