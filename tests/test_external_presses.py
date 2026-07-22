@@ -130,7 +130,7 @@ def test_presses_construct_and_are_the_expected_types():
 
     assert isinstance(make_snapkv_press_ext(0.75), kvpress.SnapKVPress)
     assert isinstance(make_uniform_press(0.75), kvpress.StreamingLLMPress)
-    assert isinstance(make_random_press(0.75), kvpress.RandomPress)
+    assert isinstance(make_random_press(0.75), kvpress.ScorerPress)
     assert isinstance(make_structure_press(0.75), kvpress.ScorerPress)
 
 
@@ -167,3 +167,33 @@ def test_structure_press_score_shape_matches_keys():
     keys = torch.zeros(1, 4, 32, 8)
     out = press.score(None, None, keys, keys, None, {})
     assert tuple(out.shape) == (1, 4, 32)
+
+
+def test_random_press_scores_on_the_keys_device_and_is_seeded():
+    """kvpress's own RandomPress builds a CPU generator and dies on CUDA keys."""
+    pytest.importorskip("kvpress")
+    torch = pytest.importorskip("torch")
+    from prioritykv.external.presses import make_random_press
+
+    keys = torch.zeros(1, 4, 64, 8)
+    a = make_random_press(0.75, seed=3).score(None, None, keys, keys, None, {})
+    b = make_random_press(0.75, seed=3).score(None, None, keys, keys, None, {})
+    c = make_random_press(0.75, seed=4).score(None, None, keys, keys, None, {})
+    assert tuple(a.shape) == (1, 4, 64)
+    assert a.device == keys.device
+    assert torch.equal(a, b), "same seed must give the same mask"
+    assert not torch.equal(a, c), "different seed must give a different mask"
+
+
+def test_random_press_selects_a_spread_not_a_contiguous_block():
+    """A position-blind control must not degenerate into sink+recent."""
+    pytest.importorskip("kvpress")
+    torch = pytest.importorskip("torch")
+    from prioritykv.external.presses import make_random_press
+
+    keys = torch.zeros(1, 1, 1000, 8)
+    s = make_random_press(0.75, seed=0).score(None, None, keys, keys, None, {})[0, 0]
+    kept = set(torch.topk(s, 250).indices.tolist())
+    # A contiguous block would put nearly all of its mass in one region.
+    thirds = [len([i for i in kept if lo <= i < lo + 334]) for lo in (0, 334, 668)]
+    assert all(t > 40 for t in thirds), f"mask is not position-blind: {thirds}"
