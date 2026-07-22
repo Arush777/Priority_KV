@@ -14,9 +14,12 @@ model:
   local_dir: ${PRIORITYKV_SCRATCH}/models/Qwen3-8B
   dtype: bfloat16
   attn_implementation: sdpa
-  enable_thinking: false          # existing project convention (prioritybench.pins)
+  # Thinking ENABLED for the external evaluation. See DEV_THINKING_ON: with it
+  # disabled the base model scores 0.000 on every task and the benchmark cannot
+  # discriminate between retention policies at all.
+  enable_thinking: true
   max_model_len: 40960
-  max_new_tokens: 512
+  max_new_tokens: 1024  # reasoning blocks need headroom; 512 truncates them
   # Never silently truncate: prompts above this are excluded with a reason.
   prompt_token_ceiling: 40000
 
@@ -130,6 +133,24 @@ deviations:
     reality: "Compute nodes have no DNS/egress; login nodes do."
     resolution: "Model, datasets, scorer, and the uv environment are staged on the
       login node and referenced by local path in every job."
+  - id: DEV_THINKING_ON
+    handoff_assumption: "Qwen3 thinking disabled (prioritybench.pins convention)."
+    reality: "That convention exists so tool-call spans stay outside <think> for the
+      synthetic bench's page tagger. On BFCL, thinking-disabled Qwen3-8B scores 0.000
+      on 20/20 conversations -- FullKV included -- so no retention policy can be
+      distinguished from any other."
+    resolution: "Enable thinking for the external evaluation and strip the reasoning
+      block before decoding, exactly as the official QwenHandler does. FullKV then
+      scores 0.105 (2/19), restoring discriminative power. Measured on job 268418."
+  - id: DEV_RANDOM_BASELINE
+    handoff_assumption: "`random` is a deterministic seeded matched-keep control."
+    reality: "The frozen core's select_random is byte-identical to select_uniform at
+      every context length: recent is expanded to budget - sink_tokens, so the forced
+      block already fills the budget and the rng branch never runs. The published
+      PriorityBench-A random baseline was therefore not independent of uniform."
+    resolution: "Use a corrected select_random_external in this namespace only, holding
+      sink and recent at their configured sizes and drawing the rest at random. The
+      frozen core is left untouched; the defect is documented, not silently rewritten."
   - id: DEV_TAU_SNAPKV
     handoff_assumption: "CPU audit reports retention for each retention policy."
     reality: "SnapKV scores tokens by realised attention and cannot run generation-free on CPU."

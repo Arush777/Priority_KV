@@ -45,6 +45,55 @@ def keep_budget(n_tokens: int, cfg: KeepPolicyConfig) -> int:
     return min(budget, n_tokens)
 
 
+def _chat_kwargs(tokenizer, enable_thinking: bool | None) -> dict:
+    """Chat-template kwargs, with an explicit thinking override.
+
+    The project default (prioritybench.pins) disables Qwen3 thinking so tool-call
+    spans stay in the assistant channel the page tagger expects. That choice was
+    made for the synthetic bench; on BFCL it materially changes model capability,
+    so the external config states it explicitly rather than inheriting silently.
+    """
+    kwargs = dict(chat_template_kwargs_for_tokenizer(tokenizer))
+    if enable_thinking is not None and "enable_thinking" in kwargs:
+        kwargs["enable_thinking"] = bool(enable_thinking)
+    return kwargs
+
+
+def select_random_external(n: int, cfg: KeepPolicyConfig) -> np.ndarray:
+    """A genuinely position-blind random keep, at the shared matched budget.
+
+    The frozen core's ``select_random`` is byte-identical to ``select_uniform``
+    at every context length: it sets ``recent = budget - sink_tokens``, so the
+    forced sink+recent block already fills the whole budget, ``remaining_budget``
+    is always 0, and the random branch never executes. That makes the published
+    "random" baseline a duplicate of uniform rather than an independent control.
+
+    This corrected version holds sink and recent at their *configured* sizes
+    (16 and 128) and draws the remaining budget uniformly at random from the
+    middle, which is what a position-blind control is supposed to be. It lives in
+    the external namespace so nothing under FINAL_RUN_MANIFEST.yaml changes.
+    """
+    budget = keep_budget(n, cfg)
+    if budget >= n:
+        return np.arange(n, dtype=np.int64)
+
+    sink = min(cfg.sink_tokens, n)
+    recent = min(cfg.force_recent, max(0, n - sink))
+    must = set(range(sink)) | set(range(n - recent, n))
+    remaining = budget - len(must)
+
+    if remaining > 0:
+        middle = np.setdiff1d(np.arange(n, dtype=np.int64),
+                              np.fromiter(must, dtype=np.int64, count=len(must)),
+                              assume_unique=False)
+        if middle.size:
+            rng = np.random.default_rng(cfg.seed)
+            pick = rng.choice(middle, size=min(remaining, middle.size), replace=False)
+            must.update(int(x) for x in pick)
+
+    return np.array(sorted(must), dtype=np.int64)
+
+
 @dataclass
 class GenerationResult:
     text: str
@@ -82,6 +131,7 @@ class TokenGatherGenerator:
         arm: str,
         keep_cfg: KeepPolicyConfig,
         max_model_len: int = 32768,
+        enable_thinking: bool | None = None,
     ):
         if arm != "full" and arm not in TOKEN_GATHER_ARMS:
             raise ValueError(f"{arm!r} is not a token-gather arm")
@@ -90,7 +140,7 @@ class TokenGatherGenerator:
         self.arm = arm
         self.keep_cfg = keep_cfg
         self.max_model_len = max_model_len
-        self.chat_kwargs = dict(chat_template_kwargs_for_tokenizer(tokenizer))
+        self.chat_kwargs = _chat_kwargs(tokenizer, enable_thinking)
         self._step = 0
 
     def _render(self, messages: Sequence[dict]) -> str:
@@ -126,7 +176,10 @@ class TokenGatherGenerator:
                 # Decorrelate the mask across steps without losing determinism.
                 cfg = KeepPolicyConfig(**{**self.keep_cfg.__dict__,
                                           "seed": self.keep_cfg.seed + self._step})
-            idx = select_keep_indices(n, cfg, policy=self.arm, roles=roles)
+            if self.arm == "random":
+                idx = select_random_external(n, cfg)
+            else:
+                idx = select_keep_indices(n, cfg, policy=self.arm, roles=roles)
             kept_ids = apply_keep_indices(ids, idx)
             kept_indices = idx
             realized = int(kept_ids.numel())
@@ -218,6 +271,7 @@ class SnapKVGenerator:
         window_size: int = 64,
         kernel_size: int = 5,
         max_model_len: int = 32768,
+        enable_thinking: bool | None = None,
     ):
         self.model = model
         self.tok = tokenizer
@@ -225,7 +279,7 @@ class SnapKVGenerator:
         self.window_size = window_size
         self.kernel_size = kernel_size
         self.max_model_len = max_model_len
-        self.chat_kwargs = dict(chat_template_kwargs_for_tokenizer(tokenizer))
+        self.chat_kwargs = _chat_kwargs(tokenizer, enable_thinking)
         # Probe once at construction so a missing/incorrect press fails before
         # any GPU budget is spent.
         assert_real_snapkv(make_snapkv_press(0.5, window_size=window_size,
@@ -253,6 +307,10 @@ class SnapKVGenerator:
         }
         t_sel = time.perf_counter()
         with torch.no_grad(), press(self.model):
+            # return_dict_in_generate is required to get past_key_values back;
+            # without it generate() returns a bare tensor and the realised keep
+            # count is unmeasurable, which would let the matched-budget check
+            # pass vacuously for the one arm that most needs verifying.
             gen = self.model.generate(
                 **inputs,
                 max_new_tokens=max_new_tokens,
@@ -260,12 +318,19 @@ class SnapKVGenerator:
                 temperature=None,
                 top_p=None,
                 pad_token_id=self.tok.pad_token_id or self.tok.eos_token_id,
+                return_dict_in_generate=True,
             )
-        new_ids = gen[0, n:].tolist()
+        sequences = gen.sequences
+        new_ids = sequences[0, n:].tolist()
         out_text = self.tok.decode(new_ids, skip_special_tokens=True)
         t_end = time.perf_counter()
 
         realized = measure_cache_length(gen, self.model, n, len(new_ids))
+        if realized < 0:
+            raise SnapKVUnavailableError(
+                "could not measure the compressed KV length, so the SnapKV arm's "
+                "realised keep count cannot be verified against the shared budget"
+            )
         return GenerationResult(
             text=out_text,
             prompt_tokens=n,
@@ -285,8 +350,14 @@ class SnapKVGenerator:
 
 
 def measure_cache_length(gen_out, model, prompt_tokens: int, new_tokens: int) -> int:
-    """Best-effort realised prompt-KV length after a compressed prefill."""
+    """Realised prompt-KV length after a compressed prefill, or -1 if unknown.
+
+    Returns the number of *prompt* KV entries the cache actually holds, so it can
+    be compared against the shared keep budget.
+    """
     cache = getattr(gen_out, "past_key_values", None)
+    if cache is None and isinstance(gen_out, dict):
+        cache = gen_out.get("past_key_values")
     if cache is None:
         return -1
     try:
@@ -306,7 +377,10 @@ def check_matched_budget(
     tolerance: int = 0,
 ) -> tuple[bool, str]:
     """Verify every non-FullKV arm realised the same keep count."""
-    vals = {a: v for a, v in per_arm_realized.items() if a != "full" and v >= 0}
+    unknown = [a for a, v in per_arm_realized.items() if a != "full" and v < 0]
+    if unknown:
+        return False, f"realised keep count unknown for {unknown}; cannot verify match"
+    vals = {a: v for a, v in per_arm_realized.items() if a != "full"}
     if len(vals) < 2:
         return True, "insufficient arms to compare"
     lo, hi = min(vals.values()), max(vals.values())

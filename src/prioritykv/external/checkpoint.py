@@ -54,6 +54,13 @@ class ResultStore:
         return self.failures / f"{work_id}.json"
 
 
+def _json_fallback(obj: Any) -> Any:
+    """Last-resort encoder for objects the official checker leaves in its output."""
+    if isinstance(obj, (set, frozenset)):
+        return sorted(str(x) for x in obj)
+    return str(obj)
+
+
 def atomic_write_json(path: str | Path, payload: dict[str, Any]) -> Path:
     """Write ``payload`` durably: tmp file → flush → fsync → atomic rename."""
     path = Path(path)
@@ -61,7 +68,10 @@ def atomic_write_json(path: str | Path, payload: dict[str, Any]) -> Path:
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=path.name, suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as fh:
-            json.dump(payload, fh, ensure_ascii=False)
+            # The official checker embeds live API objects (Directory, set, ...)
+            # in its failure details. Stringify them rather than losing the whole
+            # point to a TypeError -- a failed conversation must still be recorded.
+            json.dump(payload, fh, ensure_ascii=False, default=_json_fallback)
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp, path)
@@ -181,7 +191,7 @@ def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> Path:
     try:
         with os.fdopen(fd, "w") as fh:
             for row in rows:
-                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+                fh.write(json.dumps(row, ensure_ascii=False, default=_json_fallback) + "\n")
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp, path)
