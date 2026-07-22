@@ -129,6 +129,7 @@ def load_model(cfg: dict):
 def make_generator(arm: str, model, tok, cfg: dict, keep_frac: float, seed: int):
     keep_cfg = keep_policy_config(cfg, keep_frac=keep_frac, seed=seed)
     max_len = int(cfg["model"]["max_model_len"])
+    thinking = bool(cfg["model"].get("enable_thinking", False))
     if arm == "snapkv":
         sk = cfg["arms"]["snapkv"]
         if sk.get("allow_fallback"):
@@ -136,10 +137,10 @@ def make_generator(arm: str, model, tok, cfg: dict, keep_frac: float, seed: int)
         return SnapKVGenerator(
             model, tok, keep_cfg=keep_cfg,
             window_size=int(sk["window_size"]), kernel_size=int(sk["kernel_size"]),
-            max_model_len=max_len,
+            max_model_len=max_len, enable_thinking=thinking,
         )
     return TokenGatherGenerator(model, tok, arm=arm, keep_cfg=keep_cfg,
-                                max_model_len=max_len)
+                                max_model_len=max_len, enable_thinking=thinking)
 
 
 def main() -> int:  # noqa: C901

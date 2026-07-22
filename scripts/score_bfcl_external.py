@@ -86,13 +86,29 @@ def main() -> int:  # noqa: C901
     print(f"[score] paired completeness "
           f"{completeness.paired_completeness:.3f} over {n_paired} tasks", flush=True)
 
-    # Matched-budget audit: every non-FullKV arm must land on the same keep count.
+    # Matched-budget audit. Under a full rollout each arm's conversation diverges
+    # after the first step, so arms legitimately see different prompt lengths and
+    # cross-arm keep counts are NOT expected to match. The invariant that does
+    # hold, and that actually matters, is per generation call: the realised keep
+    # must equal the budget requested for that exact prefix.
     budget_violations = []
-    for task_id, per_arm in keep_by_task.items():
-        vals = {a: v for a, v in per_arm.items() if a != "full" and v >= 0}
-        if len(vals) >= 2 and max(vals.values()) - min(vals.values()) > 0:
-            budget_violations.append({"task_id": task_id, "realized_keep": vals,
-                                      "spread": max(vals.values()) - min(vals.values())})
+    for p in points:
+        if p["arm"] == "full":
+            continue
+        req = p.get("requested_keep") or []
+        real = p.get("realized_keep") or []
+        tol = int(cfg["arms"]["snapkv"].get("match_tolerance", 0)) if p["arm"] == "snapkv" else 0
+        bad = [
+            {"step": i, "requested": q, "realized": r}
+            for i, (q, r) in enumerate(zip(req, real))
+            if r < 0 or abs(r - q) > tol
+        ]
+        if bad:
+            budget_violations.append({
+                "task_id": p["task_id"], "arm": p["arm"],
+                "n_steps": len(req), "n_mismatched": len(bad),
+                "examples": bad[:3],
+            })
 
     edges = [int(x) for x in args.length_bins.split(",")]
     overall = {a: arm_summary(paired.get(a, {})) for a in arms}

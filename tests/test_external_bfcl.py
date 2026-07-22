@@ -19,7 +19,11 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from prioritykv.baselines.keep_policy import KeepPolicyConfig  # noqa: E402
+import numpy as np  # noqa: E402
+from prioritykv.baselines.keep_policy import (  # noqa: E402
+    KeepPolicyConfig,
+    select_keep_indices,
+)
 from prioritykv.external.arms import (  # noqa: E402
     SnapKVUnavailableError,
     assert_real_snapkv,
@@ -394,13 +398,29 @@ def test_atomic_write_does_not_clobber_on_failure(tmp_path):
     path = tmp_path / "keep.json"
     atomic_write_json(path, {"good": True})
 
-    class Unserialisable:
-        pass
+    # Arbitrary objects are now stringified by design (the official checker
+    # embeds live API instances), so provoke a real encoder failure instead.
+    circular: dict = {}
+    circular["self"] = circular
 
-    with pytest.raises(TypeError):
-        atomic_write_json(path, {"bad": Unserialisable()})
+    with pytest.raises(ValueError, match="[Cc]ircular"):
+        atomic_write_json(path, circular)
     assert json.loads(path.read_text()) == {"good": True}
     assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_unserialisable_objects_are_stringified_not_dropped(tmp_path):
+    """A point must survive the checker leaving live objects in its output."""
+
+    class Directory:
+        def __repr__(self):
+            return "Directory(/tmp)"
+
+    out = atomic_write_json(tmp_path / "p.json",
+                            {"verdict": {"obj": Directory(), "s": {"b", "a"}}})
+    payload = json.loads(out.read_text())
+    assert payload["verdict"]["obj"] == "Directory(/tmp)"
+    assert payload["verdict"]["s"] == ["a", "b"]
 
 
 def test_sigterm_mid_run_leaves_no_partial_point(tmp_path):
@@ -510,3 +530,76 @@ def test_restrict_to_common_equalises_arm_sizes():
     common = restrict_to_common(outcomes)
     assert {len(v) for v in common.values()} == {1}
     assert set(common["full"]) == {"t2"}
+
+
+def test_unknown_realized_keep_is_not_treated_as_matched():
+    """An unmeasurable keep count must fail the budget check, not pass silently."""
+    ok, msg = check_matched_budget({"structure": 100, "uniform": 100, "snapkv": -1})
+    assert not ok and "unknown" in msg
+
+
+def test_split_reasoning_recovers_the_tool_call():
+    """A thinking-mode answer must reach the decoder, not the <think> block."""
+    from prioritykv.external.bfcl_rollout import split_reasoning
+
+    raw = "<think>\nI should fill the tank.\n</think>\n\n[fillFuelTank(fuelAmount=30)]"
+    reasoning, answer = split_reasoning(raw)
+    assert answer == "[fillFuelTank(fuelAmount=30)]"
+    assert "fill the tank" in reasoning
+
+
+def test_split_reasoning_passes_plain_output_through():
+    from prioritykv.external.bfcl_rollout import split_reasoning
+
+    assert split_reasoning("[foo(a=1)]") == ("", "[foo(a=1)]")
+
+
+def test_rollout_decodes_the_answer_not_the_reasoning():
+    task = make_task(n_turns=1)
+    gen = FakeGenerator("full", ["<think>musing</think>\n[cd(folder='d0')]", "[]"])
+    res = _rollout(gen, task)
+    assert res.model_result_decoded[0][0] == ["cd(folder='d0')"]
+
+
+def test_frozen_random_is_actually_uniform():
+    """Documents the frozen-core defect the external namespace works around."""
+    from prioritykv.baselines.keep_policy import select_keep_indices
+
+    cfg = KeepPolicyConfig(keep_frac=0.25, sink_tokens=16, force_recent=128, seed=0)
+    for n in (600, 4096, 40000):
+        u = select_keep_indices(n, cfg, policy="uniform")
+        r = select_keep_indices(n, cfg, policy="random")
+        assert np.array_equal(u, r), f"frozen random unexpectedly differs at n={n}"
+
+
+def test_external_random_is_genuinely_random_and_matched():
+    """The corrected control must differ from uniform yet keep the same count."""
+    from prioritykv.external.arms import select_random_external
+
+    cfg = KeepPolicyConfig(keep_frac=0.25, sink_tokens=16, force_recent=128, seed=0)
+    for n in (600, 4096, 40000):
+        u = select_keep_indices(n, cfg, policy="uniform")
+        r = select_random_external(n, cfg)
+        assert len(r) == keep_budget(n, cfg), f"budget not matched at n={n}"
+        assert not np.array_equal(u, r), f"still identical to uniform at n={n}"
+        assert len(set(r.tolist())) == len(r), "duplicate indices"
+
+
+def test_external_random_is_deterministic_per_seed():
+    from prioritykv.external.arms import select_random_external
+
+    cfg = KeepPolicyConfig(keep_frac=0.25, sink_tokens=16, force_recent=128, seed=0)
+    other = KeepPolicyConfig(keep_frac=0.25, sink_tokens=16, force_recent=128, seed=1)
+    a = select_random_external(4096, cfg)
+    assert np.array_equal(a, select_random_external(4096, cfg))
+    assert not np.array_equal(a, select_random_external(4096, other))
+
+
+def test_external_random_keeps_sink_and_recent():
+    from prioritykv.external.arms import select_random_external
+
+    cfg = KeepPolicyConfig(keep_frac=0.25, sink_tokens=16, force_recent=128, seed=0)
+    n = 4096
+    idx = set(select_random_external(n, cfg).tolist())
+    assert set(range(16)) <= idx
+    assert set(range(n - 128, n)) <= idx

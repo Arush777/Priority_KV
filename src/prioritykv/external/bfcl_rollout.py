@@ -74,6 +74,22 @@ def _reveal_prompt(holdout_docs: list[dict]) -> str:
     return _reveal_template().format(functions=holdout_docs)
 
 
+def split_reasoning(raw: str) -> tuple[str, str]:
+    """Split a reasoning-model response into (reasoning, answer).
+
+    Port of ``QwenHandler._parse_query_response_prompting`` from the pinned
+    checkout. Without this, a thinking-mode response like
+    ``<think>...</think>\\n\\n[foo(a=1)]`` is handed to the decoder whole, which
+    assumes the text *is* the call list -- so a perfectly correct tool call
+    decodes to nothing and the turn is scored as empty.
+    """
+    if "</think>" not in raw:
+        return "", raw
+    parts = raw.split("</think>")
+    reasoning = parts[0].rstrip("\n").split("<think>")[-1].lstrip("\n")
+    return reasoning, parts[-1].lstrip("\n")
+
+
 def run_rollout(
     task: BfclTask,
     generator,
@@ -135,10 +151,16 @@ def run_rollout(
 
             raw = result.text
             turn_raw.append(raw)
-            messages.append({"role": "assistant", "content": raw})
+            # Match the official handler: the assistant turn carries the answer,
+            # with reasoning kept alongside rather than inlined into the history.
+            reasoning, answer = split_reasoning(raw)
+            assistant_msg = {"role": "assistant", "content": answer}
+            if reasoning:
+                assistant_msg["reasoning_content"] = reasoning
+            messages.append(assistant_msg)
 
             try:
-                decoded = decode_execute(raw)
+                decoded = decode_execute(answer)
             except Exception:  # noqa: BLE001
                 # Upstream treats an undecodable response as end-of-turn.
                 turn_decoded.append([])
