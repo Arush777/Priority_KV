@@ -26,7 +26,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from prioritykv.external import FREEZE_ID  # noqa: E402
 from prioritykv.external.arms import (  # noqa: E402
-    SnapKVGenerator,
+    PressGenerator,
     SnapKVUnavailableError,
     TokenGatherGenerator,
 )
@@ -127,20 +127,25 @@ def load_model(cfg: dict):
 
 
 def make_generator(arm: str, model, tok, cfg: dict, keep_frac: float, seed: int):
+    """FullKV runs unpressed; every other arm is a kvpress press.
+
+    Arms must differ only in which KV entries they keep, never in how those
+    entries are removed -- otherwise the table measures mechanism, not policy.
+    """
     keep_cfg = keep_policy_config(cfg, keep_frac=keep_frac, seed=seed)
     max_len = int(cfg["model"]["max_model_len"])
     thinking = bool(cfg["model"].get("enable_thinking", False))
-    if arm == "snapkv":
-        sk = cfg["arms"]["snapkv"]
-        if sk.get("allow_fallback"):
-            raise RuntimeError("snapkv.allow_fallback must stay false")
-        return SnapKVGenerator(
-            model, tok, keep_cfg=keep_cfg,
-            window_size=int(sk["window_size"]), kernel_size=int(sk["kernel_size"]),
-            max_model_len=max_len, enable_thinking=thinking,
-        )
-    return TokenGatherGenerator(model, tok, arm=arm, keep_cfg=keep_cfg,
-                                max_model_len=max_len, enable_thinking=thinking)
+    if arm == "full":
+        return TokenGatherGenerator(model, tok, arm="full", keep_cfg=keep_cfg,
+                                    max_model_len=max_len, enable_thinking=thinking)
+    sk = cfg["arms"]["snapkv"]
+    if arm == "snapkv" and sk.get("allow_fallback"):
+        raise RuntimeError("snapkv.allow_fallback must stay false")
+    return PressGenerator(
+        model, tok, arm=arm, keep_cfg=keep_cfg,
+        window_size=int(sk["window_size"]), kernel_size=int(sk["kernel_size"]),
+        max_model_len=max_len, enable_thinking=thinking,
+    )
 
 
 def main() -> int:  # noqa: C901
