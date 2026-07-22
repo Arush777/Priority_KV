@@ -77,7 +77,10 @@ def main() -> int:  # noqa: C901
         if realized:
             keep_by_task[p["task_id"]][p["arm"]] = max(realized)
 
-    arms = [a for a in cfg["arms"]["primary"] if a in outcomes]
+    # Include any adaptive arms alongside the primary five so ADAPT is scored
+    # in the same paired set rather than silently dropped.
+    declared = list(cfg["arms"]["primary"]) + list(cfg["arms"].get("adaptive") or [])
+    arms = [a for a in declared if a in outcomes]
     expected_tasks = sorted({w["task_id"] for w in work_items})
 
     completeness = paired_completeness(expected_tasks, outcomes)
