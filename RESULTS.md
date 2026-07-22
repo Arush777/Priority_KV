@@ -246,6 +246,6 @@ Artifacts: `configs/external_bfcl_prajna_v1.yaml` (incl. all deviations),
 - Evidence track: [`docs/EVIDENCE.md`](docs/EVIDENCE.md)  
 - Dataset (tasks): [`docs/DATASET.md`](docs/DATASET.md)  
 - Freeze: [`FINAL_RUN_MANIFEST.yaml`](FINAL_RUN_MANIFEST.yaml)  
-- Manuscript: [`paper/prioritykv_manuscript.md`](paper/prioritykv_manuscript.md)
+- Manuscript: [`paper/prioritykv.tex`](paper/prioritykv.tex)
 - Reproduction guide: [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md)
 - Job manifests and bundles: [`jobs/`](jobs/)

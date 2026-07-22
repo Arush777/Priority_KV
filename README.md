@@ -17,7 +17,6 @@ Apache-2.0 · Python 3.11–3.12 · Primary evaluation: Qwen3-8B on NVIDIA H200
 
 **Paper:** [compiled PDF](paper/prioritykv.pdf) ·
 [LaTeX source](paper/prioritykv.tex) ·
-[readable manuscript](paper/prioritykv_manuscript.md) ·
 [PDF build instructions](paper/README.md)
 
 ![Qwen matched-budget eviction and attention baselines](paper/figures/eviction_and_baselines.svg)
@@ -66,7 +65,6 @@ peak memory or speed.
 | [`docs/EVIDENCE.md`](docs/EVIDENCE.md) | Canonical claim registry and external-audit response |
 | [`RESULTS.md`](RESULTS.md) | Frozen metrics and prior result tables |
 | [`paper/prioritykv.tex`](paper/prioritykv.tex) | Handwritten standalone arXiv source |
-| [`paper/prioritykv_manuscript.md`](paper/prioritykv_manuscript.md) | Readable synchronized manuscript |
 | [`paper/README.md`](paper/README.md) | PDF build and packaging instructions |
 | [`docs/DATASET.md`](docs/DATASET.md) | PriorityBench-A task and split specification |
 | [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | Local, artifact, and H200 reproduction levels |
