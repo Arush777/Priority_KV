@@ -5,11 +5,21 @@ Two figures:
 
 ``protected_fraction_boundary``
     The paper's central claim. Structure-aware retention can only express a
-    preference while protected mass stays under the keep budget. Plotting the
-    three measured workloads against structure's outcome shows the boundary.
+    preference while protected mass stays under the keep budget. Workloads are
+    discrete, so they are drawn as bars against the budget threshold -- never as
+    a line through the points, which would invent a continuous trend from three
+    measurements.
 
 ``external_bfcl_arms``
-    The paired five/six-arm BFCL table with Wilson intervals.
+    The paired arm table, one panel per model, so the cross-model replication is
+    visible. Emphasis colouring: the two arms that carry the story are coloured,
+    the arms that sit at zero are muted, rather than spending six hues on a
+    result that is really one comparison.
+
+Colour: slots 1-3 of the reference palette (blue/orange/aqua), whose all-pairs
+CVD separation is documented as validated in both modes. `node` is unavailable on
+this cluster so `validate_palette.js` could not be re-run here; staying inside the
+documented-safe first three slots is the reason this is sound.
 
     uv run python scripts/make_external_figures.py
 """
@@ -32,153 +42,161 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 OUT = REPO_ROOT / "paper" / "figures"
 
-# Colour-blind safe, consistent across both figures.
-C_STRUCT = "#0F7B6C"
-C_ATTN = "#2D6BA8"
-C_BLIND = "#9AA5B1"
-C_FULL = "#1B1F24"
-C_ADAPT = "#B85C00"
-C_GRID = "#D8DEE4"
+# Reference palette, light mode.
+SERIES_1 = "#2a78d6"   # blue   — the emphasised measure
+SERIES_2 = "#eb6834"   # orange — second emphasised measure
+CRITICAL = "#c0392b"   # threshold rule (a real status: the budget boundary)
+MUTED = "#b6bcc4"      # arms that sit at zero
+INK = "#0b0b0b"
+INK_2 = "#52514e"
+GRID = "#e3e7eb"
 
-ARM_STYLE = {
-    "full": (C_FULL, "FullKV (no eviction)"),
-    "snapkv": (C_ATTN, "SnapKV (attention)"),
-    "adapt": (C_ADAPT, "ADAPT (ours)"),
-    "structure": (C_STRUCT, "Structure"),
-    "uniform": (C_BLIND, "Uniform"),
-    "random": (C_BLIND, "Random"),
+# Arms whose value carries the finding; everything else is deliberately muted.
+EMPHASIS = {"full": INK, "snapkv": SERIES_1, "adapt": SERIES_2}
+ARM_LABEL = {
+    "full": "FullKV", "snapkv": "SnapKV", "adapt": "ADAPT",
+    "structure": "Structure", "uniform": "Uniform", "random": "Random",
 }
 
 
-def _style(ax):
+def _style(ax, *, xgrid=False):
     ax.spines[["top", "right"]].set_visible(False)
-    ax.spines[["left", "bottom"]].set_color("#8A94A0")
-    ax.grid(axis="y", color=C_GRID, lw=0.8, alpha=0.9)
+    ax.spines[["left", "bottom"]].set_color("#9aa3ad")
+    ax.spines[["left", "bottom"]].set_linewidth(0.8)
+    ax.grid(axis="x" if xgrid else "y", color=GRID, lw=0.8)
     ax.set_axisbelow(True)
-    ax.tick_params(colors="#4A5560", labelsize=9)
+    ax.tick_params(colors=INK_2, labelsize=9, length=3)
 
 
 def fig_boundary(pf: dict, structure_outcomes: dict, out: Path) -> Path:
-    """Protected fraction vs structure's measured accuracy."""
-    pts = []
-    for w in pf["workloads"]:
-        name = w["workload"]
-        if name in structure_outcomes:
-            pts.append((w["protected_fraction_mean"], structure_outcomes[name], name))
-    pts.sort()
-
-    fig, ax = plt.subplots(figsize=(6.2, 3.9), dpi=200)
+    """Protected fraction per workload against the keep budget."""
+    rows = [w for w in pf["workloads"] if not w["workload"].startswith("BFCL-")
+            or w["workload"] == "BFCL-all"]
+    rows.sort(key=lambda w: w["protected_fraction_mean"])
+    names = [w["workload"] for w in rows]
+    fracs = [w["protected_fraction_mean"] for w in rows]
     budget = pf.get("keep_frac", 0.25)
 
-    # Everything right of the budget line is oversubscribed: the policy cannot
-    # rank within the protected set, so it carries no information.
-    ax.axvspan(budget, 1.02, color="#F2B8B5", alpha=0.22, zorder=0)
-    ax.axvline(budget, color="#C0392B", lw=1.4, ls="--", zorder=2)
-    ax.text(budget + 0.015, 0.965, "oversubscribed\n(protected mass > keep budget)",
-            fontsize=8.5, color="#8E2B22", va="top", linespacing=1.35)
-    ax.text(budget - 0.015, 0.965, "structure can rank", fontsize=8.5,
-            color="#0F7B6C", va="top", ha="right")
+    fig, ax = plt.subplots(figsize=(7.0, 2.9), dpi=200)
+    y = np.arange(len(rows))
 
-    xs = [p[0] for p in pts]
-    ys = [p[1] for p in pts]
-    ax.plot(xs, ys, color=C_STRUCT, lw=1.6, alpha=0.55, zorder=3)
-    ax.scatter(xs, ys, s=110, color=C_STRUCT, zorder=4,
-               edgecolor="white", linewidth=1.6)
+    colors = [SERIES_1 if f <= budget else MUTED for f in fracs]
+    ax.barh(y, fracs, color=colors, height=0.5, zorder=3)
 
-    for x, y, name in pts:
-        va, dy = ("bottom", 0.035) if y > 0.05 else ("bottom", 0.045)
-        ax.annotate(f"{name}\n{x:.1%} protected",
-                    (x, y), textcoords="offset points",
-                    xytext=(0, 12 if va == "bottom" else -22),
-                    ha="center", fontsize=8.5, color="#2B3138", linespacing=1.3)
-        ax.annotate(f"{y:.3f}", (x, y), textcoords="offset points",
-                    xytext=(0, -14), ha="center", fontsize=9,
-                    color=C_STRUCT, fontweight="bold")
-    _ = dy
+    ax.axvline(budget, color=CRITICAL, lw=1.5, zorder=4)
+    # Sit the rule label inside the axes, clear of both the title and the bars.
+    ax.annotate(f"keep budget {budget:.0%}", xy=(budget, 1.0),
+                xycoords=("data", "axes fraction"), xytext=(4, -10),
+                textcoords="offset points", color=CRITICAL, fontsize=8.5,
+                ha="left", va="top")
 
-    ax.set_xlim(0, 1.02)
-    ax.set_ylim(-0.06, 1.06)
-    ax.set_xlabel("Fraction of context tokens carrying a protected role", fontsize=10)
-    ax.set_ylabel("Structure-aware retention accuracy", fontsize=10)
-    ax.set_title("Structure-aware KV retention helps only below the keep budget",
-                 fontsize=11.5, pad=12, color="#1B1F24")
+    for yi, (w, f) in enumerate(zip(rows, fracs)):
+        acc = structure_outcomes.get(w["workload"])
+        note = ("structure " + (f"{acc:.3f}" if acc is not None else "n/a"))
+        if acc is None:
+            note += "  (retention-only)"
+        ax.text(f + 0.012, yi, f"{f:.1%}   ·   {note}", va="center",
+                fontsize=9, color=INK)
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(names, fontsize=9.5, color=INK)
+    ax.set_ylim(-0.6, len(rows) - 0.15)
+    ax.set_xlim(0, 1.42)
+    ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
     ax.xaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
-    _style(ax)
+    ax.set_xlabel("Fraction of context tokens carrying a protected role", fontsize=10)
+    ax.set_title("Structure-aware retention can only rank below the keep budget",
+                 fontsize=11.5, pad=10, color=INK, loc="left")
+    _style(ax, xgrid=True)
     fig.tight_layout()
     out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out, bbox_inches="tight")
+    fig.savefig(out, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return out
 
 
-def fig_arms(summary: dict, out: Path) -> Path:
-    """Paired arm accuracies with Wilson intervals."""
-    order = [a for a in ("full", "snapkv", "adapt", "structure", "uniform", "random")
-             if a in summary["overall"]]
-    vals = [summary["overall"][a]["accuracy"] for a in order]
-    lo = [summary["overall"][a]["accuracy"] - summary["overall"][a]["wilson_ci_low"]
-          for a in order]
-    hi = [summary["overall"][a]["wilson_ci_high"] - summary["overall"][a]["accuracy"]
-          for a in order]
-    colors = [ARM_STYLE[a][0] for a in order]
-    labels = [ARM_STYLE[a][1] for a in order]
+def fig_arms(panels: list[tuple[str, dict]], out: Path) -> Path:
+    """One panel per model so the cross-model replication is visible."""
+    fig, axes = plt.subplots(1, len(panels), figsize=(3.6 * len(panels), 3.3),
+                             dpi=200, sharex=True)
+    if len(panels) == 1:
+        axes = [axes]
 
-    fig, ax = plt.subplots(figsize=(6.4, 3.6), dpi=200)
-    x = np.arange(len(order))
-    ax.bar(x, vals, color=colors, width=0.62, zorder=3)
-    ax.errorbar(x, vals, yerr=[lo, hi], fmt="none", ecolor="#4A5560",
-                elinewidth=1.2, capsize=4, zorder=4)
-    for xi, v in zip(x, vals):
-        ax.text(xi, v + max(hi) * 0.12 + 0.006, f"{v:.3f}", ha="center",
-                fontsize=9, color="#1B1F24", fontweight="bold")
+    for ax, (title, summary) in zip(axes, panels):
+        order = [a for a in ("full", "snapkv", "adapt", "structure", "uniform", "random")
+                 if a in summary["overall"]]
+        vals = [summary["overall"][a]["accuracy"] for a in order]
+        lo = [v - summary["overall"][a]["wilson_ci_low"] for a, v in zip(order, vals)]
+        hi = [summary["overall"][a]["wilson_ci_high"] - v for a, v in zip(order, vals)]
+        colors = [EMPHASIS.get(a, MUTED) for a in order]
+        y = np.arange(len(order))[::-1]
 
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=8.8, rotation=12, ha="right")
-    ax.set_ylabel("BFCL V3 multi-turn accuracy", fontsize=10)
-    n = summary.get("n_tasks_paired", 0)
-    kf = summary.get("keep_frac", 0.25)
-    ax.set_title(f"External BFCL evaluation · Qwen3-8B · {kf:.0%} keep · "
-                 f"n={n} paired conversations", fontsize=11, pad=10)
-    ax.set_ylim(0, max(vals + [0.01]) * 1.45)
-    _style(ax)
+        ax.barh(y, vals, color=colors, height=0.55, zorder=3)
+        ax.errorbar(vals, y, xerr=[lo, hi], fmt="none", ecolor="#6b737c",
+                    elinewidth=1.1, capsize=3, zorder=4)
+        for yi, v in zip(y, vals):
+            ax.text(v + 0.012, yi, f"{v:.3f}", va="center", fontsize=9, color=INK)
+
+        ax.set_yticks(y)
+        ax.set_yticklabels([ARM_LABEL[a] for a in order], fontsize=9.5, color=INK)
+        n = summary.get("n_tasks_paired", 0)
+        ax.set_title(f"{title}  ·  n={n} paired", fontsize=10.5, pad=8,
+                     color=INK, loc="left")
+        ax.set_xlim(0, max(vals + [0.05]) * 1.45)
+        _style(ax, xgrid=True)
+
+    axes[0].set_xlabel("BFCL V3 multi-turn accuracy", fontsize=10)
+    fig.suptitle("Attention-based eviction holds; structure-aware retention does not",
+                 fontsize=11.5, y=1.03, x=0.02, ha="left", color=INK)
     fig.tight_layout()
-    fig.savefig(out, bbox_inches="tight")
+    fig.savefig(out, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return out
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--summaries", default=None,
-                    help="results summaries dir (default: from config)")
+    ap.add_argument("--summaries", default=None)
     ap.add_argument("--tag", default="primary")
+    ap.add_argument("--llama-summaries", default=None)
+    ap.add_argument("--llama-tag", default="llama")
     args = ap.parse_args()
 
-    if args.summaries:
-        sdir = Path(args.summaries)
-    else:
-        from prioritykv.external.config import load_config
+    from prioritykv.external.config import load_config
 
-        cfg = load_config(REPO_ROOT / "configs/external_bfcl_prajna_v1.yaml")
-        sdir = Path(cfg["paths"]["results_root"]) / "summaries"
+    cfg = load_config(REPO_ROOT / "configs/external_bfcl_prajna_v1.yaml")
+    sdir = Path(args.summaries) if args.summaries else (
+        Path(cfg["paths"]["results_root"]) / "summaries")
 
     pf = json.loads((sdir / "protected_fraction.json").read_text())
     summary = json.loads((sdir / f"summary_{args.tag}.json").read_text())
 
-    # Structure's measured accuracy per workload. PriorityBench-A is the frozen
-    # core result; BFCL is measured here. tau-bench is retention-only (no task
-    # success), so it is deliberately absent from the accuracy axis.
+    # PriorityBench-A is the frozen core result; BFCL is measured here. tau-bench
+    # is retention-only (no task success), so it has no accuracy and is labelled
+    # as such rather than being given a fabricated y value.
     structure_outcomes = {
         "PriorityBench-A": 0.933,
         "BFCL-all": summary["overall"].get("structure", {}).get("accuracy", 0.0),
+        "tau-bench": None,
     }
 
-    written = []
-    written.append(fig_boundary(pf, structure_outcomes,
-                                OUT / "protected_fraction_boundary.png"))
-    written.append(fig_arms(summary, OUT / "external_bfcl_arms.png"))
+    panels = [("Qwen3-8B", summary)]
+    ldir = Path(args.llama_summaries) if args.llama_summaries else None
+    if ldir is None:
+        cand = Path(cfg["paths"]["prajna_root"]) / "results/external_bfcl_llama/summaries"
+        ldir = cand if cand.is_dir() else None
+    if ldir is not None:
+        lpath = ldir / f"summary_{args.llama_tag}.json"
+        if lpath.is_file():
+            panels.append(("Llama-3.1-8B", json.loads(lpath.read_text())))
+
+    written = [
+        fig_boundary(pf, structure_outcomes, OUT / "protected_fraction_boundary.png"),
+        fig_arms(panels, OUT / "external_bfcl_arms.png"),
+    ]
     for p in written:
         print(f"wrote {p}")
+    print(f"panels: {[t for t, _ in panels]}")
     print("EXTERNAL_FIGURES_OK")
     return 0
 
