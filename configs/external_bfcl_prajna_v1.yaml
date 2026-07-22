@@ -54,6 +54,14 @@ sampling:
 
 arms:
   primary: [full, structure, uniform, snapkv, random]
+  # ADAPT: structure as a budget-relative prior rather than a hard constraint.
+  # FROZEN BEFORE ANY ADAPT OUTCOME WAS OBSERVED (see git history).
+  #   alpha = min(1, keep_budget / protected_mass)
+  #   score = alpha * rank(structure) + (1 - alpha) * rank(snapkv_attention)
+  # alpha is computed from the prompt alone: no tuning, no fitting, no free
+  # parameter. Ranks are used because structure bands (~1e6) and attention
+  # scores (~1e-3) are not on a comparable scale.
+  adaptive: [adapt]
   keep_frac: 0.25
   keep_policy:
     sink_tokens: 16
