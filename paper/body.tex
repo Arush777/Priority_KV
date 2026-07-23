@@ -185,7 +185,7 @@ manifest.
 Two frozen manifests serve different studies.  A 240-example set covers nominal
 8k, 16k, and 32k contexts for mixed-precision quality; a 120-example stress set
 covers 8k and 16k contexts for retention.  Both balance the three task families.
-Table~\ref{tab:artifacts} records their digests and exact splits.
+Table~\ref{tab:artifacts} records their digests.
 
 \subsection{Placement and leakage controls}
 \label{sec:controls}
@@ -307,8 +307,29 @@ a comparative systems result.
 
 All GPU experiments use greedy decoding on NVIDIA H200 hardware.  Canonical
 jobs use at most two GPUs, while each eviction, attention-baseline, and transfer
-job uses one.  Table~\ref{tab:artifacts} records the pinned model revisions,
-manifest digests, and result bundles.
+job uses one.  Table~\ref{tab:artifacts} records the pinned model revisions
+and manifest digests used throughout.
+
+\begingroup
+\footnotesize
+\sloppy
+\hbadness=10000
+\begin{table}[!htbp]
+  \centering
+  \caption{Pinned model and manifest identity.}
+  \label{tab:artifacts}
+  \begin{tabular}{@{}p{0.27\linewidth}p{0.66\linewidth}@{}}
+    \toprule
+    Item & Revision or digest \\
+    \midrule
+    Qwen3-8B & \texttt{b968826d9c46dd6066d109e}\allowbreak\texttt{abc6255188de91218} \\
+    Llama-3.1-8B & \texttt{0e9e39f249a16976918f656}\allowbreak\texttt{4b8830bc894c89659} \\
+    Locked manifest (240) & SHA256 \texttt{fc44b966725738c9}\allowbreak\texttt{4008ba61ce57ad73}\allowbreak\texttt{66169b9c0be73074}\allowbreak\texttt{f8161d909ccfae89} \\
+    Stress manifest (120) & SHA256 \texttt{154c07b900a7be6a}\allowbreak\texttt{26a0381b0fa28d49}\allowbreak\texttt{e0847086eade0b98}\allowbreak\texttt{e9472663b578784f} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+\endgroup
 
 \subsection{Eviction, attention baselines, and placement controls}
 \label{sec:p0-design}
@@ -782,42 +803,6 @@ The latency comparison uses different backends (FullKV SDPA and mixed
 FlashInfer) and single-request measurements.  It does not establish batched
 throughput, concurrency, or tail latency.  Payload is not peak memory because
 cold attention expands the coded cache into BF16 scratch.
-
-\section{Reproducibility}
-\label{sec:reproducibility}
-
-Model revisions, manifests, configuration files, and every result bundle
-behind a number in this paper are frozen and versioned in the project
-repository, with exact commands in \texttt{docs/REPRODUCIBILITY.md}.  CPU
-logic and all figures regenerate without a GPU; GPU re-execution needs the
-pinned weights below.  The external BFCL cluster summaries are not part of
-this checkout; a tracked snapshot preserves their aggregate counts and
-protected fractions for figure regeneration.
-
-\begingroup
-\footnotesize
-\sloppy
-\hbadness=10000
-\begin{table}[!htbp]
-  \centering
-  \caption{Pinned model and manifest identity.}
-  \label{tab:artifacts}
-  \begin{tabular}{@{}p{0.27\linewidth}p{0.66\linewidth}@{}}
-    \toprule
-    Item & Revision or digest \\
-    \midrule
-    Qwen3-8B & \texttt{b968826d9c46dd6066d109e}\allowbreak\texttt{abc6255188de91218} \\
-    Llama-3.1-8B & \texttt{0e9e39f249a16976918f656}\allowbreak\texttt{4b8830bc894c89659} \\
-    Locked manifest (240) & SHA256 \texttt{fc44b966725738c9}\allowbreak\texttt{4008ba61ce57ad73}\allowbreak\texttt{66169b9c0be73074}\allowbreak\texttt{f8161d909ccfae89} \\
-    Stress manifest (120) & SHA256 \texttt{154c07b900a7be6a}\allowbreak\texttt{26a0381b0fa28d49}\allowbreak\texttt{e0847086eade0b98}\allowbreak\texttt{e9472663b578784f} \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-\endgroup
-
-Figures regenerate in one command, \texttt{uv run python
-scripts/make\_publication\_figures.py}, which reads the same tracked result
-files as the paper.
 
 \section{Conclusion}
 \label{sec:conclusion}
