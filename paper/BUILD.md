@@ -19,7 +19,7 @@ First run downloads fonts and maps (a few minutes); later runs hit the cache.
 
 `tectonic 0.15.0`, 2026-07-24:
 
-- 13 pages (arXiv target)
+- 12 pages (arXiv target)
 - 0 errors, 0 undefined references, 0 missing figures
 - 0 overfull/underfull boxes
 

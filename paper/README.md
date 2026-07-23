@@ -29,16 +29,16 @@ Verified with `tectonic 0.15.0` on 2026-07-24:
 
 | Target | Pages | Errors | Overfull |
 |---|---:|---:|---:|
-| arXiv | 13 | 0 | 0 |
-| conference | 12 | 0 | 2 |
+| arXiv | 12 | 0 | 0 |
+| conference | 12 | 0 | 0 |
 
 The conference target uses a neutral two-column layout so it compiles anywhere.
 When the venue is fixed, drop its official `.sty` beside the file and swap the
 `\documentclass`/`geometry` block — the header comment in
 `prioritykv_conference.tex` shows the exact replacement for ICLR and NeurIPS.
 At 12 two-column pages it is over a typical 9-page main-text limit; trim from
-Sections 5 and 6, which carry the most detail already covered by the appendix
-material in `docs/`.
+the results detail after selecting a venue, using the supporting material in
+`docs/` to preserve reproducibility.
 
 ## Figures
 

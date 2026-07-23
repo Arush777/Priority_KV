@@ -185,7 +185,8 @@ manifest.
 Two frozen manifests serve different studies.  A 240-example set covers nominal
 8k, 16k, and 32k contexts for mixed-precision quality; a 120-example stress set
 covers 8k and 16k contexts for retention.  Both balance the three task families.
-Table~\ref{tab:artifacts} records their digests.
+Frozen model revisions and manifest digests remain recorded in the public
+repository.
 
 \subsection{Placement and leakage controls}
 \label{sec:controls}
@@ -302,87 +303,6 @@ a comparative systems result.
   \label{fig:lifetime}
 \end{figure*}
 
-\section{Experimental Design}
-\label{sec:design}
-
-All GPU experiments use greedy decoding on NVIDIA H200 hardware.  Canonical
-jobs use at most two GPUs, while each eviction, attention-baseline, and transfer
-job uses one.  Table~\ref{tab:artifacts} records the pinned model revisions
-and manifest digests used throughout.
-
-\begingroup
-\footnotesize
-\sloppy
-\hbadness=10000
-\begin{table*}[!tbp]
-  \centering
-  \caption{Pinned model and manifest identity.}
-  \label{tab:artifacts}
-  \begin{tabular}{@{}p{0.27\linewidth}p{0.66\linewidth}@{}}
-    \toprule
-    Item & Revision or digest \\
-    \midrule
-    Qwen3-8B & \texttt{b968826d9c46dd6066d109e}\allowbreak\texttt{abc6255188de91218} \\
-    Llama-3.1-8B & \texttt{0e9e39f249a16976918f656}\allowbreak\texttt{4b8830bc894c89659} \\
-    Locked manifest (240) & SHA256 \texttt{fc44b966725738c9}\allowbreak\texttt{4008ba61ce57ad73}\allowbreak\texttt{66169b9c0be73074}\allowbreak\texttt{f8161d909ccfae89} \\
-    Stress manifest (120) & SHA256 \texttt{154c07b900a7be6a}\allowbreak\texttt{26a0381b0fa28d49}\allowbreak\texttt{e0847086eade0b98}\allowbreak\texttt{e9472663b578784f} \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
-\endgroup
-
-\subsection{Eviction, attention baselines, and placement controls}
-\label{sec:p0-design}
-
-The eviction and placement study evaluates Qwen on the 120-example stress
-manifest, divided into three disjoint 40-example slices and balanced across 8k
-and 16k contexts.  At token keep $k=0.25$, it compares structure, the released
-position-blind selectors, keep-all, and a separately recorded FullKV run using
-deterministic task pass rate.  The two released position-blind selectors are
-identical and are reported once.  Middle-relocation and buried-state
-transformations are evaluated on all three slices.  A second comparison reuses
-the same examples, model, contexts, and budget for SnapKV, PyramidKV, H2O, and
-a structure--SnapKV hybrid.  SnapKV uses a 64-token observation window and
-kernel size five.  The H2O arm is a chunked SDPA reimplementation and carries a
-fidelity limitation.  We compute the exact two-sided paired McNemar test for
-structure versus SnapKV.
-
-\subsection{CPU retention audit}
-\label{sec:audit-design}
-
-The audit runs the Qwen and Llama tokenizers on the three stress slices for each
-model ($n=120$ each), maps gold messages to token spans, and applies
-position-blind and structure selection at $k=0.25$.  It reports mean token-retention
-fractions rather than model accuracy.  These are descriptive span means, so no
-binomial interval or significance test is attached.
-
-\subsection{Mixed-precision quality and systems measurements}
-\label{sec:int4-design}
-
-The locked mixed-precision study evaluates Qwen on all 240 examples: 83 at 8k,
-81 at 16k, and 76 at 32k.  FullKV, uniform-mixed, and structure-mixed arms use
-matched $f=0.75$ INT4 placement for the mixed arms.  The H200 mixed-cache
-FlashInfer path is scored by the same deterministic benchmark metric.  This
-family tests a precision-placement quality hypothesis, not eviction, so we
-report Wilson intervals from the observed success counts rather than a paired
-test.
-
-The latency measurement uses nine 8k and nine 16k examples, 128 generated
-tokens, one warm-up, and three timing repetitions summarized by per-example
-medians.  FullKV uses SDPA while the mixed-cache path uses the FlashInfer shim;
-this is an end-to-end prototype comparison, not a kernel-isolated study.  The
-memory measurement uses 18 examples and records coded payload plus allocated
-and reserved CUDA peak.  Both are single-request studies without concurrent
-serving or tail latency.  A three-example streamed-cold run checks exit status
-and parity but serves only as a smoke test.
-
-\subsection{Cross-model transfer}
-\label{sec:p3-design}
-
-The Llama transfer study evaluates structure, SnapKV, H2O, PyramidKV, and
-hybrid on all three stress slices at $k=0.25$ ($n=120$).  At $k=0.05$, only the
-first two slices are run ($n=40$ each); no uniform Llama arm is available.
-
 \section{Results}
 \label{sec:results}
 
@@ -442,7 +362,7 @@ in that window.
   \label{tab:audit}
   \begin{tabular}{llrrr}
     \toprule
-    Model & Slice & Gold in sink+recent & Structure kept & Uniform kept \\
+    Model & Slice & Gold in $M$ & Structure & Uniform \\
     \midrule
     Qwen & 0 & 0.010 & 1.000 & 0.010 \\
     Qwen & 1 & 0.013 & 1.000 & 0.013 \\
@@ -615,7 +535,7 @@ context-limit exclusions, 140 Qwen and 143 Llama conversations remain
   \label{tab:external-arms}
   \begin{tabular}{lrr}
     \toprule
-    Arm & Qwen3-8B ($n{=}140$) & Llama-3.1-8B ($n{=}143$) \\
+    Arm & Qwen ($n{=}140$) & Llama ($n{=}143$) \\
     \midrule
     FullKV            & 0.193 & 0.077 \\
     SnapKV            & 0.136 & 0.084 \\
