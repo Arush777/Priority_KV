@@ -56,7 +56,7 @@ whether this visible structure can guide what survives.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=\linewidth]{agent_trace_failure_mode.pdf}
+  \includegraphics[width=\linewidth]{agent_trace_failure_mode.png}
   \caption{\textbf{Equal storage cost, unequal failure cost.}  Two policies keep
   the same illustrative 14/26-token budget.  Hatched cells are evicted; callouts
   show the resulting failure modes rather than empirical counts.}
@@ -73,7 +73,7 @@ than eviction; Figure~\ref{fig:hypothesis-split} keeps these questions distinct.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=0.92\linewidth]{hypothesis_split.pdf}
+  \includegraphics[width=0.92\linewidth]{hypothesis_split.png}
   \caption{\textbf{Three questions, three verdicts.}  Eviction reliability,
   precision placement, and systems performance are evaluated independently;
   displayed counts and ratios are measured endpoints.}
@@ -267,7 +267,7 @@ metadata.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=\linewidth]{page_allocation_architecture.pdf}
+  \includegraphics[width=\linewidth]{page_allocation_architecture.png}
   \caption{\textbf{PriorityKV architecture.}  Chat metadata becomes token roles
   and pages of at most 16 tokens.  Eviction and precision placement then use
   separate controllers and are evaluated independently.}
@@ -295,7 +295,7 @@ a comparative systems result.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=\linewidth]{decode_memory_lifetime.pdf}
+  \includegraphics[width=\linewidth]{decode_memory_lifetime.png}
   \caption{\textbf{Decode path and allocation lifetime.}  Two homogeneous
   FlashInfer calls are merged through log-sum-exp state; the coded payload persists
   while BF16 cold scratch is live during decode.}
@@ -399,7 +399,7 @@ places the position-blind and attention-derived selectors on one pass-rate axis.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=0.88\linewidth]{eviction_and_baselines.pdf}
+  \includegraphics[width=0.88\linewidth]{eviction_and_baselines.png}
   \caption{\textbf{Matched-budget Qwen comparison} ($n=120$, $k=0.25$).
   Points show pass rates with Wilson 95\% intervals; exact counts are aligned at
   right and the bracket reports the paired structure--SnapKV McNemar test.
@@ -407,7 +407,7 @@ places the position-blind and attention-derived selectors on one pass-rate axis.
   \label{fig:eviction}
 \end{figure*}
 
-\begin{table*}[!tbp]
+\begin{table}[!htbp]
   \centering
   \caption{Pooled Qwen eviction and attention-baseline results at $k=0.25$
   ($n=120$).  Intervals are Wilson 95\%.}
@@ -427,7 +427,7 @@ places the position-blind and attention-derived selectors on one pass-rate axis.
     \bottomrule
   \end{tabular}
 
-\end{table*}
+\end{table}
 
 The CPU audit confirms that this gap reflects retention rather than an easy
 always-kept window.  Only 1.0--1.3\% of Qwen gold tokens and none of the Llama
@@ -435,7 +435,7 @@ gold tokens lie in sink plus recent (Table~\ref{tab:audit}).  Structure retains
 all mapped gold tokens, whereas uniform retains only the small fraction already
 in that window.
 
-\begin{table*}[!tbp]
+\begin{table}[!htbp]
   \centering
   \caption{Gold-span retention audit at $k=0.25$ ($n=40$ per slice).  Entries
   are mean token fractions, not pass counts.}
@@ -452,7 +452,7 @@ in that window.
     Llama & 2 & 0.000 & 1.000 & 0.000 \\
     \bottomrule
   \end{tabular}
-\end{table*}
+\end{table}
 
 Placement controls bound the positive result (Table~\ref{tab:placement}).
 Moving state to the middle gives both structure and FullKV 115/120, or 0.958
@@ -462,7 +462,7 @@ Moving state to the middle gives both structure and FullKV 115/120, or 0.958
 state is buried.  Visible roles are therefore a useful prior, not an oracle for
 arbitrarily embedded state.
 
-\begin{table*}[!tbp]
+\begin{table}[!htbp]
   \centering
   \caption{Placement controls ($n=40$ per slice), reported as structure / FullKV
   / uniform pass rates.}
@@ -476,7 +476,7 @@ arbitrarily embedded state.
     2 & 0.950 / 0.950 / 0.000 & 0.675 / 0.900 / 0.000 \\
     \bottomrule
   \end{tabular}
-\end{table*}
+\end{table}
 
 \subsection{Structure reaches the attention-selector range in its sparse-state regime}
 \label{sec:p1-results}
@@ -508,7 +508,7 @@ At $k=0.05$, SnapKV passes 40/40 on each evaluated slice, while structure passes
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=0.92\linewidth]{budget_and_transfer.pdf}
+  \includegraphics[width=0.92\linewidth]{budget_and_transfer.png}
   \caption{\textbf{Budget and model dependence.}  Qwen and Llama at $k=0.25$
   use $n=120$; each Llama $k=0.05$ condition uses $n=40$.  Error bars are Wilson
   95\% intervals.}
@@ -535,14 +535,14 @@ advantage.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=0.88\linewidth]{lock240_quality_by_length.pdf}
+  \includegraphics[width=0.88\linewidth]{lock240_quality_by_length.png}
   \caption{\textbf{Matched INT4 quality.}  Qwen3-8B with FullKV or matched
   $f=0.75$ INT4 placement.  Error bars are Wilson 95\% intervals from exact
   counts (83, 81, and 76 examples).}
   \label{fig:int4}
 \end{figure*}
 
-\begin{table*}[!tbp]
+\begin{table}[!htbp]
   \centering
   \caption{Locked Qwen quality ($n=240$).  Intervals are Wilson 95\%.}
   \label{tab:int4}
@@ -555,7 +555,7 @@ advantage.
     Structure mixed & 212/240 & 0.8833 & [0.837, 0.918] \\
     \bottomrule
   \end{tabular}
-\end{table*}
+\end{table}
 
 \subsection{Storage savings incur scratch and latency costs}
 \label{sec:systems-results}
@@ -571,7 +571,7 @@ independently repeated, so we do not show uncertainty bars.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=0.88\linewidth]{systems_tradeoff.pdf}
+  \includegraphics[width=0.88\linewidth]{systems_tradeoff.png}
   \caption{\textbf{H200 systems trade-off.}  The implemented code-plus-metadata
   payload is smaller than FullKV KV, while the allocated CUDA peak falls less.
   Latency compares mixed FlashInfer against FullKV SDPA at nominal context
@@ -607,7 +607,7 @@ We start with 150 conversations per model at a 25\% keep budget.  After paired
 context-limit exclusions, 140 Qwen and 143 Llama conversations remain
 (Table~\ref{tab:external-arms}).
 
-\begin{table*}[!tbp]
+\begin{table}[!htbp]
   \centering
   \caption{\textbf{BFCL V3 multi-turn, official scorer, 25\% keep.}  Paired
   completeness 0.933 (Qwen) and 0.953 (Llama); exclusions are all
@@ -625,7 +625,7 @@ context-limit exclusions, 140 Qwen and 143 Llama conversations remain
     Random            & 0.000 & 0.000 \\
     \bottomrule
   \end{tabular}
-\end{table*}
+\end{table}
 
 The low FullKV scores, 0.193 and 0.077, make harness validation essential.
 Replayed ground truth passes the upstream checker, while corrupted arguments and
@@ -656,7 +656,7 @@ measures the protected-role fraction with the same tagger used by the policy.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=\linewidth]{protected_fraction_boundary.pdf}
+  \includegraphics[width=\linewidth]{protected_fraction_boundary.png}
   \caption{\textbf{Protected mass relative to the keep budget.}  PriorityBench-A
   stress set has 6.0\% mean protected-role mass ($n=120$; 0/120 contexts exceed
   the budget), leaving room within a
@@ -669,7 +669,7 @@ measures the protected-role fraction with the same tagger used by the policy.
 
 \begin{figure*}[!tbp]
   \centering
-  \includegraphics[width=\linewidth]{external_bfcl_arms.pdf}
+  \includegraphics[width=\linewidth]{external_bfcl_arms.png}
   \caption{\textbf{Paired BFCL accuracy with Wilson intervals.}  The same
   ordering holds on both models: no significant FullKV--SnapKV difference is
   detected, while the three non-attention policies are at zero with a Wilson

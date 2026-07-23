@@ -56,7 +56,7 @@ whether this visible structure can guide what survives.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{agent_trace_failure_mode.pdf}
+  \includegraphics[width=\linewidth]{agent_trace_failure_mode.png}
   \caption{\textbf{Equal storage cost, unequal failure cost.}  Two policies keep
   the same illustrative 14/26-token budget.  Hatched cells are evicted; callouts
   show the resulting failure modes rather than empirical counts.}
@@ -73,7 +73,7 @@ than eviction; Figure~\ref{fig:hypothesis-split} keeps these questions distinct.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.92\linewidth]{hypothesis_split.pdf}
+  \includegraphics[width=0.92\linewidth]{hypothesis_split.png}
   \caption{\textbf{Three questions, three verdicts.}  Eviction reliability,
   precision placement, and systems performance are evaluated independently;
   displayed counts and ratios are measured endpoints.}
@@ -267,7 +267,7 @@ metadata.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{page_allocation_architecture.pdf}
+  \includegraphics[width=\linewidth]{page_allocation_architecture.png}
   \caption{\textbf{PriorityKV architecture.}  Chat metadata becomes token roles
   and pages of at most 16 tokens.  Eviction and precision placement then use
   separate controllers and are evaluated independently.}
@@ -295,7 +295,7 @@ a comparative systems result.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{decode_memory_lifetime.pdf}
+  \includegraphics[width=\linewidth]{decode_memory_lifetime.png}
   \caption{\textbf{Decode path and allocation lifetime.}  Two homogeneous
   FlashInfer calls are merged through log-sum-exp state; the coded payload persists
   while BF16 cold scratch is live during decode.}
@@ -399,7 +399,7 @@ places the position-blind and attention-derived selectors on one pass-rate axis.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.88\linewidth]{eviction_and_baselines.pdf}
+  \includegraphics[width=0.88\linewidth]{eviction_and_baselines.png}
   \caption{\textbf{Matched-budget Qwen comparison} ($n=120$, $k=0.25$).
   Points show pass rates with Wilson 95\% intervals; exact counts are aligned at
   right and the bracket reports the paired structure--SnapKV McNemar test.
@@ -508,7 +508,7 @@ At $k=0.05$, SnapKV passes 40/40 on each evaluated slice, while structure passes
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.92\linewidth]{budget_and_transfer.pdf}
+  \includegraphics[width=0.92\linewidth]{budget_and_transfer.png}
   \caption{\textbf{Budget and model dependence.}  Qwen and Llama at $k=0.25$
   use $n=120$; each Llama $k=0.05$ condition uses $n=40$.  Error bars are Wilson
   95\% intervals.}
@@ -535,7 +535,7 @@ advantage.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.88\linewidth]{lock240_quality_by_length.pdf}
+  \includegraphics[width=0.88\linewidth]{lock240_quality_by_length.png}
   \caption{\textbf{Matched INT4 quality.}  Qwen3-8B with FullKV or matched
   $f=0.75$ INT4 placement.  Error bars are Wilson 95\% intervals from exact
   counts (83, 81, and 76 examples).}
@@ -571,7 +571,7 @@ independently repeated, so we do not show uncertainty bars.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=0.88\linewidth]{systems_tradeoff.pdf}
+  \includegraphics[width=0.88\linewidth]{systems_tradeoff.png}
   \caption{\textbf{H200 systems trade-off.}  The implemented code-plus-metadata
   payload is smaller than FullKV KV, while the allocated CUDA peak falls less.
   Latency compares mixed FlashInfer against FullKV SDPA at nominal context
@@ -656,7 +656,7 @@ measures the protected-role fraction with the same tagger used by the policy.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{protected_fraction_boundary.pdf}
+  \includegraphics[width=\linewidth]{protected_fraction_boundary.png}
   \caption{\textbf{Protected mass relative to the keep budget.}  PriorityBench-A
   stress set has 6.0\% mean protected-role mass ($n=120$; 0/120 contexts exceed
   the budget), leaving room within a
@@ -669,7 +669,7 @@ measures the protected-role fraction with the same tagger used by the policy.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\linewidth]{external_bfcl_arms.pdf}
+  \includegraphics[width=\linewidth]{external_bfcl_arms.png}
   \caption{\textbf{Paired BFCL accuracy with Wilson intervals.}  The same
   ordering holds on both models: no significant FullKV--SnapKV difference is
   detected, while the three non-attention policies are at zero with a Wilson

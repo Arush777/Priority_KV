@@ -15,11 +15,11 @@ Apache-2.0 · Python 3.11–3.12 · Primary evaluation: Qwen3-8B on NVIDIA H200
 | Matched INT4 placement (`n=240`) | FullKV **0.8875**, uniform **0.8792**, structure **0.8833**: role-aware INT4 does not separate quality. |
 | Packed H200 path | Payload **0.719×** and peak **0.868×**, but E2E **1.11–1.12×** and TPOT **1.20–1.21×**: fewer bytes, higher latency. |
 
-**Paper:** [compiled PDF](paper/prioritykv.pdf) ·
-[LaTeX source](paper/prioritykv.tex) ·
+**Paper:** [compiled PDF](paper/prioritykv_arxiv.pdf) ·
+[LaTeX source](paper/prioritykv_arxiv.tex) ·
 [PDF build instructions](paper/README.md)
 
-![Qwen matched-budget eviction and attention baselines](paper/figures/eviction_and_baselines.svg)
+![Qwen matched-budget eviction and attention baselines](paper/figures/eviction_and_baselines.png)
 
 ## Why structure?
 
@@ -28,7 +28,7 @@ results, ordinary dialogue, and filler in one KV cache. PriorityKV asks whether 
 application-visible role of a token should influence retention when the cache must shrink.
 It tests eviction reliability separately from mixed-precision quality and systems cost.
 
-![Conceptual agent-trace failure mode](paper/figures/agent_trace_failure_mode.svg)
+![Conceptual agent-trace failure mode](paper/figures/agent_trace_failure_mode.png)
 
 ## What is and is not claimed
 
@@ -56,7 +56,7 @@ layer and merges their log-sum-exp states. Cold pages are expanded into BF16 scr
 attention; that limitation explains why payload savings do not translate one-for-one to
 peak memory or speed.
 
-![PriorityKV page allocation architecture](paper/figures/page_allocation_architecture.svg)
+![PriorityKV page allocation architecture](paper/figures/page_allocation_architecture.png)
 
 ## Evidence, paper, and reproducibility
 
@@ -64,7 +64,7 @@ peak memory or speed.
 |---|---|
 | [`docs/EVIDENCE.md`](docs/EVIDENCE.md) | Canonical claim registry and external-audit response |
 | [`RESULTS.md`](RESULTS.md) | Frozen metrics and prior result tables |
-| [`paper/prioritykv.tex`](paper/prioritykv.tex) | Handwritten standalone arXiv source |
+| [`paper/prioritykv_arxiv.tex`](paper/prioritykv_arxiv.tex) | Handwritten standalone arXiv source |
 | [`paper/README.md`](paper/README.md) | PDF build and packaging instructions |
 | [`docs/DATASET.md`](docs/DATASET.md) | PriorityBench-A task and split specification |
 | [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | Local, artifact, and H200 reproduction levels |
@@ -102,17 +102,17 @@ PYTHONPATH=src uv run python scripts/mk_bench.py --mode w3_lock
 PYTHONPATH=src uv run python scripts/audit_bench.py
 ```
 
-Regenerate every publication SVG/PDF plus review PNGs:
-
-```bash
-uv run python scripts/make_publication_figures.py
-```
+The camera-ready paper uses the reviewed PNG assets tracked in
+`paper/figures/`. The older deterministic SVG/PDF generator remains available
+for experiment-side reference plots, but its output is not the camera-ready
+figure set used by the manuscript.
 
 Build the paper PDF:
 
 ```bash
 cd paper
-latexmk -pdf -interaction=nonstopmode -halt-on-error prioritykv.tex
+mkdir -p build
+tectonic -X compile prioritykv_arxiv.tex --outdir build --keep-logs
 ```
 
 ## GPU reproduction

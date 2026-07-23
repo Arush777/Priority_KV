@@ -17,9 +17,9 @@ First run downloads fonts and maps (a few minutes); later runs hit the cache.
 
 ## Verified build
 
-`tectonic 0.15.0`, 2026-07-22:
+`tectonic 0.15.0`, 2026-07-24:
 
-- 14 pages (arXiv target)
+- 13 pages (arXiv target)
 - 0 errors, 0 undefined references, 0 missing figures
 - 0 overfull/underfull boxes
 
@@ -43,11 +43,7 @@ PY
 grep -iE "^! |LaTeX Error|Undefined|Overfull" build/prioritykv_arxiv.log
 ```
 
-All ten figures are regenerated and validated in one command.  External plots
-use the tracked submission snapshot when the cluster summaries are unavailable:
-
-```bash
-uv run python scripts/make_publication_figures.py
-```
-
-It writes both PNG and PDF; the manuscript includes the PDF.
+The manuscript includes the reviewed PNG figures tracked in `paper/figures/`.
+The older deterministic SVG/PDF generator remains available for
+experiment-side reference plots, but the camera-ready paper does not consume
+those generated vector files.
