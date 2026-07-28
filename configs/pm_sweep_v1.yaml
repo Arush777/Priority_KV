@@ -1,0 +1,58 @@
+# SWEEP_PM_V1 — protected-mass dose-response sweep (post-freeze namespace).
+#
+# Fills the interval between the two frozen endpoints (PriorityBench-A stress
+# ~6% protected mass, BFCL ~99%) with a controlled sweep, crossed with three
+# keep budgets, so the oversubscription boundary becomes a measured curve
+# instead of two points. Does NOT modify anything under FINAL_RUN_MANIFEST.yaml
+# or EXTERNAL_BFCL_PRAJNA_V1.
+
+freeze_id: SWEEP_PM_V1
+
+manifest: data/prioritybench/manifests/pm_sweep_v1.json
+
+models:
+  qwen:
+    model_id: Qwen/Qwen3-8B
+    revision: b968826d9c46dd6066d109eabc6255188de91218
+    local_dir: ${PRIORITYKV_SCRATCH}/models/Qwen3-8B
+    dtype: bfloat16
+    attn_implementation: sdpa
+    # Synthetic-bench convention (prioritybench.pins): thinking disabled, as in
+    # every frozen PriorityBench-A run. BFCL's DEV_THINKING_ON does not apply:
+    # these scorers parse the assistant channel directly.
+    enable_thinking: false
+    max_new_tokens: 256
+  llama:
+    model_id: meta-llama/Llama-3.1-8B-Instruct
+    revision: pinned-local-snapshot
+    local_dir: ${PRIORITYKV_SCRATCH}/models/Llama-3.1-8B-Instruct
+    dtype: bfloat16
+    attn_implementation: sdpa
+    enable_thinking: null
+    max_new_tokens: 256
+
+arms:
+  # `full` runs once per instance; press arms run once per (instance, budget).
+  press: [structure, snapkv, adapt, uniform, random]
+  budgets: [0.10, 0.25, 0.50]
+  keep_policy:
+    sink_tokens: 16
+    force_recent: 128
+    granularity: token
+  snapkv:
+    window_size: 64
+    kernel_size: 5
+    implementation: kvpress.SnapKVPress
+    allow_fallback: false
+
+protocol:
+  seed: 0
+  scoring: prioritybench.scoring.score_example   # deterministic, no LLM judge
+
+paths:
+  results_root: ${PRAJNA_ROOT}/results/pm_sweep_v1
+
+cluster:
+  partitions: [l40, a40, dgx]
+  gpus_per_task: 1
+  shard_size: 20

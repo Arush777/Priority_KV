@@ -1,0 +1,68 @@
+# SWEEP_PM_V2 — protected-mass dose-response sweep, discriminative conditions.
+#
+# V1 (8k, prefix-placed gold, budgets 0.10/0.25/0.50) measured every non-blind
+# arm at 1.000 in every cell, including 5.5x oversubscription at pm65/kf10.
+# Cause: PriorityBench templates emit gold state in the prefix, and the
+# structure policy's oversubscription tiebreak keeps the *earliest* protected
+# positions -- so the tokens it falls back on were the gold tokens anyway. The
+# budget test could not bite regardless of protected mass.
+#
+# V2 removes that accidental rescue and restores headroom:
+#   - gold relocated to mid-context AFTER schema conversion (placement=middle),
+#     so oversubscribed structure falls back onto distractor schemas instead;
+#   - 16k contexts rather than 8k;
+#   - budgets 2%/5%/10%, which are oversubscribed at every measured level.
+#
+# V1 is retained as the easy-regime baseline, not discarded. Does NOT modify
+# anything under FINAL_RUN_MANIFEST.yaml or EXTERNAL_BFCL_PRAJNA_V1.
+
+freeze_id: SWEEP_PM_V3
+
+manifest: data/prioritybench/manifests/pm_sweep_v3.json
+
+models:
+  qwen:
+    model_id: Qwen/Qwen3-8B
+    revision: b968826d9c46dd6066d109eabc6255188de91218
+    local_dir: ${PRIORITYKV_SCRATCH}/models/Qwen3-8B
+    dtype: bfloat16
+    attn_implementation: sdpa
+    # Synthetic-bench convention (prioritybench.pins): thinking disabled, as in
+    # every frozen PriorityBench-A run. BFCL's DEV_THINKING_ON does not apply:
+    # these scorers parse the assistant channel directly.
+    enable_thinking: false
+    max_new_tokens: 256
+  llama:
+    model_id: meta-llama/Llama-3.1-8B-Instruct
+    revision: pinned-local-snapshot
+    local_dir: ${PRIORITYKV_SCRATCH}/models/Llama-3.1-8B-Instruct
+    dtype: bfloat16
+    attn_implementation: sdpa
+    enable_thinking: null
+    max_new_tokens: 256
+
+arms:
+  # `full` runs once per instance; press arms run once per (instance, budget).
+  press: [structure, snapkv, adapt, uniform, random]
+  budgets: [0.02, 0.05, 0.10]
+  keep_policy:
+    sink_tokens: 16
+    force_recent: 128
+    granularity: token
+  snapkv:
+    window_size: 64
+    kernel_size: 5
+    implementation: kvpress.SnapKVPress
+    allow_fallback: false
+
+protocol:
+  seed: 0
+  scoring: prioritybench.scoring.score_example   # deterministic, no LLM judge
+
+paths:
+  results_root: ${PRAJNA_ROOT}/results/pm_sweep_v3
+
+cluster:
+  partitions: [l40, a40, dgx]
+  gpus_per_task: 1
+  shard_size: 20

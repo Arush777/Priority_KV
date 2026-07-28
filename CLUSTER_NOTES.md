@@ -225,3 +225,30 @@ set -g status-fg white
    all reject user writes, despite having hundreds of TB free.
 6. `lfs quota` reports limit 0 (no enforced quota) with ~613 TB free, but `$HOME`
    was already at ~473 GB, 241 GB of it an unrelated `~/.cache/huggingface`.
+
+## QOS limits and partition viability (discovered 2026-07-28)
+
+`sacctmgr show qos` per-user limits (array tasks count individually toward
+MaxSubmit once submitted):
+
+| QOS | MaxJobsPU | MaxSubmitPU |
+|---|---:|---:|
+| l40 | 4 | 5 |
+| a40 | 3 | 6 |
+| dgx | 4 | 5 |
+| dgx-mpi | 1 | 2 |
+
+Association-level (all partitions combined): **MaxJobs 12, MaxSubmit 20**.
+
+1. **dgx partition is unusable for this account.** Batch jobs die in 1 s with
+   exit code 0:53 and *no output file is ever created*, even with
+   `--output=$HOME/...` (tested cn13-dgx and cn14-dgx, 2026-07-28). Looks like
+   a home-mount/permission problem on the dgx nodes, not a script bug. Driver
+   compatibility was never even reached.
+2. **`srun` interactive is rejected outside the `interactive` partition**
+   ("Interactive jobs are only allowed on partition 'interactive'"), so probes
+   must go through `sbatch`.
+3. A `debug`-partition submission failed with `AssocGrpSubmitJobsLimit` even
+   with a near-empty queue; cause unclear. Use l40 with a short `-t` for smokes.
+4. Watch for other jobs under the same account (e.g. `alab_*`): they consume
+   the per-QOS MaxJobsPU slots and shrink usable parallelism.
