@@ -63,6 +63,24 @@ sweep identified.
 - If **no** budget lands in the band because all are above it, the ladder is
   extended downward to 0.01 once, and the same rule is reapplied.
 
+### Amendment 1 (2026-07-28, before any ADAPT run at any budget)
+
+The original ladder {0.10, 0.05, 0.02} returned SnapKV/FullKV ratios of 0.11,
+0.00 and 0.00 — every rung *below* the band. Section 3 as written covers only
+the mirror case (all rungs above the band) and therefore under-specifies this
+one.
+
+The frozen `EXTERNAL_BFCL_PRAJNA_V1` run at `keep_frac = 0.25` gives SnapKV
+19/140 against FullKV 27/140, a ratio of 0.70 — the band's upper edge. The
+discriminative window is therefore *bracketed* between 0.10 and 0.25 rather than
+absent, and the original ladder simply started too tight.
+
+The ladder is extended **upward once** to {0.15, 0.20}, and the Section 3 rule is
+reapplied unchanged. This is symmetric to the downward extension already
+specified. The integrity condition is preserved: **ADAPT has not been run at any
+budget**, so no budget can be selected to flatter it. If neither added rung lands
+in the band, H1 is recorded as not testable on BFCL, per Section 5.
+
 ## 4. Primary analysis
 
 - **Unit:** one BFCL multi-turn conversation, scored by the unmodified official

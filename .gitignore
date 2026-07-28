@@ -53,3 +53,10 @@ cluster/prajna/config.env
 
 # LaTeX build output
 paper/build/
+
+# Sweep manifests are large and deterministically regenerable:
+#   uv run python scripts/mk_pm_sweep.py --placement middle --context-length 16000 ...
+data/prioritybench/manifests/pm_sweep_v*.json
+# Slurm job logs
+pkv_pm*_*.out
+pkv_bfclp*_*.out

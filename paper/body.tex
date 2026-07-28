@@ -4,34 +4,39 @@
 A long agent conversation packs tool schemas, persistent identifiers,
 superseded instructions, and filler into one key--value (KV) cache.  Every
 token costs the same amount of memory, but losing the wrong one costs far
-more than losing the wrong filler.  PriorityKV uses the structure a chat
-transcript already exposes as a retention rule: keep schemas, constraints,
-and identifiers before ordinary filler.
+more than losing the wrong filler.  A retention rule can read the structure a
+chat transcript already exposes---keep schemas, constraints, and identifiers
+before ordinary filler---and, unlike attention-derived selection, that signal
+costs nothing to compute.  This paper asks when such a prior is sufficient,
+and answers it with a measured operating range rather than an assertion.
 
-On PriorityBench-A, a synthetic stress test built for this study,
-structure-aware retention passes 112 of 120 Qwen3-8B examples at a 25\% keep
-budget, against 1 of 120 for position-blind eviction, and is statistically
-indistinguishable from matched-budget SnapKV and PyramidKV reimplementations
-at 108/120 (McNemar $p=0.125$).  The prior is strong exactly when the state
-worth keeping is sparse and recognizable; when that same state is instead
-spread through free-form text, the rule's pass rate falls to 80/120.
+We sweep the protected-role mass of a controlled agent benchmark across eight
+levels (5\% to 92\%) crossed with three keep budgets, 15{,}360 scored
+generations on Qwen3-8B and Llama-3.1-8B.  Structural retention holds at
+ceiling while the protected set fits the budget and degrades sharply once the
+oversubscription ratio $|S\cup M|/B$ passes one; the knee sits at
+$\approx\!1.1$ on both model families.  Past it, structure loses to
+matched-budget SnapKV in 20 of 24 cells on Llama with zero wins in the
+opposite direction.
 
-An external evaluation on BFCL finds where the prior stops working.  There,
-protected content covers 98.8\% of the context, far past the 25\% budget, so a
-yes/no structural label runs out of room to discriminate, while
-attention-based selection still tracks FullKV.  PriorityBench-A sits at the
-opposite extreme, with only 6.0\% of tokens protected.  Because this
-protected-to-budget ratio can be measured before generation, we use it to
-build ADAPT, a budget-relative blend of structure and attention with no fitted
-parameter.  ADAPT recovers SnapKV's range on BFCL (0.129 versus 0.136,
-$p=1.0$).
+The collapse is not uniform across task types, and the exception identifies
+the real mechanism.  State carried in the leading system block survives
+18$\times$ oversubscription intact (tool-schema conformance stays at 1.000),
+because the evaluated policy breaks ties by position and that block is
+earliest.  State carried in mid-conversation turns falls to exactly 0.000.
+The governing quantity is therefore not protected mass alone but its
+interaction with where load-bearing state sits relative to the policy's
+tiebreak---which explains directly why the same rule scores 0.000 on BFCL,
+whose schemas are in the system prompt while its task-critical state is not.
 
-A separate systems study asks the same question about storage rather than
-eviction: role-aware INT4 placement matches uniform placement in quality,
-while a mixed BF16/INT4 prototype cuts KV payload to 0.719$\times$ at a
-1.200--1.215$\times$ time-per-token cost.  Together, the two studies give
-PriorityKV a retention rule with a known operating range, a cheap test for
-when that range ends, and an explicit memory--latency trade for storage.
+Because the ratio is computable before generation, we evaluate ADAPT, a
+budget-relative blend of structure and attention with no fitted parameter.
+ADAPT never loses to SnapKV in 48 cells across both models, and significantly
+exceeds it on Qwen at a 2\% budget (up to $p=4.9\times10^{-4}$, with no losing
+discordant pairs).  That advantage does not replicate on Llama, where SnapKV
+never degrades enough to leave room.  We report the scope honestly, together
+with a pre-registered external test whose pilot shows attention selection
+floors on BFCL below a 10\% budget.
 \end{abstract}
 
 \section{Introduction}
@@ -92,16 +97,20 @@ This work makes four contributions.
   \item We introduce PriorityBench-A, a deterministic stress test for
   tool-schema conformance, instruction supersession, and state recall, with
   placement controls and a token-level retention audit.
-  \item We show a large matched-budget gap over position-blind eviction on
-  Qwen (112/120 versus 1/120), and we report honestly where that gap closes:
-  against SnapKV-style reimplementations, and at a tighter budget on Llama.
-  \item We expose the external boundary on BFCL, identify oversubscription of the
-  protected set as its mechanism, and evaluate ADAPT as a budget-relative soft
-  prior.  This yields a practical policy-selection diagnostic rather than a
-  universal-superiority claim.
-  \item We independently test mixed precision, implement mixed BF16/INT4 pages
-  with two-call FlashInfer decode, and report payload, memory, and latency without
-  folding them into the retention claim.
+  \item We measure the operating range of structural retention as a
+  dose--response curve rather than asserting it: eight protected-mass levels
+  crossed with three keep budgets, on two model families, 15{,}360 scored
+  generations.  The boundary sits at oversubscription ratio $\approx\!1$ and
+  replicates across architectures (Section~\ref{sec:sweep}).
+  \item We identify the mechanism by dissociating task types.  Load-bearing
+  state in the leading system block survives arbitrary oversubscription under a
+  position-ordered tiebreak, while mid-conversation state does not.  This
+  supersedes a protected-mass-only account and explains the external BFCL
+  result directly.
+  \item We evaluate ADAPT, a budget-relative structure--attention blend with no
+  fitted parameter, and report both its significant advantage over SnapKV on
+  Qwen at a 2\% budget and its failure to replicate on Llama, together with a
+  pre-registered external test and the pilot that scopes it.
 \end{enumerate}
 
 \section{Related Work}
@@ -507,6 +516,145 @@ the measured latency cost associated with the payload savings.  The streamed-col
 approximately 36.4 GiB peak in its log, but with only three examples and no
 comparative frontier it remains a smoke test rather than a systems result.
 
+\section{The Operating Boundary, Measured}
+\label{sec:sweep}
+
+Sections~\ref{sec:p0-results}--\ref{sec:p3-results} report two points on an
+axis: PriorityBench-A with sparse protected mass, and (in
+Section~\ref{sec:external}) BFCL with nearly saturated protected mass.  Two
+points do not establish a boundary.  This section replaces them with a
+controlled sweep.
+
+\subsection{Design}
+\label{sec:sweep-design}
+
+We parameterise the generator so that filler user/assistant pairs can be
+converted into \emph{distractor} tool-schema pairs: a short registry notice and
+a JSON dump of deferred schemas, sized to the characters they replace.  The gold
+task, its scoring payload, and the approximate context length are unchanged;
+only the composition of the surrounding context varies.  Eight levels span
+5.2\%--92.2\% measured protected-role mass, crossed with keep budgets
+$k\in\{0.02,0.05,0.10\}$ at 16k nominal context.  The same base example appears
+at every level, so comparisons along the axis are paired.  Every non-FullKV arm
+is a \texttt{kvpress} press over an identical full prefill, as in
+Section~\ref{sec:external}.
+
+Two design iterations are reported because both were informative.  A first sweep
+placed gold state in the template's natural prefix position; there every
+non-blind arm scored 1.000 in all 24 cells, including at 9$\times$
+oversubscription.  The cause is the tiebreak: when the protected set does not
+fit, the evaluated policy retains the \emph{earliest} protected positions, which
+in that layout are the gold positions themselves.  A second iteration relocated
+gold to mid-context but applied the transform after schema conversion; because
+the relocation helper classifies converted schema turns as non-filler, gold
+drifted back toward the prefix as protected mass rose (character fraction 0.65
+at the lowest level, 0.07 at the highest), cancelling the effect.  The reported
+sweep applies relocation \emph{before} conversion, with gold verified at
+character fraction 0.63--0.65 at every level.
+
+\subsection{The boundary and its replication}
+\label{sec:sweep-results}
+
+Table~\ref{tab:sweep} reports structure against the oversubscription ratio
+$|S\cup M|/B$.  Structure is at ceiling while the protected set fits and falls
+immediately past $\approx\!1.1$ on both models.  FullKV is 1.000 in every cell,
+so the collapse reflects retention rather than task difficulty; position-blind
+arms remain near zero throughout.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{Structure pass rate against oversubscription ratio, pooled across
+  budgets ($n=60$ per cell).  SnapKV and ADAPT are shown at the same cells.}
+  \label{tab:sweep}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Ratio & Structure (Qwen) & Structure (Llama) & SnapKV & ADAPT \\
+    \midrule
+    $0.5\times$  & 1.000 & 1.000 & 1.000 & 1.000 \\
+    $1.0\times$  & 1.000 & 1.000 & 1.000 & 1.000 \\
+    $1.1\times$  & 1.000 & 0.883 & 1.000 & 1.000 \\
+    $2.2\times$  & 0.617 & 0.600 & 1.000 & 1.000 \\
+    $4\times$--$18\times$ & 0.400 & 0.333--0.417 & 0.967--1.000 & 1.000 \\
+    $27\times$--$45\times$ & 0.067 & 0.000 & 0.750--0.867 & 0.950--1.000 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=0.49\linewidth]{sweep_boundary_qwen.png}\hfill
+  \includegraphics[width=0.49\linewidth]{sweep_boundary_llama.png}
+  \caption{\textbf{One boundary, two architectures.}  Pass rate against
+  oversubscription ratio for Qwen3-8B (left) and Llama-3.1-8B (right).  Marker
+  shape encodes the keep budget, so points from 2\%, 5\% and 10\% budgets are
+  visibly on the same curve.  The dotted line marks the protected set exactly
+  filling the budget.}
+  \label{fig:sweep}
+\end{figure}
+
+Past the boundary the ordering against attention selection reverses relative to
+Section~\ref{sec:p1-results}.  On Llama, structure loses to matched-budget
+SnapKV in 20 of 24 cells with $b=0$ in every one; on Qwen the same pattern holds
+at the tightest budget ($b=0$, $c=41$--$54$).  The parity reported at
+$k=0.25$ on PriorityBench-A is therefore a property of that operating point, not
+a general result.
+
+\subsection{Which state survives, and why}
+\label{sec:sweep-mechanism}
+
+Pooling across task families conceals the mechanism.  Table~\ref{tab:dissoc}
+splits it.  At high oversubscription, tool-schema conformance is perfectly
+retained while instruction supersession is at exactly zero.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{Structure by task family at high oversubscription
+  ($\geq 5\times$; $n=20$ per cell per model).}
+  \label{tab:dissoc}
+  \begin{tabular}{llrrr}
+    \toprule
+    Model & Budget & Tool schema & Supersession & Multi-turn state \\
+    \midrule
+    Qwen  & 0.10 & 1.000 & 0.000 & 0.200 \\
+    Qwen  & 0.05 & 1.000 & 0.000 & 0.200 \\
+    Qwen  & 0.02 & 0.000 & 0.000 & 0.200 \\
+    Llama & 0.10 & 1.000 & 0.000 & 0.000--0.150 \\
+    Llama & 0.02 & 0.000 & 0.000 & 0.000--0.050 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The explanation is structural.  A tool-schema item's load-bearing content is the
+leading system block, and a position-ordered tiebreak retains the earliest
+protected positions; the contract therefore survives however oversubscribed the
+policy is, until the budget is too small to hold the block at all (the
+$k=0.02$ row).  Supersession and multi-turn state live in mid-conversation
+turns, which the same tiebreak discards first.
+
+This supersedes the account in Section~\ref{sec:external-boundary}.  Protected
+mass relative to budget determines \emph{whether} the label can still
+discriminate; the position of load-bearing state relative to the tiebreak
+determines \emph{what is lost when it cannot}.  The two together predict the
+external result of Section~\ref{sec:external}: BFCL prompts carry their schemas
+in the system block, which structure retains, while the state the task actually
+depends on accumulates across turns, which it does not.
+
+\subsection{ADAPT across the range}
+\label{sec:sweep-adapt}
+
+ADAPT (Equation~\ref{eq:adapt}) holds 0.950--1.000 on Qwen and 0.983--1.000 on
+Llama across all 24 cells per model, and loses no discordant pair to SnapKV
+anywhere in the 48 cells.  Its measured $\alpha$ decays monotonically from
+1.000 to 0.022 as oversubscription grows, with no value fitted to any outcome.
+
+On Qwen at $k=0.02$ it significantly exceeds SnapKV in four cells: 1.000 versus
+0.900 ($p=0.031$), 1.000 versus 0.867 ($p=7.8\times10^{-3}$, twice), and 0.950
+versus 0.750 ($p=4.9\times10^{-4}$), with $c=0$ throughout.  The advantage does
+not replicate on Llama, where SnapKV does not fall below 0.983 at any tested
+setting and therefore leaves no headroom.  We claim only that ADAPT matches
+attention selection everywhere tested and exceeds it where attention selection
+begins to degrade.
+
 \section{External Evaluation: Finding the Boundary}
 \label{sec:external}
 
@@ -640,14 +788,19 @@ the experiment as exploratory rather than preregistered evidence.
 \section{Discussion}
 \label{sec:discussion}
 
-\textbf{The boundary turns structure into a deployable prior.}
+\textbf{The boundary turns structure into a deployable prior, with a caveat the
+sweep makes explicit.}
 Visible protocol structure protects sparse, recognizable state that positional
-selection drops.  The middle and buried controls show what the label must
-capture; the Llama and BFCL results show what the budget must accommodate.  The
-relevant test is not whether protected content is a majority, but whether
-$|S\cup M|$ exceeds the keep budget.  This quantity is available before
-generation, so a serving policy can choose hard structural retention only when
-the prior can discriminate.
+selection drops, and the relevant test is whether $|S\cup M|$ exceeds the keep
+budget---a quantity available before generation.  But
+Section~\ref{sec:sweep-mechanism} shows the ratio is not sufficient on its own.
+Because the evaluated policy resolves ties by position, state in the leading
+system block is retained at any ratio, while mid-conversation state is dropped
+as soon as the ratio exceeds one.  A serving policy that consults the ratio
+alone will therefore be over-optimistic for workloads whose critical state
+accumulates across turns, which is precisely the agent setting this work
+targets.  The deployable diagnostic is the pair: the ratio, and whether the
+state the task depends on lives where the tiebreak protects it.
 
 \textbf{Soft weighting is safer than a hard union.}
 The original structure--SnapKV union equals SnapKV on Qwen and falls below both
@@ -708,10 +861,30 @@ reimplementations, not reference-code leaderboard runs; chunked H2O is the least
 faithful approximation.
 
 \textbf{Statistical scope.}
-The paired Qwen structure--SnapKV result is not significant ($p=0.125$), and the
-Llama 5\% comparison has no paired test.  Canonical runs use fixed
-example sets rather than machine replications; Wilson intervals describe pass
-counts, not hardware variability.
+The paired Qwen structure--SnapKV result at $k=0.25$ is not significant
+($p=0.125$), and the Llama 5\% comparison in Section~\ref{sec:p3-results} has no
+paired test.  Canonical runs use fixed example sets rather than machine
+replications; Wilson intervals describe pass counts, not hardware variability.
+
+\textbf{Sweep scope and construction.}
+The sweep is synthetic, and its protected-mass axis is built from distractor
+schemas authored to carry the same roles the tagger recognises, so the
+instrument and the stimulus are not independent; the axis is measured post hoc
+with the pinned tokenizer, and the mechanism replicates across two model
+families, but this does not remove the concern.  FullKV scores 1.000 in every
+sweep cell, so the benchmark isolates retention cleanly but has no difficulty
+gradient and cannot speak to workload realism.  The ADAPT advantage over SnapKV
+is confined to Qwen at $k=0.02$; on Llama SnapKV never degrades enough to leave
+headroom, so that comparison is uninformative rather than negative.
+
+\textbf{External test status.}
+A pre-registered tight-budget test of ADAPT on BFCL is specified in the
+repository's pre-registration note, committed before any tight-budget
+conversation was scored.  Its pilot finds that matched-budget SnapKV floors on
+BFCL below a 10\% keep budget (1/48, then 0/49 at 5\% and 2\%), against a FullKV
+reference of 9/48 on the same conversations.  The regime in which the sweep
+predicts an ADAPT advantage therefore may not exist on this workload; the
+outcome of that test is not folded into any claim here.
 
 \textbf{Model and budget scope.}
 Qwen3-8B on H200 is the primary matrix.  Llama provides a ceiling and a
@@ -727,17 +900,22 @@ cold attention expands the coded cache into BF16 scratch.
 \section{Conclusion}
 \label{sec:conclusion}
 
-PriorityKV turns application-visible structure into a retention rule with a
-known operating range: strong when protocol state is sparse and recognizable
-(112/120 versus 1/120 for position-blind eviction), and blunt once that state
-saturates the budget, as it does on BFCL.  The practical payoff is the
-boundary itself: protected mass versus keep budget is measurable before a
-single token is generated, so a serving system can choose hard structural
-retention when it will work and fall back toward attention, via ADAPT, when it
-will not.  The mixed-precision study applies the same honesty to storage: a
-real payload reduction at a measured, non-zero latency cost.  In operational
-terms, retain the schema before the pleasantry, but check first that the
-budget can hold the schema.
+Application-visible structure is a retention signal that costs nothing to
+compute, and it has an operating range that can be measured rather than assumed.
+Across 15{,}360 scored generations on two model families, structural retention
+holds at ceiling while the protected set fits the keep budget and degrades
+sharply past an oversubscription ratio of one; past that point it loses to
+matched-budget attention selection with no wins in the opposite direction.  The
+sweep also shows why a ratio-only account is incomplete: under a
+position-ordered tiebreak, state in the leading system block survives
+18$\times$ oversubscription while mid-conversation state is lost entirely, which
+is the reason the same rule fails on externally authored agent traces whose
+schemas sit in the system prompt.  ADAPT, whose single weight is read off the
+prompt with nothing fitted, matches attention selection in all 48 cells tested
+and exceeds it where attention selection itself begins to degrade.  In
+operational terms: retain the schema before the pleasantry, but check first
+whether the budget can hold the schema---and whether the state your task depends
+on is the schema at all.
 
 \begingroup
 \small

@@ -9,11 +9,20 @@ Apache-2.0 · Python 3.11–3.12 · Primary evaluation: Qwen3-8B on NVIDIA H200
 
 | Headline | Result and claim boundary |
 |---|---|
-| Qwen eviction, 25% keep (`n=120`) | Structure **0.933** (112/120) vs uniform/random **0.008** (1/120 each): visible structure decisively beats blind eviction. |
-| Matched attention selectors (`n=120`) | Structure **0.933** vs SnapKV/PyramidKV/hybrid **0.900**; McNemar **p=0.125**, so the four-example edge is not significant. |
-| Model and budget transfer | Llama at 25% is ceiling-saturated; at 5%, SnapKV **1.000** beats structure **0.875 / 0.900** on both evaluated slices. |
+| **Operating boundary** (`SWEEP_PM_V3`, 15,360 generations) | Structural retention is at ceiling while the protected set fits the keep budget and collapses past oversubscription ratio ≈ **1.1**. Replicated on Qwen3-8B and Llama-3.1-8B. |
+| **Mechanism** (per task family) | State in the *leading system block* survives **18×** oversubscription (tool-schema 1.000); *mid-conversation* state falls to **0.000**. The ratio alone does not predict what is lost — the tiebreak position does. |
+| **Past the boundary** | Structure loses to matched-budget SnapKV in **20/24** Llama cells with **b=0** (zero wins in the opposite direction). The 25% parity below is an operating-point property, not a general result. |
+| **ADAPT** | Never loses to SnapKV across **48 cells / 2 models**; significantly exceeds it on Qwen at 2% keep (up to **p=4.9e-4**, `c=0`). Does **not** replicate on Llama, where SnapKV never degrades. |
+| Qwen eviction, 25% keep (`n=120`) | Structure **0.933** (112/120) vs uniform/random **0.008**. Note: this baseline is position-blind on a benchmark whose gold sits outside the recent window, so treat it as motivation, not evidence. |
+| Matched attention selectors (`n=120`) | Structure **0.933** vs SnapKV/PyramidKV/hybrid **0.900**; McNemar **p=0.125**, not significant. |
 | Matched INT4 placement (`n=240`) | FullKV **0.8875**, uniform **0.8792**, structure **0.8833**: role-aware INT4 does not separate quality. |
 | Packed H200 path | Payload **0.719×** and peak **0.868×**, but E2E **1.11–1.12×** and TPOT **1.20–1.21×**: fewer bytes, higher latency. |
+
+**External test (in progress).** A pre-registered tight-budget test of ADAPT on BFCL is
+specified in [`docs/PREREG_BFCL_TIGHT.md`](docs/PREREG_BFCL_TIGHT.md), committed before any
+tight-budget conversation was scored. Its pilot finds matched-budget SnapKV **floors** on BFCL
+below a 10% keep budget (1/48, then 0/49 and 0/49), against a FullKV reference of 9/48 — so the
+regime where the sweep predicts an ADAPT advantage may not exist on that workload.
 
 **Paper:** [compiled PDF](paper/prioritykv_arxiv.pdf) ·
 [LaTeX source](paper/prioritykv_arxiv.tex) ·

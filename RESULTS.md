@@ -4,6 +4,85 @@
 **Authors:** Arush Sharma (IIT (ISM) Dhanbad) · Anupam Rawat (IIT Bombay)
 **Model:** Qwen3-8B @ `b968826d9c46…` · H200 (`dgre2`)  
 
+## SWEEP_PM_V3 — the operating boundary, measured (2026-07-28)
+
+Post-freeze namespace. **Does not modify any frozen number below.** Fills the interval
+between the two endpoints the frozen work reported (PriorityBench-A ~6% protected mass,
+BFCL ~99%) with a controlled dose–response sweep: 8 protected-mass levels (5.2%–92.2%)
+× 3 keep budgets (2/5/10%) × 6 arms, 16k contexts, **7,680 generations per model on
+Qwen3-8B and Llama-3.1-8B, zero failures**.
+
+### Structure vs oversubscription ratio (`|S∪M| / B`)
+
+| Ratio | Structure (Qwen) | Structure (Llama) | SnapKV | ADAPT | FullKV |
+|---|---:|---:|---:|---:|---:|
+| 0.5× | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| 1.0× | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| 1.1× | 1.000 | 0.883 | 1.000 | 1.000 | 1.000 |
+| 2.2× | 0.617 | 0.600 | 1.000 | 1.000 | 1.000 |
+| 4–18× | 0.400 | 0.333–0.417 | 0.967–1.000 | 1.000 | 1.000 |
+| 27–45× | 0.067 | 0.000 | 0.750–0.867 | 0.950–1.000 | 1.000 |
+
+**The knee is at ratio ≈ 1.1 on both architectures.** FullKV is 1.000 in every cell, so
+the collapse is retention, not task difficulty.
+
+### The mechanism: pooling hides a dissociation
+
+At high oversubscription, structure by task family (n=20/cell/model):
+
+| Model | Budget | tool_schema | supersession | multi_turn_state |
+|---|---|---:|---:|---:|
+| Qwen | 0.10 / 0.05 | **1.000** | **0.000** | 0.200 |
+| Qwen | 0.02 | 0.000 | 0.000 | 0.200 |
+| Llama | 0.10 / 0.05 | **1.000** | **0.000** | 0.000–0.150 |
+| Llama | 0.02 | 0.000 | 0.000 | 0.000–0.050 |
+
+A tool-schema item's load-bearing content is the **leading system block**, and the policy's
+tiebreak keeps the *earliest* protected positions — so the contract survives any ratio until
+the budget cannot hold the block at all. Supersession/state live mid-conversation and are
+dropped. **This supersedes the protected-mass-only account** and explains the BFCL 0.000
+directly: BFCL schemas are in the system prompt; its task-critical state is not.
+
+### ADAPT
+
+Holds 0.950–1.000 (Qwen) and 0.983–1.000 (Llama) across all 24 cells per model, **losing
+no discordant pair to SnapKV in 48 cells**. Significantly exceeds SnapKV on Qwen at
+`keep_frac=0.02`:
+
+| Level | ADAPT | SnapKV | b | c | exact McNemar |
+|---|---:|---:|---:|---:|---:|
+| pm50 | 1.000 | 0.900 | 6 | 0 | 0.031 |
+| pm65 | 1.000 | 0.867 | 8 | 0 | 0.0078 |
+| pm80 | 1.000 | 0.867 | 8 | 0 | 0.0078 |
+| pm95 | 0.950 | 0.750 | 12 | 0 | **4.9e-04** |
+
+**Does not replicate on Llama** — SnapKV never falls below 0.983 there, so no headroom.
+Claim scope: ADAPT *matches* attention selection everywhere tested and *exceeds* it where
+attention selection itself degrades.
+
+### Two informative nulls (kept, not discarded)
+
+- **V1** (8k, gold in template prefix, budgets 10/25/50%): every non-blind arm 1.000 in all
+  24 cells, including 9× oversubscription. Cause: the earliest-first tiebreak re-selects the
+  gold positions. **Structure is immune to oversubscription when gold sits in the prefix.**
+- **V2** (relocation applied *after* schema conversion): confounded. The relocation helper
+  treats converted schema turns as non-filler, so gold drifted from char-fraction 0.65 at
+  pm06 to **0.07** at pm95 — back to the prefix exactly where oversubscription should bite.
+  V3 relocates *before* conversion; gold verified at 0.63–0.65 at every level.
+
+### Not claimed from the sweep
+
+- Any external validity — the sweep is synthetic and its protected-mass axis is built from
+  distractor schemas authored to carry roles the tagger recognises (instrument and stimulus
+  are not independent).
+- Workload realism — FullKV is 1.000 in every cell, so there is no difficulty gradient.
+- ADAPT superiority in general — the win is Qwen-and-2%-specific.
+
+Artifacts: `configs/pm_sweep_v3.yaml`, `scripts/{mk_pm_sweep,run_pm_sweep,pm_sweep_summary,make_pm_sweep_figure}.py`,
+`$PRAJNA_ROOT/results/pm_sweep_v3/{qwen,llama}/summaries/`.
+
+---
+
 ## Point of the project
 
 Long agent chats stuff **tool schemas, superseding instructions, and IDs** into the KV cache.
