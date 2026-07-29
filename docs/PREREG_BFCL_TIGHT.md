@@ -81,6 +81,48 @@ specified. The integrity condition is preserved: **ADAPT has not been run at any
 budget**, so no budget can be selected to flatter it. If neither added rung lands
 in the band, H1 is recorded as not testable on BFCL, per Section 5.
 
+### Amendment 2 — directional prediction from the mechanism (2026-07-29, before any ADAPT run)
+
+Section 2 states H1 as written before the sweep's mechanism was understood. The
+sweep since established (paper Section~\ref{sec:sweep-mechanism}) that structural
+retention preserves state carried in the **leading system block** and sacrifices
+state carried in **mid-conversation turns**, because the policy's tiebreak is
+position-ordered.
+
+Applying that mechanism to BFCL yields a directional prediction that we record
+now rather than after the fact. A failure-mode census of the frozen
+`EXTERNAL_BFCL_PRAJNA_V1` points (CPU-only, no new generation) gives:
+
+| Arm | pass | empty_turn_model_response | instance_state_mismatch | execution_response_mismatch |
+|---|---:|---:|---:|---:|
+| full | 20.5% | 45.5% | 22.7% | 11.4% |
+| snapkv | 13.9% | 50.4% | 21.2% | 14.6% |
+| adapt | 12.9% | 46.4% | 27.1% | 13.6% |
+| structure | 0.0% | 78.0% | 10.0% | 12.0% |
+
+BFCL failures are dominated by empty model responses and by
+`instance_state_mismatch` — that is, by loss of **accumulated multi-turn state**,
+which is precisely the class the structural prior does *not* protect. The tool
+schemas that structure does protect sit in the system block and are apparently
+not the binding constraint. Consistent with this, the frozen ADAPT arm shows a
+*higher* state-mismatch rate than SnapKV (27.1% vs 21.2%) at slightly lower
+accuracy.
+
+**Predicted outcome of H1 on BFCL: null, or a small negative.** We expect ADAPT
+to match SnapKV within noise and possibly to fall slightly below it, because at
+BFCL's protected mass the structural component biases retention toward schema
+tokens at the expense of the multi-turn state the checker actually scores.
+
+This prediction is recorded before any tight-budget ADAPT conversation is
+scored. If it holds, it is evidence that the mechanism has external predictive
+power even though the method does not confer an external benefit. If ADAPT
+instead beats SnapKV, the mechanism as stated is incomplete and must be revised.
+
+**Effect ceiling.** FullKV passes 27/140 and SnapKV 19/140, so at most ~8
+conversations (~5.7 points of accuracy) separate SnapKV from the no-eviction
+ceiling. Any true ADAPT advantage on this workload is bounded by that gap; the
+test cannot show a large effect regardless of outcome.
+
 ## 4. Primary analysis
 
 - **Unit:** one BFCL multi-turn conversation, scored by the unmodified official
