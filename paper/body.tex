@@ -86,13 +86,21 @@ attention-based selection---we will show it generally is not---but whether there
 exists a characterisable regime in which the cheap signal suffices, and whether
 that regime can be recognised in advance.
 
-Prior work in this line, including an earlier version of this study, asserted
-such a boundary on the basis of two observations: a synthetic benchmark on which
-structural retention performed well and carried little protected content, and an
-external benchmark on which it failed and carried a great deal.  Two points,
-however, do not establish a curve, and a boundary inferred from the endpoints of
-an interval cannot distinguish a real threshold from a coincidence of two
-unrelated effects.
+Structural retention itself is established.  RoleKV manages agent KV blocks by
+semantic role rather than recency, though losslessly, deciding placement in the
+memory hierarchy rather than discarding~\cite{rolekv}; work on structural-role
+bias allocates budget across document-structural categories and reports that the
+achievable gain is bounded by role density, becoming indistinguishable from
+SnapKV where the informative role is sparse~\cite{structrolebias}.  What is not
+established is the behaviour at the opposite extreme.  Agent traces do not
+suffer from too few protected tokens; they suffer from too many, because tool
+schemas can occupy nearly the whole context.  Prior work in this specific line,
+including an earlier version of this study, asserted a boundary there on the
+basis of two observations: a synthetic benchmark on which structural retention
+performed well and carried little protected content, and an external benchmark
+on which it failed and carried a great deal.  Two points do not establish a
+curve, and a boundary inferred from the endpoints of an interval cannot
+distinguish a real threshold from a coincidence of two unrelated effects.
 
 \paragraph{Thesis.}  This paper replaces that inference with a measurement, and
 in doing so arrives at a mechanism different from the one previously proposed.
@@ -148,11 +156,47 @@ positions~\cite{zhang2023h2o}.  SnapKV selects prefix positions using attention
 from an observation window at the end of the prompt, exploiting the empirical
 stability of those patterns~\cite{li2024snapkv}.  PyramidKV allocates budget
 non-uniformly across layers~\cite{cai2024pyramidkv}.  All three infer importance
-from model behaviour.  Our contribution is orthogonal: we characterise when a
-signal requiring no model behaviour at all is sufficient, and we use these
-methods as the standard against which that question is settled.  Except where
-noted, the attention comparison in this paper uses the \texttt{kvpress}
-implementation of SnapKV rather than a reimplementation.
+from model behaviour.  We use these methods as the standard against which the
+sufficiency of a behaviour-free signal is judged.  Except where noted, the
+attention comparison in this paper uses the \texttt{kvpress} implementation of
+SnapKV rather than a reimplementation.
+
+\paragraph{Role- and structure-aware retention.}
+The idea that a token's structural role should inform its retention is not new,
+and two lines of prior work bear directly on ours.  RoleKV tags KV blocks with
+agent-workflow roles---system, instruction, reasoning, action, tool
+output---and manages them by role rather than recency, motivated by an inverted
+age--importance effect in which the oldest blocks remain the most
+attended~\cite{rolekv}.  RoleKV is, however, a \emph{lossless} policy: it
+decides where blocks reside in the memory hierarchy and does not alter model
+outputs.  The present work studies lossy eviction, where a discarded position
+cannot be recovered and the failure modes are correspondingly different.
+
+Closer to our question, work on structural-role bias applies a role-conditional
+budget allocator over document-structural categories such as schema labels,
+table headers and prose, and reports that the achievable gain is \emph{bounded
+by role density}: where the informative role occupies a small fraction of the
+context, the policy becomes indistinguishable from
+SnapKV~\cite{structrolebias}.  That result establishes a boundary at the
+\emph{sparse} end of the role-density axis.  Our contribution is the opposite
+end.  We show that when protected content instead saturates the budget, the
+policy does not merely lose its advantage but inverts its ordering against
+attention-based selection, and---the finding we regard as
+new---that \emph{which} state is lost is determined not by density but by the
+position-ordered tiebreak the policy falls back on
+(Section~\ref{sec:sweep-mechanism}).  The two results are complementary
+descriptions of when a structural prior is usable.
+
+\paragraph{Diagnostics for when eviction helps.}
+A related line asks not which selector is best but when eviction succeeds at
+all.  A fixed-contract diagnostic decomposes eviction failure into access
+estimation, value ranking, and score-to-cache projection, and derives a
+pre-generation margin that predicts whether value-aware selection will
+help~\cite{valuediag}.  That study evaluates the same two 8B models used here
+and explicitly confines itself to attention- and value-aware selection, leaving
+role-based and structural retention unexamined.  The diagnostic we report---the
+oversubscription ratio together with the location of load-bearing state---is
+the structural counterpart it does not cover.
 
 \paragraph{Quantization.}
 KIVI shows that asymmetric group-wise low-bit quantization of the KV cache
@@ -692,6 +736,16 @@ Two 8B models, nominal contexts to 32k, and selected budgets between 2\% and
 serving is unmeasured.  Systems measurements are single-request and do not
 establish throughput, concurrency, or tail latency.
 
+\paragraph{Relation to concurrent work.}
+Role-aware retention is an active area, and we do not claim the use of
+structural roles as a retention signal.  RoleKV~\cite{rolekv} predates this work
+on the signal itself, and~\cite{structrolebias} predates it on the existence of
+a density-dependent boundary, albeit at the sparse end of that axis and over
+document-structural rather than conversational roles.  Our claims are confined
+to the saturated regime, to lossy eviction, and to the tiebreak interaction of
+Section~\ref{sec:sweep-mechanism}, which we believe to be new but which a reader
+should weigh against that literature rather than in isolation.
+
 \paragraph{Baseline fidelity.}
 The sweep and external evaluations use the \texttt{kvpress} implementation of
 SnapKV.  The earlier in-distribution comparisons additionally use repository
@@ -794,6 +848,22 @@ agentic evaluation of large language models.
 \newblock In \emph{Proceedings of the 42nd International Conference on Machine
 Learning (ICML)}, PMLR 267:48371--48392, 2025.
 \href{https://proceedings.mlr.press/v267/patil25a.html}{PMLR:patil25a}.
+
+\bibitem{rolekv}
+RoleKV: Role-aware KV cache management for the inverted age-importance of LLM
+agent context.
+\newblock OpenReview submission, 2026.
+\href{https://openreview.net/forum?id=of1W47Odj1}{OpenReview:of1W47Odj1}.
+
+\bibitem{structrolebias}
+Adaptive filtering of the KV cache: Diagnosing and correcting structural-role
+bias in LLM inference.
+\newblock \href{https://arxiv.org/abs/2607.13205}{arXiv:2607.13205}, 2026.
+
+\bibitem{valuediag}
+When does value-aware KV eviction help?  A fixed-contract diagnostic for
+non-monotone cache compression.
+\newblock \href{https://arxiv.org/abs/2605.08234}{arXiv:2605.08234}, 2026.
 
 \bibitem{yao2024taubench}
 Shunyu Yao, Noah Shinn, Pedram Razavi, and Karthik Narasimhan.
