@@ -98,7 +98,7 @@ cluster:
 
 paths:
   prajna_root: ${PRAJNA_ROOT}
-  results_root: ${PRAJNA_ROOT}/results/external_bfcl_tight_v1
+  results_root: ${PRAJNA_ROOT}/results/external_bfcl_tight_v1/main_kf015
   tau_dataset: ${PRAJNA_ROOT}/datasets/tau_bench_trajectories
 
 tau_audit:
