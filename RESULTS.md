@@ -4,6 +4,62 @@
 **Authors:** Arush Sharma (IIT (ISM) Dhanbad) · Anupam Rawat (IIT Bombay)
 **Model:** Qwen3-8B @ `b968826d9c46…` · H200 (`dgre2`)  
 
+## EXTERNAL_BFCL_TIGHT_V1 — pre-registered external test (2026-07-31)
+
+**The registered prediction was confirmed.** Pre-registration
+([`docs/PREREG_BFCL_TIGHT.md`](docs/PREREG_BFCL_TIGHT.md)) was committed *before*
+any tight-budget conversation was scored, and predicted a null or small negative
+for ADAPT on BFCL — because BFCL's failures are dominated by loss of accumulated
+multi-turn state, which the structural prior does not protect, not by schema
+loss, which it does.
+
+### Budget selection (pre-specified rule: tightest rung with SnapKV in [0.25, 0.70] × FullKV)
+
+| Budget | n | SnapKV | FullKV | ratio | selected |
+|---|---:|---:|---:|---:|:--:|
+| 0.02 | 49 | 0.000 | 0.184 | 0.00 | |
+| 0.05 | 49 | 0.000 | 0.184 | 0.00 | |
+| 0.10 | 48 | 0.021 | 0.188 | 0.11 | |
+| **0.15** | 89 | 0.124 | 0.202 | 0.61 | ✅ |
+| 0.20 | 92 | 0.087 | 0.207 | 0.42 | |
+
+SnapKV **floors below a 10% keep budget** on BFCL, so the tight budgets where the
+synthetic sweep shows an ADAPT advantage do not exist on this workload.
+
+### Main test @ keep_frac=0.15 — n=233 fully paired, 94% completeness, 0 budget violations
+
+| Arm | Passes | Accuracy | Wilson 95% |
+|---|---:|---:|---|
+| FullKV | 52/233 | **0.223** | [0.174, 0.281] |
+| SnapKV | 32/233 | **0.137** | [0.099, 0.187] |
+| ADAPT | 26/233 | **0.112** | [0.077, 0.158] |
+
+| Comparison | b | c | Δ | exact McNemar |
+|---|---:|---:|---:|---:|
+| ADAPT vs SnapKV | 10 | 16 | −0.026 | **0.327** (n.s. — predicted) |
+| SnapKV vs FullKV | 12 | 32 | −0.086 | 0.0037 |
+| ADAPT vs FullKV | 12 | 38 | −0.112 | 0.0003 |
+
+**Interpretation (fixed in advance).** ADAPT is indistinguishable from SnapKV and
+trends 2.6 points below. The registration bounds any true advantage below ~0.05
+absolute; the measured Δ sits inside that bound. **The method confers no external
+benefit. The mechanism that predicts its failure has external predictive power.**
+
+### Why BFCL cannot reward this prior (failure census, CPU-only)
+
+| Arm | pass | empty turn response | state mismatch | exec mismatch |
+|---|---:|---:|---:|---:|
+| FullKV | 20.5% | **45.5%** | 22.7% | 11.4% |
+| SnapKV | 13.9% | 50.4% | 21.2% | 14.6% |
+| ADAPT | 12.9% | 46.4% | **27.1%** | 13.6% |
+| Structure | 0.0% | **78.0%** | 10.0% | 12.0% |
+
+45.5% of conversations fail with an unparseable turn response **even at FullKV** —
+an 8B model on this benchmark is limited more by its own tool-calling ability than
+by retention. The measurable interval between SnapKV and FullKV is ~8 conversations.
+
+---
+
 ## SWEEP_PM_V3 — the operating boundary, measured (2026-07-28)
 
 Post-freeze namespace. **Does not modify any frozen number below.** Fills the interval

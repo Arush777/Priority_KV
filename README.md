@@ -18,11 +18,21 @@ Apache-2.0 · Python 3.11–3.12 · Primary evaluation: Qwen3-8B on NVIDIA H200
 | Matched INT4 placement (`n=240`) | FullKV **0.8875**, uniform **0.8792**, structure **0.8833**: role-aware INT4 does not separate quality. |
 | Packed H200 path | Payload **0.719×** and peak **0.868×**, but E2E **1.11–1.12×** and TPOT **1.20–1.21×**: fewer bytes, higher latency. |
 
-**External test (in progress).** A pre-registered tight-budget test of ADAPT on BFCL is
-specified in [`docs/PREREG_BFCL_TIGHT.md`](docs/PREREG_BFCL_TIGHT.md), committed before any
-tight-budget conversation was scored. Its pilot finds matched-budget SnapKV **floors** on BFCL
-below a 10% keep budget (1/48, then 0/49 and 0/49), against a FullKV reference of 9/48 — so the
-regime where the sweep predicts an ADAPT advantage may not exist on that workload.
+**External test — pre-registered prediction confirmed.** The prediction in
+[`docs/PREREG_BFCL_TIGHT.md`](docs/PREREG_BFCL_TIGHT.md) was committed *before* any tight-budget
+conversation was scored: the mechanism implies ADAPT should not help on BFCL, whose failures are
+losses of accumulated multi-turn state rather than of schemas. Measured at the rule-selected
+budget (`keep_frac=0.15`), n=233 paired, 0 budget violations:
+
+| Arm | Accuracy | vs SnapKV |
+|---|---:|---|
+| FullKV | 0.223 | — |
+| SnapKV | 0.137 | — |
+| ADAPT | 0.112 | Δ=−0.026, **p=0.327 (n.s.)** |
+
+**The method confers no external benefit; the mechanism that predicts its failure does have
+external predictive power.** A pilot ladder also showed SnapKV floors below a 10% budget on
+BFCL, so the regime where the sweep shows an ADAPT advantage does not exist on that workload.
 
 **Paper:** [compiled PDF](paper/prioritykv_arxiv.pdf) ·
 [LaTeX source](paper/prioritykv_arxiv.tex) ·

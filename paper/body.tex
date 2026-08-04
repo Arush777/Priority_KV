@@ -38,10 +38,14 @@ policy whose single weight is read from the prompt with nothing fitted never
 loses to SnapKV across 48 cells and significantly exceeds it on Qwen at a 2\%
 budget ($p = 4.9\times10^{-4}$), but the same mechanism predicts no benefit on
 the Berkeley Function Calling Leaderboard, whose failures are dominated by loss
-of multi-turn state rather than of schemas.  We pre-register that prediction
-before running the test.  We report a matched-precision storage study as an
-explicit negative, and we document two experimental iterations that returned
-nulls, each for an identified cause.
+of multi-turn state rather than of schemas.  We pre-registered that prediction,
+and the test confirms it: over 233 paired conversations ADAPT is
+indistinguishable from SnapKV ($\Delta=-0.026$, $p=0.33$), inside the bound the
+registration specified.  The method therefore confers no external benefit, while
+the mechanism that predicts its failure does have external predictive power.  We
+additionally report a matched-precision storage study as an explicit negative,
+and document two experimental iterations that returned nulls, each for an
+identified cause.
 \end{abstract}
 
 \section{Introduction}
@@ -125,10 +129,13 @@ ratio, that determines whether a workload is served well by the cheap signal.
   position-ordered tiebreak, not protected mass, decides which state survives
   oversubscription, and we show the dissociation replicates across
   architectures (Section~\ref{sec:sweep-mechanism}).
-  \item \textbf{A falsifiable external prediction.}  We derive from the
-  mechanism a directional prediction for an externally authored benchmark, and
-  pre-register it, together with a budget-selection rule and a power analysis,
-  before the corresponding experiment is scored (Section~\ref{sec:external}).
+  \item \textbf{A falsifiable external prediction, registered and confirmed.}
+  We derive from the mechanism a directional prediction for an externally
+  authored benchmark and pre-register it---with a budget-selection rule and a
+  power analysis---before the experiment is scored; the test then returns the
+  predicted null ($\Delta=-0.026$, $p=0.33$, $n=233$ paired), establishing
+  external predictive power for the mechanism while confirming that the method
+  itself does not transfer (Section~\ref{sec:external}).
   \item \textbf{Negative and null results reported in full.}  We report a
   storage study that finds no quality separation, two sweep iterations that
   returned nulls with identified causes, and a failure-mode census showing that
@@ -617,12 +624,56 @@ appears do not exist on this workload; the rule selects $k=0.15$.
   \end{tabular}
 \end{table}
 
-The corresponding main test is in progress at the time of writing and its
-outcome is not folded into any claim in this paper.  We record the prediction
-and the design so that the result, in either direction, is interpretable:
-confirmation would establish that the mechanism has external predictive power
-even though the method confers no external benefit, while a significant ADAPT
-advantage would show the mechanism as stated to be incomplete.
+\subsection{Outcome: the predicted null}
+\label{sec:external-outcome}
+
+The main test ran 300 conversations per arm at $k=0.15$, yielding 233 fully
+paired across FullKV, SnapKV and ADAPT at 94\% paired completeness, with zero
+matched-budget violations and 33 exclusions, all of them context-limit
+exclusions distributed across arms (Table~\ref{tab:external-main}).
+
+\begin{table}[!htbp]
+  \centering
+  \caption{BFCL V3 multi-turn at the pre-registered budget $k=0.15$, official
+  checker, $n=233$ fully paired conversations.  Intervals are Wilson 95\%;
+  tests are exact two-sided McNemar.}
+  \label{tab:external-main}
+  \begin{tabular}{lrrl}
+    \toprule
+    Arm & Passes & Accuracy & Wilson 95\% \\
+    \midrule
+    FullKV & 52/233 & 0.223 & [0.174, 0.281] \\
+    SnapKV & 32/233 & 0.137 & [0.099, 0.187] \\
+    ADAPT  & 26/233 & 0.112 & [0.077, 0.158] \\
+    \midrule
+    \multicolumn{4}{l}{\emph{Paired comparisons}} \\
+    ADAPT vs SnapKV & $b{=}10$, $c{=}16$ & $\Delta=-0.026$ & $p=0.327$ \\
+    SnapKV vs FullKV & $b{=}12$, $c{=}32$ & $\Delta=-0.086$ & $p=0.0037$ \\
+    ADAPT vs FullKV & $b{=}12$, $c{=}38$ & $\Delta=-0.112$ & $p=0.0003$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+ADAPT is statistically indistinguishable from SnapKV and trends 2.6 points
+below it.  This is the registered prediction, and the observed effect lies well
+inside the bound the registration specified: a null on this design constrains
+any true ADAPT advantage to below roughly 0.05 absolute, and the measured
+$\Delta$ is $-0.026$ with a 10/16 discordant split.  The mechanism of
+Section~\ref{sec:sweep-mechanism} therefore made a quantitative, directional,
+pre-registered prediction about a benchmark the authors did not construct, and
+the prediction was borne out.
+
+We emphasise what this does and does not establish.  It does not establish that
+the method is useful on BFCL; it establishes the opposite, and the paper claims
+no external benefit.  What it supports is the \emph{mechanism}: a structural
+prior that protects system-block content cannot help a workload whose residual
+failures are losses of accumulated multi-turn state, and the size and direction
+of that shortfall were derivable in advance from a synthetic sweep.  The two
+secondary comparisons are consistent with the same account.  SnapKV trails
+FullKV significantly ($p=0.0037$), confirming that a 15\% budget is genuinely
+lossy on this workload rather than free, and ADAPT trails FullKV more strongly
+($p=0.0003$), as expected when 98.8\% protected mass oversubscribes the budget
+more than sixfold.
 
 \subsection{A generation-free corroboration}
 \label{sec:external-tau}
@@ -702,8 +753,11 @@ established on one model family in one regime.
 \paragraph{The positive results are on a benchmark we authored.}
 Every result showing an advantage is measured on PriorityBench-A.  The
 externally authored evaluation shows the hard structural policy at 0.000, and
-the pre-registered follow-up predicts no ADAPT benefit there.  No claim of
-external superiority is made or supported.
+the pre-registered follow-up measured no ADAPT benefit there
+($\Delta=-0.026$, $p=0.33$).  No claim of external superiority is made or
+supported, and the reader should treat the ADAPT advantage of
+Section~\ref{sec:sweep-adapt} as an in-distribution result whose external
+counterpart has been sought and not found.
 
 \paragraph{Instrument and stimulus are not independent.}
 The tagger keys on role, length, and schema or constraint markers that resemble
@@ -770,9 +824,12 @@ block survives arbitrary oversubscription while state accumulated across
 mid-conversation turns is lost entirely, and it is this second factor that
 determines whether a workload is served by the cheap signal.  The distinction is
 not a refinement of the earlier account but a correction of it, and it converts
-an unexplained external failure into a predicted one.  Whether that prediction
-holds is the subject of the pre-registered test reported here as pending; we
-have fixed its interpretation in advance so that either outcome is informative.
+an unexplained external failure into a predicted one.  That prediction was
+registered before the corresponding experiment was scored and the experiment
+returned it: on 233 paired conversations of an externally authored agent
+benchmark, the blended policy is indistinguishable from attention-based
+selection and trends slightly below it, as the mechanism requires.  The method
+does not transfer.  The account of why it does not transfer does.
 
 In operational terms: keep the schema before the pleasantry, but check first
 whether the budget can hold the schema---and whether the state your task
