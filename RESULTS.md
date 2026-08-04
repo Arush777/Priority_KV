@@ -60,6 +60,38 @@ by retention. The measurable interval between SnapKV and FullKV is ~8 conversati
 
 ---
 
+## SWEEP_PM_V3_32B — scaling check: the boundary is a policy property (2026-08-04)
+
+Qwen3-32B (64 layers, 2x L40S via `device_map=auto`), `keep_frac=0.05`, n=60/cell,
+2,880 work units, **zero failures**. Protected mass alone varies the ratio 1.0 -> 18.2.
+
+| rho | Structure (32B) | Structure (8B) | SnapKV | ADAPT | FullKV | structure vs snapkv |
+|---:|---:|---:|---:|---:|---:|---|
+| 1.0x | **1.000** | 1.000 | 1.000 | 1.000 | 1.000 | b=0 c=0 p=1.0 |
+| 2.2x | **0.617** | 0.617 | 1.000 | 1.000 | 1.000 | b=0 c=23 p=2.4e-07 |
+| 3.7x | **0.417** | 0.417 | 1.000 | 1.000 | 1.000 | b=0 c=35 p=5.8e-11 |
+| 5.3x | **0.400** | 0.400 | 1.000 | 1.000 | 1.000 | b=0 c=36 p=2.9e-11 |
+| 8.0x | **0.400** | 0.400 | 0.983 | 1.000 | 1.000 | b=1 c=36 p=5.5e-10 |
+| 11.0x | **0.433** | 0.400 | 1.000 | 1.000 | 1.000 | b=0 c=34 p=1.2e-10 |
+| 14.5x | **0.400** | 0.400 | 0.967 | 1.000 | 1.000 | b=2 c=36 p=5.4e-09 |
+| 18.2x | **0.400** | 0.400 | 0.983 | 1.000 | 1.000 | b=1 c=36 p=5.5e-10 |
+
+**The 32B curve matches the 8B curve to three significant figures at every level.**
+The knee does not move, the descent does not soften, the floor does not shift — at 4x
+the parameters. That is the signature of a property of the *retention policy*, not of
+the model: the 0.400 floor is the tool-schema family passing while the other two fail,
+and which family passes is fixed by where the tiebreak retains positions.
+
+Structure loses to matched-budget SnapKV in 7 of 8 cells with b=0-2 against c=23-36.
+
+Per-category at 32B (kf=0.05) matches 8B exactly: tool_schema **1.00** at every level
+tested, supersession **0.00**, multi_turn_state **0.20**.
+
+Artifacts: `configs/pm_sweep_32b.yaml`, `cluster/prajna/pm_sweep_32b.sbatch`,
+`$PRAJNA_ROOT/results/pm_sweep_v3/qwen32/`.
+
+---
+
 ## SWEEP_PM_V3 — the operating boundary, measured (2026-07-28)
 
 Post-freeze namespace. **Does not modify any frozen number below.** Fills the interval

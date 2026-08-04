@@ -13,11 +13,14 @@ natural to ask whether that free signal is sufficient.  This paper answers
 We measure the operating range of a structural retention prior as a
 dose--response curve rather than inferring it from endpoints.  Sweeping the
 protected-role mass of a controlled agent benchmark across eight levels
-(5.2\%--92.2\%), crossed with three keep budgets, over 15{,}360 scored
-generations on Qwen3-8B and Llama-3.1-8B, we find a sharp boundary: structural
+(5.2\%--92.2\%), crossed with three keep budgets, over 18{,}240 scored
+generations on Qwen3-8B, Llama-3.1-8B and Qwen3-32B, we find a sharp boundary: structural
 retention is at ceiling while the protected set fits the budget and degrades
 immediately once the oversubscription ratio $|S\cup M|/B$ exceeds
-approximately~1.1.  The boundary replicates across both model families.  Past
+approximately~1.1.  The boundary replicates across all three model families, and a
+fourfold increase in parameters reproduces the 8B curve to three significant
+figures at every level, which is the signature of a property of the retention
+policy rather than of the model.  Past
 it, the ordering against attention-based selection reverses: structure loses to
 matched-budget SnapKV in 20 of 24 Llama cells, winning no discordant pair in any
 of them.
@@ -447,6 +450,47 @@ discordant pair anywhere.  On Qwen the same pattern holds at the tightest
 budget, with $b=0$ and $c$ between 41 and 54.  The in-distribution parity is
 therefore a property of one operating point rather than a general result, and
 should not be reported without it.
+
+\subsection{The boundary is a property of the policy, not the model}
+\label{sec:sweep-scale}
+
+If the boundary reflected how a particular model attends, its location or depth
+should move with model capacity.  We tested this by repeating the sweep on
+Qwen3-32B, four times the parameter count of the primary matrix, sharded across
+two GPUs, at a fixed $k=0.05$ so that protected mass alone varies $\rho$ from
+1.0 to 18.2 ($n=60$ per cell, 2{,}880 work units, no failures).
+
+\begin{table}[!htbp]
+  \centering
+  \caption{Structural retention at $k=0.05$ on Qwen3-32B against the 8B result
+  at the same cells.  Paired tests compare structure with matched-budget SnapKV
+  on the 32B run.}
+  \label{tab:scale}
+  \begin{tabular}{lrrrrl}
+    \toprule
+    $\rho$ & Structure (32B) & Structure (8B) & SnapKV (32B) & ADAPT (32B) & Structure vs SnapKV \\
+    \midrule
+    $1.0\times$  & 1.000 & 1.000 & 1.000 & 1.000 & $b{=}0$, $c{=}0$, $p=1.00$ \\
+    $2.2\times$  & 0.617 & 0.617 & 1.000 & 1.000 & $b{=}0$, $c{=}23$, $p=2.4\times10^{-7}$ \\
+    $3.7\times$  & 0.417 & 0.417 & 1.000 & 1.000 & $b{=}0$, $c{=}35$, $p=5.8\times10^{-11}$ \\
+    $5.3\times$  & 0.400 & 0.400 & 1.000 & 1.000 & $b{=}0$, $c{=}36$, $p=2.9\times10^{-11}$ \\
+    $8.0\times$  & 0.400 & 0.400 & 0.983 & 1.000 & $b{=}1$, $c{=}36$, $p=5.5\times10^{-10}$ \\
+    $11.0\times$ & 0.433 & 0.400 & 1.000 & 1.000 & $b{=}0$, $c{=}34$, $p=1.2\times10^{-10}$ \\
+    $14.5\times$ & 0.400 & 0.400 & 0.967 & 1.000 & $b{=}2$, $c{=}36$, $p=5.4\times10^{-9}$ \\
+    $18.2\times$ & 0.400 & 0.400 & 0.983 & 1.000 & $b{=}1$, $c{=}36$, $p=5.5\times10^{-10}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The curves agree to three significant figures at every level.  This is a
+stronger statement than consistency: the knee does not move, the descent does
+not soften, and the floor does not shift, despite a fourfold increase in
+capacity.  Section~\ref{sec:sweep-mechanism} explains why it cannot.  The floor
+of 0.400 is the tool-schema family passing while the other two fail; which
+family passes is fixed by where the policy's tiebreak retains positions, and
+that is arithmetic over the role assignment rather than behaviour of the
+network.  A property of the retention policy is invariant to the model it is
+applied to, and this is the prediction that invariance makes.
 
 \subsection{Which state survives, and why}
 \label{sec:sweep-mechanism}

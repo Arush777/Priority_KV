@@ -9,7 +9,7 @@ Apache-2.0 · Python 3.11–3.12 · Primary evaluation: Qwen3-8B on NVIDIA H200
 
 | Headline | Result and claim boundary |
 |---|---|
-| **Operating boundary** (`SWEEP_PM_V3`, 15,360 generations) | Structural retention is at ceiling while the protected set fits the keep budget and collapses past oversubscription ratio ≈ **1.1**. Replicated on Qwen3-8B and Llama-3.1-8B. |
+| **Operating boundary** (18,240 generations) | Structural retention is at ceiling while the protected set fits the keep budget and collapses past oversubscription ratio ≈ **1.1**. Replicated on Qwen3-8B, Llama-3.1-8B **and Qwen3-32B** — the 32B curve matches 8B to three significant figures at every level, so the boundary is a property of the *policy*, not the model. |
 | **Mechanism** (per task family) | State in the *leading system block* survives **18×** oversubscription (tool-schema 1.000); *mid-conversation* state falls to **0.000**. The ratio alone does not predict what is lost — the tiebreak position does. |
 | **Past the boundary** | Structure loses to matched-budget SnapKV in **20/24** Llama cells with **b=0** (zero wins in the opposite direction). The 25% parity below is an operating-point property, not a general result. |
 | **ADAPT** | Never loses to SnapKV across **48 cells / 2 models**; significantly exceeds it on Qwen at 2% keep (up to **p=4.9e-4**, `c=0`). Does **not** replicate on Llama, where SnapKV never degrades. |

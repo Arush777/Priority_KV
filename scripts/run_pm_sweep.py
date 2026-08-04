@@ -114,7 +114,7 @@ def point_is_done(path: Path) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--config", default=str(ROOT / "configs" / "pm_sweep_v1.yaml"))
-    ap.add_argument("--model", default="qwen", choices=["qwen", "llama"])
+    ap.add_argument("--model", default="qwen", choices=["qwen", "llama", "qwen32"])
     ap.add_argument("--shard-index", type=int, default=0)
     ap.add_argument("--shard-size", type=int, default=20)
     ap.add_argument("--limit-instances", type=int, default=None,
@@ -169,7 +169,10 @@ def main() -> int:
         mcfg["local_dir"],
         dtype=getattr(torch, mcfg["dtype"]),
         attn_implementation=mcfg["attn_implementation"],
-        device_map="cuda",
+        # "auto" shards a model too large for one device across all visible
+        # GPUs. Single-GPU runs are unaffected: accelerate places every layer
+        # on cuda:0 when it fits, which is what the 8B results used.
+        device_map=mcfg.get("device_map", "auto"),
         trust_remote_code=True,
     )
     model.eval()

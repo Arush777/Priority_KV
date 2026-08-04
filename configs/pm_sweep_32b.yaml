@@ -16,7 +16,7 @@
 # V1 is retained as the easy-regime baseline, not discarded. Does NOT modify
 # anything under FINAL_RUN_MANIFEST.yaml or EXTERNAL_BFCL_PRAJNA_V1.
 
-freeze_id: SWEEP_PM_V3
+freeze_id: SWEEP_PM_V3_32B
 
 manifest: data/prioritybench/manifests/pm_sweep_v3.json
 
@@ -55,7 +55,7 @@ models:
 arms:
   # `full` runs once per instance; press arms run once per (instance, budget).
   press: [structure, snapkv, adapt, uniform, random]
-  budgets: [0.02, 0.05, 0.10]
+  budgets: [0.05]   # single budget; protected mass varies the ratio across levels
   keep_policy:
     sink_tokens: 16
     force_recent: 128
